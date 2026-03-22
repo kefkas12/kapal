@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\M_kontrak;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class M_kontrakController extends Controller
@@ -23,8 +24,7 @@ class M_kontrakController extends Controller
     {
         $id = $request->route('id');
 
-        $data = M_kontrak::where('id', $id)
-            ->first();
+        $data = M_kontrak::where('id', $id)->first();
         
         return response()->json([
             'success' => true,
@@ -38,14 +38,18 @@ class M_kontrakController extends Controller
         try {
             DB::beginTransaction();
             $m_kontrak = new M_kontrak();
-            $m_kontrak->nama = $request->input('nama');
-            $m_kontrak->nama_perusahaan = $request->input('nama_perusahaan');
-            $m_kontrak->email = $request->input('email');
-            $m_kontrak->nomor_handphone = $request->input('nomor_handphone');
-            $m_kontrak->nomor_telepon = $request->input('nomor_telepon');
-            $m_kontrak->fax = $request->input('fax');
-            $m_kontrak->npwp = $request->input('npwp');
-            $m_kontrak->tipe = 'm_kontrak';
+            $m_kontrak->no_kontrak = $request->input('no_kontrak');
+            $m_kontrak->kode_vessel = $request->input('kode_vessel');
+            $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
+            $m_kontrak->tgl_akhir_kontrak = $request->input('tgl_akhir_kontrak');
+            $m_kontrak->charter_rate = $request->input('charter_rate');
+            $m_kontrak->speed = $request->input('speed');
+            $m_kontrak->me_ballast = $request->input('me_ballast');
+            $m_kontrak->me_laden = $request->input('me_laden');
+            $m_kontrak->pumping_rate = $request->input('pumping_rate');
+            $m_kontrak->status = $request->input('status');
+            $m_kontrak->file_upload = $request->input('file_upload');
+            $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
             DB::commit();
 
@@ -66,14 +70,18 @@ class M_kontrakController extends Controller
         try {
             DB::beginTransaction();
             $m_kontrak = M_kontrak::where('id', $id)->firstOrFail();
-            $m_kontrak->nama = $request->input('nama');
-            $m_kontrak->nama_perusahaan = $request->input('nama_perusahaan');
-            $m_kontrak->email = $request->input('email');
-            $m_kontrak->nomor_handphone = $request->input('nomor_handphone');
-            $m_kontrak->nomor_telepon = $request->input('nomor_telepon');
-            $m_kontrak->fax = $request->input('fax');
-            $m_kontrak->npwp = $request->input('npwp');
-            $m_kontrak->tipe = 'm_kontrak';
+            $m_kontrak->no_kontrak = $request->input('no_kontrak');
+            $m_kontrak->kode_vessel = $request->input('kode_vessel');
+            $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
+            $m_kontrak->tgl_akhir_kontrak = $request->input('tgl_akhir_kontrak');
+            $m_kontrak->charter_rate = $request->input('charter_rate');
+            $m_kontrak->speed = $request->input('speed');
+            $m_kontrak->me_ballast = $request->input('me_ballast');
+            $m_kontrak->me_laden = $request->input('me_laden');
+            $m_kontrak->pumping_rate = $request->input('pumping_rate');
+            $m_kontrak->status = $request->input('status');
+            $m_kontrak->file_upload = $request->input('file_upload');
+            $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
             DB::commit();
 

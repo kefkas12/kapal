@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\T_klaim;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class T_klaimController extends Controller
@@ -23,8 +24,7 @@ class T_klaimController extends Controller
     {
         $id = $request->route('id');
 
-        $data = T_klaim::where('id', $id)
-            ->first();
+        $data = T_klaim::where('id', $id)->first();
         
         return response()->json([
             'success' => true,
@@ -38,14 +38,14 @@ class T_klaimController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim = new T_klaim();
-            $t_klaim->nama = $request->input('nama');
-            $t_klaim->nama_perusahaan = $request->input('nama_perusahaan');
-            $t_klaim->email = $request->input('email');
-            $t_klaim->nomor_handphone = $request->input('nomor_handphone');
-            $t_klaim->nomor_telepon = $request->input('nomor_telepon');
-            $t_klaim->fax = $request->input('fax');
-            $t_klaim->npwp = $request->input('npwp');
-            $t_klaim->tipe = 't_klaim';
+            $t_klaim->no_klaim_awal = $request->input('no_klaim_awal');
+            $t_klaim->tgl_klaim_awal = $request->input('tgl_klaim_awal');
+            $t_klaim->jenis_klaim = $request->input('jenis_klaim');
+            $t_klaim->kode_vessel = $request->input('kode_vessel');
+            $t_klaim->currency = $request->input('currency');
+            $t_klaim->no_klaim_akhir = $request->input('no_klaim_akhir');
+            $t_klaim->tgl_klaim_akhir = $request->input('tgl_klaim_akhir');
+            $t_klaim->user_id = Auth::id();
             $t_klaim->save();
             DB::commit();
 
@@ -66,14 +66,14 @@ class T_klaimController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim = T_klaim::where('id', $id)->firstOrFail();
-            $t_klaim->nama = $request->input('nama');
-            $t_klaim->nama_perusahaan = $request->input('nama_perusahaan');
-            $t_klaim->email = $request->input('email');
-            $t_klaim->nomor_handphone = $request->input('nomor_handphone');
-            $t_klaim->nomor_telepon = $request->input('nomor_telepon');
-            $t_klaim->fax = $request->input('fax');
-            $t_klaim->npwp = $request->input('npwp');
-            $t_klaim->tipe = 't_klaim';
+            $t_klaim->no_klaim_awal = $request->input('no_klaim_awal');
+            $t_klaim->tgl_klaim_awal = $request->input('tgl_klaim_awal');
+            $t_klaim->jenis_klaim = $request->input('jenis_klaim');
+            $t_klaim->kode_vessel = $request->input('kode_vessel');
+            $t_klaim->currency = $request->input('currency');
+            $t_klaim->no_klaim_akhir = $request->input('no_klaim_akhir');
+            $t_klaim->tgl_klaim_akhir = $request->input('tgl_klaim_akhir');
+            $t_klaim->user_id = Auth::id();
             $t_klaim->save();
             DB::commit();
 

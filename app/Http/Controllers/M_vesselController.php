@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\M_vessel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class M_vesselController extends Controller
@@ -23,8 +24,7 @@ class M_vesselController extends Controller
     {
         $id = $request->route('id');
 
-        $data = M_vessel::where('id', $id)
-            ->first();
+        $data = M_vessel::where('id', $id)->first();
         
         return response()->json([
             'success' => true,
@@ -38,14 +38,31 @@ class M_vesselController extends Controller
         try {
             DB::beginTransaction();
             $m_vessel = new M_vessel();
-            $m_vessel->nama = $request->input('nama');
-            $m_vessel->nama_perusahaan = $request->input('nama_perusahaan');
-            $m_vessel->email = $request->input('email');
-            $m_vessel->nomor_handphone = $request->input('nomor_handphone');
-            $m_vessel->nomor_telepon = $request->input('nomor_telepon');
-            $m_vessel->fax = $request->input('fax');
-            $m_vessel->npwp = $request->input('npwp');
-            $m_vessel->tipe = 'm_vessel';
+            $m_vessel->no_voyage_gab = $request->input('no_voyage_gab');
+            $m_vessel->no_voyage = $request->input('no_voyage');
+            $m_vessel->jenis_voyage = $request->input('jenis_voyage');
+            $m_vessel->kode_vessel = $request->input('kode_vessel');
+            $m_vessel->captain = $request->input('captain');
+            $m_vessel->atd_port = $request->input('atd_port');
+            $m_vessel->atd_time = $request->input('atd_time');
+            $m_vessel->atd_rob = $request->input('atd_rob');
+            $m_vessel->ata_port = $request->input('ata_port');
+            $m_vessel->ata_time = $request->input('ata_time');
+            $m_vessel->ata_rob = $request->input('ata_rob');
+            $m_vessel->distance = $request->input('distance');
+            $m_vessel->speed = $request->input('speed');
+            $m_vessel->est_sail_day = $request->input('est_sail_day');
+            $m_vessel->act_sail_day = $request->input('act_sail_day');
+            $m_vessel->charter_rate_day = $request->input('charter_rate_day');
+            $m_vessel->est_claim_speed = $request->input('est_claim_speed');
+            $m_vessel->std_bunker_cons = $request->input('std_bunker_cons');
+            $m_vessel->act_bunker_cons = $request->input('act_bunker_cons');
+            $m_vessel->excess_bunker = $request->input('excess_bunker');
+            $m_vessel->bunker_price = $request->input('bunker_price');
+            $m_vessel->est_claim_bunker = $request->input('est_claim_bunker');
+            $m_vessel->status = $request->input('status');
+            $m_vessel->file_upload = $request->input('file_upload');
+            $m_vessel->user_id = Auth::id();
             $m_vessel->save();
             DB::commit();
 
@@ -66,14 +83,31 @@ class M_vesselController extends Controller
         try {
             DB::beginTransaction();
             $m_vessel = M_vessel::where('id', $id)->firstOrFail();
-            $m_vessel->nama = $request->input('nama');
-            $m_vessel->nama_perusahaan = $request->input('nama_perusahaan');
-            $m_vessel->email = $request->input('email');
-            $m_vessel->nomor_handphone = $request->input('nomor_handphone');
-            $m_vessel->nomor_telepon = $request->input('nomor_telepon');
-            $m_vessel->fax = $request->input('fax');
-            $m_vessel->npwp = $request->input('npwp');
-            $m_vessel->tipe = 'm_vessel';
+            $m_vessel->no_voyage_gab = $request->input('no_voyage_gab');
+            $m_vessel->no_voyage = $request->input('no_voyage');
+            $m_vessel->jenis_voyage = $request->input('jenis_voyage');
+            $m_vessel->kode_vessel = $request->input('kode_vessel');
+            $m_vessel->captain = $request->input('captain');
+            $m_vessel->atd_port = $request->input('atd_port');
+            $m_vessel->atd_time = $request->input('atd_time');
+            $m_vessel->atd_rob = $request->input('atd_rob');
+            $m_vessel->ata_port = $request->input('ata_port');
+            $m_vessel->ata_time = $request->input('ata_time');
+            $m_vessel->ata_rob = $request->input('ata_rob');
+            $m_vessel->distance = $request->input('distance');
+            $m_vessel->speed = $request->input('speed');
+            $m_vessel->est_sail_day = $request->input('est_sail_day');
+            $m_vessel->act_sail_day = $request->input('act_sail_day');
+            $m_vessel->charter_rate_day = $request->input('charter_rate_day');
+            $m_vessel->est_claim_speed = $request->input('est_claim_speed');
+            $m_vessel->std_bunker_cons = $request->input('std_bunker_cons');
+            $m_vessel->act_bunker_cons = $request->input('act_bunker_cons');
+            $m_vessel->excess_bunker = $request->input('excess_bunker');
+            $m_vessel->bunker_price = $request->input('bunker_price');
+            $m_vessel->est_claim_bunker = $request->input('est_claim_bunker');
+            $m_vessel->status = $request->input('status');
+            $m_vessel->file_upload = $request->input('file_upload');
+            $m_vessel->user_id = Auth::id();
             $m_vessel->save();
             DB::commit();
 

@@ -23,8 +23,7 @@ class T_klaim_detailController extends Controller
     {
         $id = $request->route('id');
 
-        $data = T_klaim_detail::where('id', $id)
-            ->first();
+        $data = T_klaim_detail::where('id', $id)->first();
         
         return response()->json([
             'success' => true,
@@ -45,7 +44,7 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->nomor_telepon = $request->input('nomor_telepon');
             $t_klaim_detail->fax = $request->input('fax');
             $t_klaim_detail->npwp = $request->input('npwp');
-            $t_klaim_detail->tipe = 't_klaim_detail';
+            $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
             DB::commit();
 
@@ -73,7 +72,7 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->nomor_telepon = $request->input('nomor_telepon');
             $t_klaim_detail->fax = $request->input('fax');
             $t_klaim_detail->npwp = $request->input('npwp');
-            $t_klaim_detail->tipe = 't_klaim_detail';
+            $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
             DB::commit();
 

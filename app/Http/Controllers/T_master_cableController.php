@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\T_master_cable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class T_master_cableController extends Controller
@@ -23,8 +24,7 @@ class T_master_cableController extends Controller
     {
         $id = $request->route('id');
 
-        $data = T_master_cable::where('id', $id)
-            ->first();
+        $data = T_master_cable::where('id', $id)->first();
         
         return response()->json([
             'success' => true,
@@ -45,7 +45,7 @@ class T_master_cableController extends Controller
             $t_master_cable->nomor_telepon = $request->input('nomor_telepon');
             $t_master_cable->fax = $request->input('fax');
             $t_master_cable->npwp = $request->input('npwp');
-            $t_master_cable->tipe = 't_master_cable';
+            $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
             DB::commit();
 
@@ -73,7 +73,7 @@ class T_master_cableController extends Controller
             $t_master_cable->nomor_telepon = $request->input('nomor_telepon');
             $t_master_cable->fax = $request->input('fax');
             $t_master_cable->npwp = $request->input('npwp');
-            $t_master_cable->tipe = 't_master_cable';
+            $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
             DB::commit();
 
