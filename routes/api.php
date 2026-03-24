@@ -18,11 +18,11 @@ Route::post('/register', [AuthController::class, 'register']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('/user', function (Request $request) {
+    Route::get('/me', function (Request $request) {
         return $request->user();
     });
 
-    Route::controller(M_kontrakController::class)->prefix('m_kontrak')->group(function () {
+    Route::controller(M_kontrakController::class)->prefix('kontrak')->group(function () {
         Route::get('/', 'index');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
@@ -30,7 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', 'delete');
     });
 
-    Route::controller(M_vesselController::class)->prefix('m_vessel')->group(function () {
+    Route::controller(M_vesselController::class)->prefix('vessel')->group(function () {
         Route::get('/', 'index');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
