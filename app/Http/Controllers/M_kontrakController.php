@@ -52,7 +52,6 @@ class M_kontrakController extends Controller
             $m_kontrak->me_laden = $request->input('me_laden');
             $m_kontrak->pumping_rate = $request->input('pumping_rate');
             $m_kontrak->status = $request->input('status');
-            $m_kontrak->file_upload = $request->input('file_upload');
             $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
             DB::commit();
@@ -83,7 +82,6 @@ class M_kontrakController extends Controller
             $m_kontrak->me_laden = $request->input('me_laden');
             $m_kontrak->pumping_rate = $request->input('pumping_rate');
             $m_kontrak->status = $request->input('status');
-            $m_kontrak->file_upload = $request->input('file_upload');
             $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
             DB::commit();

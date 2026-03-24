@@ -122,7 +122,6 @@ class T_master_cableController extends Controller
             $t_master_cable->bunker_price = $request->input('bunker_price');
             $t_master_cable->est_claim_bunker = $request->input('est_claim_bunker');
             $t_master_cable->status = 'OPEN';
-            $t_master_cable->file_upload = $request->input('file_upload');
             $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
             DB::commit();
@@ -167,7 +166,6 @@ class T_master_cableController extends Controller
             $t_master_cable->bunker_price = $request->input('bunker_price');
             $t_master_cable->est_claim_bunker = $request->input('est_claim_bunker');
             $t_master_cable->status = 'OPEN';
-            $t_master_cable->file_upload = $request->input('file_upload');
             $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
             DB::commit();

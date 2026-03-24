@@ -53,7 +53,6 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->no_tagihan_klaim = $request->input('no_tagihan_klaim');
             $t_klaim_detail->no_tagihan_dipotong = $request->input('no_tagihan_dipotong');
             $t_klaim_detail->status = $request->input('status');
-            $t_klaim_detail->file_upload = $request->input('file_upload');
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
             DB::commit();
@@ -90,7 +89,6 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->no_tagihan_klaim = $request->input('no_tagihan_klaim');
             $t_klaim_detail->no_tagihan_dipotong = $request->input('no_tagihan_dipotong');
             $t_klaim_detail->status = $request->input('status');
-            $t_klaim_detail->file_upload = $request->input('file_upload');
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
             DB::commit();
