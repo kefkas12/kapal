@@ -11,13 +11,79 @@ class M_kontrakController extends Controller
 {
     public function index(Request $request)
     {
-        $data = M_kontrak::get();
+        $fetchAll = $request->boolean('all', false);
+        if ($fetchAll) {
+            $data = M_kontrak::get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data M_kontrak berhasil diambil',
+                'data'    => $data
+            ]);
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        if ($perPage < 1) {
+            $perPage = 10;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        $query = M_kontrak::query();
+
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('no_kontrak', 'like', "%{$search}%")
+                    ->orWhere('tgl_awal_kontrak', 'like', "%{$search}%")
+                    ->orWhere('tgl_akhir_kontrak', 'like', "%{$search}%")
+                    ->orWhere('charter_rate', 'like', "%{$search}%")
+                    ->orWhere('speed', 'like', "%{$search}%")
+                    ->orWhere('me_ballast', 'like', "%{$search}%")
+                    ->orWhere('me_laden', 'like', "%{$search}%")
+                    ->orWhere('pumping_rate', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%");
+            });
+        }
+
+        $status = $request->input('status');
+        if (!is_null($status) && $status !== '') {
+            $query->where('status', $status);
+        }
+
+        $idVessel = $request->input('id_vessel');
+        if (!is_null($idVessel) && $idVessel !== '') {
+            $query->where('id_vessel', $idVessel);
+        }
+
+        $allowedSort = ['id', 'no_kontrak', 'tgl_awal_kontrak', 'tgl_akhir_kontrak', 'charter_rate', 'speed', 'me_ballast', 'me_laden', 'pumping_rate', 'status', 'created_at'];
+        $sortBy = $request->input('sort_by', 'id');
+        if (!in_array($sortBy, $allowedSort, true)) {
+            $sortBy = 'id';
+        }
+        $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy($sortBy, $sortDir);
+
+        $paginator = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'message' => 'Data M_kontrak berhasil diambil',
-            'data'    => $data
+            'data'    => $paginator->items(),
+            'meta'    => [
+                'current_page' => $paginator->currentPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'last_page'    => $paginator->lastPage(),
+            ]
         ]);
+    }
+
+    public function search(Request $request)
+    {
+        return $this->index($request);
     }
 
     public function details(Request $request)

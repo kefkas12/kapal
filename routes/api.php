@@ -24,6 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(M_kontrakController::class)->prefix('kontrak')->group(function () {
         Route::get('/', 'index');
+        Route::get('/search', 'search');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
@@ -32,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(M_vesselController::class)->prefix('vessel')->group(function () {
         Route::get('/', 'index');
+        Route::get('/search', 'search');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
@@ -50,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(T_klaimController::class)->prefix('klaim')->group(function () {
         Route::get('/', 'index');
+        Route::get('/search', 'search');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
@@ -58,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(T_master_cableController::class)->prefix('cable')->group(function () {
         Route::get('/', 'index');
+        Route::get('/search', 'search');
         Route::get('/refs', 'refs');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');

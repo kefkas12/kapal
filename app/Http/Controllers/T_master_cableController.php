@@ -11,13 +11,61 @@ class T_master_cableController extends Controller
 {
     public function index(Request $request)
     {
-        $data = T_master_cable::get();
+        $perPage = (int) $request->input('per_page', 10);
+        if ($perPage < 1) {
+            $perPage = 10;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        $query = T_master_cable::query();
+
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('no_voyage_gab', 'like', "%{$search}%")
+                    ->orWhere('no_voyage', 'like', "%{$search}%")
+                    ->orWhere('jenis_voyage', 'like', "%{$search}%")
+                    ->orWhere('captain', 'like', "%{$search}%")
+                    ->orWhere('atd_port', 'like', "%{$search}%")
+                    ->orWhere('ata_port', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%");
+            });
+        }
+
+        $status = $request->input('status');
+        if (!is_null($status) && $status !== '') {
+            $query->where('status', $status);
+        }
+
+        $allowedSort = ['id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'captain', 'atd_port', 'ata_port', 'status', 'created_at'];
+        $sortBy = $request->input('sort_by', 'id');
+        if (!in_array($sortBy, $allowedSort, true)) {
+            $sortBy = 'id';
+        }
+        $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy($sortBy, $sortDir);
+
+        $paginator = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'message' => 'Data T_master_cable berhasil diambil',
-            'data'    => $data
+            'data'    => $paginator->items(),
+            'meta'    => [
+                'current_page' => $paginator->currentPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'last_page'    => $paginator->lastPage(),
+            ]
         ]);
+    }
+
+    public function search(Request $request)
+    {
+        return $this->index($request);
     }
 
     public function details(Request $request)

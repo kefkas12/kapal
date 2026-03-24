@@ -11,13 +11,66 @@ class T_klaimController extends Controller
 {
     public function index(Request $request)
     {
-        $data = T_klaim::get();
+        $perPage = (int) $request->input('per_page', 10);
+        if ($perPage < 1) {
+            $perPage = 10;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        $query = T_klaim::query();
+
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('no_klaim_awal', 'like', "%{$search}%")
+                    ->orWhere('tgl_klaim_awal', 'like', "%{$search}%")
+                    ->orWhere('jenis_klaim', 'like', "%{$search}%")
+                    ->orWhere('id_vessel', 'like', "%{$search}%")
+                    ->orWhere('currency', 'like', "%{$search}%")
+                    ->orWhere('no_klaim_akhir', 'like', "%{$search}%")
+                    ->orWhere('tgl_klaim_akhir', 'like', "%{$search}%");
+            });
+        }
+
+        $idVessel = $request->input('id_vessel');
+        if (!is_null($idVessel) && $idVessel !== '') {
+            $query->where('id_vessel', $idVessel);
+        }
+
+        $jenisKlaim = $request->input('jenis_klaim');
+        if (!is_null($jenisKlaim) && $jenisKlaim !== '') {
+            $query->where('jenis_klaim', $jenisKlaim);
+        }
+
+        $allowedSort = ['id', 'no_klaim_awal', 'tgl_klaim_awal', 'jenis_klaim', 'id_vessel', 'currency', 'no_klaim_akhir', 'tgl_klaim_akhir', 'created_at'];
+        $sortBy = $request->input('sort_by', 'id');
+        if (!in_array($sortBy, $allowedSort, true)) {
+            $sortBy = 'id';
+        }
+        $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $query->orderBy($sortBy, $sortDir);
+
+        $paginator = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'message' => 'Data T_klaim berhasil diambil',
-            'data'    => $data
+            'data'    => $paginator->items(),
+            'meta'    => [
+                'current_page' => $paginator->currentPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'last_page'    => $paginator->lastPage(),
+            ]
         ]);
+    }
+
+    public function search(Request $request)
+    {
+        return $this->index($request);
     }
 
     public function details(Request $request)
