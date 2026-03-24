@@ -33,6 +33,67 @@ class T_master_cableController extends Controller
         ]);
     }
 
+    public function refs(Request $request)
+    {
+        $idVessel = $request->query('id_vessel');
+
+        $vessels = DB::table('m_vessel')
+            ->select('id', 'kode_vessel', 'nama_vessel', 'jenis_vessel', 'status')
+            ->orderBy('kode_vessel')
+            ->get();
+
+        $lastCable = null;
+        $captains = [];
+        $atdPorts = [];
+        $ataPorts = [];
+        $kontrak = null;
+
+        if ($idVessel) {
+            $lastCable = T_master_cable::where('id_vessel', $idVessel)
+                ->orderByDesc('id')
+                ->first();
+
+            $captains = T_master_cable::where('id_vessel', $idVessel)
+                ->whereNotNull('captain')
+                ->select('captain')
+                ->distinct()
+                ->orderBy('captain')
+                ->pluck('captain');
+
+            $atdPorts = T_master_cable::where('id_vessel', $idVessel)
+                ->whereNotNull('atd_port')
+                ->select('atd_port')
+                ->distinct()
+                ->orderBy('atd_port')
+                ->pluck('atd_port');
+
+            $ataPorts = T_master_cable::where('id_vessel', $idVessel)
+                ->whereNotNull('ata_port')
+                ->select('ata_port')
+                ->distinct()
+                ->orderBy('ata_port')
+                ->pluck('ata_port');
+
+            $kontrak = DB::table('m_kontrak')
+                ->where('id_vessel', $idVessel)
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Referensi cable berhasil diambil',
+            'data' => [
+                'vessels' => $vessels,
+                'last_cable' => $lastCable,
+                'captains' => $captains,
+                'atd_ports' => $atdPorts,
+                'ata_ports' => $ataPorts,
+                'kontrak' => $kontrak,
+            ]
+        ]);
+    }
+
     public function create(Request $request)
     {
         try {
@@ -60,7 +121,7 @@ class T_master_cableController extends Controller
             $t_master_cable->excess_bunker = $request->input('excess_bunker');
             $t_master_cable->bunker_price = $request->input('bunker_price');
             $t_master_cable->est_claim_bunker = $request->input('est_claim_bunker');
-            $t_master_cable->status = $request->input('status');
+            $t_master_cable->status = 'OPEN';
             $t_master_cable->file_upload = $request->input('file_upload');
             $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
@@ -105,7 +166,7 @@ class T_master_cableController extends Controller
             $t_master_cable->excess_bunker = $request->input('excess_bunker');
             $t_master_cable->bunker_price = $request->input('bunker_price');
             $t_master_cable->est_claim_bunker = $request->input('est_claim_bunker');
-            $t_master_cable->status = $request->input('status');
+            $t_master_cable->status = 'OPEN';
             $t_master_cable->file_upload = $request->input('file_upload');
             $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();

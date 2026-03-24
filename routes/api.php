@@ -40,7 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/kontrak/{id}', 'kontrak');
     });
 
-    Route::controller(T_klaim_detailController::class)->prefix('t_klaim_detail')->group(function () {
+    Route::controller(T_klaim_detailController::class)->prefix('klaim_detail')->group(function () {
         Route::get('/', 'index');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
@@ -48,7 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', 'delete');
     });
 
-    Route::controller(T_klaimController::class)->prefix('t_klaim')->group(function () {
+    Route::controller(T_klaimController::class)->prefix('klaim')->group(function () {
         Route::get('/', 'index');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
@@ -58,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(T_master_cableController::class)->prefix('cable')->group(function () {
         Route::get('/', 'index');
+        Route::get('/refs', 'refs');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
