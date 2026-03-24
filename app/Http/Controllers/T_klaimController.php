@@ -38,10 +38,10 @@ class T_klaimController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim = new T_klaim();
+            $t_klaim->id_vessel = $request->input('id_vessel');
             $t_klaim->no_klaim_awal = $request->input('no_klaim_awal');
             $t_klaim->tgl_klaim_awal = $request->input('tgl_klaim_awal');
             $t_klaim->jenis_klaim = $request->input('jenis_klaim');
-            $t_klaim->kode_vessel = $request->input('kode_vessel');
             $t_klaim->currency = $request->input('currency');
             $t_klaim->no_klaim_akhir = $request->input('no_klaim_akhir');
             $t_klaim->tgl_klaim_akhir = $request->input('tgl_klaim_akhir');
@@ -66,10 +66,10 @@ class T_klaimController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim = T_klaim::where('id', $id)->firstOrFail();
+            $t_klaim->id_vessel = $request->input('id_vessel');
             $t_klaim->no_klaim_awal = $request->input('no_klaim_awal');
             $t_klaim->tgl_klaim_awal = $request->input('tgl_klaim_awal');
             $t_klaim->jenis_klaim = $request->input('jenis_klaim');
-            $t_klaim->kode_vessel = $request->input('kode_vessel');
             $t_klaim->currency = $request->input('currency');
             $t_klaim->no_klaim_akhir = $request->input('no_klaim_akhir');
             $t_klaim->tgl_klaim_akhir = $request->input('tgl_klaim_akhir');

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Mar 24, 2026 at 05:32 PM
+-- Generation Time: Mar 24, 2026 at 07:03 PM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -301,7 +301,7 @@ CREATE TABLE `personal_access_tokens` (
 --
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(9, 'App\\Models\\User', 1, 'api-token', '48920dc0eda16c0dbc58eccdf569cf2b91d66ad1aa7f8ce6c2d51875ecaad8b9', '[\"*\"]', '2026-03-24 10:16:21', NULL, '2026-03-24 07:41:51', '2026-03-24 10:16:21');
+(9, 'App\\Models\\User', 1, 'api-token', '48920dc0eda16c0dbc58eccdf569cf2b91d66ad1aa7f8ce6c2d51875ecaad8b9', '[\"*\"]', '2026-03-24 11:56:36', NULL, '2026-03-24 07:41:51', '2026-03-24 11:56:36');
 
 -- --------------------------------------------------------
 
@@ -323,7 +323,7 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('AXBO8lAjGXEbIny1E6IPIZGras4ywXnZAQHKI4sS', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJvZWxxRktRMU9ScUlDUXRsbDdSM2VFM1JTMW5Sc2YwSmV2NGllTmZqIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1774373513);
+('AXBO8lAjGXEbIny1E6IPIZGras4ywXnZAQHKI4sS', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJvZWxxRktRMU9ScUlDUXRsbDdSM2VFM1JTMW5Sc2YwSmV2NGllTmZqIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1774378295);
 
 -- --------------------------------------------------------
 
@@ -333,10 +333,10 @@ INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, 
 
 CREATE TABLE `t_klaim` (
   `id` int NOT NULL,
+  `id_vessel` int NOT NULL,
   `no_klaim_awal` varchar(100) NOT NULL,
   `tgl_klaim_awal` varchar(100) NOT NULL,
   `jenis_klaim` varchar(100) NOT NULL,
-  `kode_vessel` varchar(100) NOT NULL,
   `currency` varchar(100) NOT NULL,
   `no_klaim_akhir` varchar(100) NOT NULL,
   `tgl_klaim_akhir` varchar(100) NOT NULL,
@@ -409,6 +409,14 @@ CREATE TABLE `t_master_cable` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `t_master_cable`
+--
+
+INSERT INTO `t_master_cable` (`id`, `id_vessel`, `no_voyage_gab`, `no_voyage`, `jenis_voyage`, `captain`, `atd_port`, `atd_time`, `atd_rob`, `ata_port`, `ata_time`, `ata_rob`, `distance`, `speed`, `est_sail_day`, `act_sail_day`, `charter_rate_day`, `est_claim_speed`, `std_bunker_cons`, `act_bunker_cons`, `excess_bunker`, `bunker_price`, `est_claim_bunker`, `status`, `file_upload`, `user_id`, `created_at`, `updated_at`) VALUES
+(1, 1, '001/L2025', '25001', 'L', 'captain1', 'Pangkalan Balam', '2025-01-05T13:59:31', '30.365', 'Tg. Uban', '2025-01-08T13:00:29', '15.683', '288', '22', '0.545455', '2.959005', '0.677419', '1.634985', '12', '14.682', '2.682', '14950', '33961227.3', 'OPEN', NULL, 1, '2026-03-24 11:31:18', '2026-03-24 11:31:18'),
+(2, 1, '001/L2026', '26001', 'L', 'captain2', 'Panjang', '2026-01-04T17:30', '62.019', 'Belinyu', '2026-01-10T12:00', '49.363', '425', '4', '4.427083', '5.770833', '0.677419', '0.910282', '10', '12.656', '2.656', '15000', '33744480', 'OPEN', NULL, 1, '2026-03-24 11:40:49', '2026-03-24 11:40:49');
 
 -- --------------------------------------------------------
 
@@ -631,7 +639,7 @@ ALTER TABLE `t_klaim_detail`
 -- AUTO_INCREMENT for table `t_master_cable`
 --
 ALTER TABLE `t_master_cable`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
