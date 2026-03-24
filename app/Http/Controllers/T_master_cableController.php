@@ -13,7 +13,6 @@ class T_master_cableController extends Controller
     {
         $data = T_master_cable::get();
 
-        
         return response()->json([
             'success' => true,
             'message' => 'Data T_master_cable berhasil diambil',
