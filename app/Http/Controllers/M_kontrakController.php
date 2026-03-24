@@ -24,7 +24,11 @@ class M_kontrakController extends Controller
     {
         $id = $request->route('id');
 
-        $data = M_kontrak::where('id', $id)->first();
+        $data = M_kontrak::query()
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 'm_kontrak.id_vessel')
+            ->where('m_kontrak.id', $id)
+            ->select('m_kontrak.*', 'm_vessel.kode_vessel')
+            ->first();
         
         return response()->json([
             'success' => true,
