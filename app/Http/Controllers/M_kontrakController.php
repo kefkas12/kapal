@@ -38,8 +38,8 @@ class M_kontrakController extends Controller
         try {
             DB::beginTransaction();
             $m_kontrak = new M_kontrak();
+            $m_kontrak->id_vessel = $request->input('id_vessel');
             $m_kontrak->no_kontrak = $request->input('no_kontrak');
-            $m_kontrak->kode_vessel = $request->input('kode_vessel');
             $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
             $m_kontrak->tgl_akhir_kontrak = $request->input('tgl_akhir_kontrak');
             $m_kontrak->charter_rate = $request->input('charter_rate');
@@ -71,7 +71,6 @@ class M_kontrakController extends Controller
             DB::beginTransaction();
             $m_kontrak = M_kontrak::where('id', $id)->firstOrFail();
             $m_kontrak->no_kontrak = $request->input('no_kontrak');
-            $m_kontrak->kode_vessel = $request->input('kode_vessel');
             $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
             $m_kontrak->tgl_akhir_kontrak = $request->input('tgl_akhir_kontrak');
             $m_kontrak->charter_rate = $request->input('charter_rate');

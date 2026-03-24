@@ -36,6 +36,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
         Route::delete('/{id}', 'delete');
+
+        Route::get('/kontrak/{id}', 'kontrak');
     });
 
     Route::controller(T_klaim_detailController::class)->prefix('t_klaim_detail')->group(function () {

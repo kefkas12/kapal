@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\M_kontrak;
 use App\Models\M_vessel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -99,5 +100,18 @@ class M_vesselController extends Controller
             DB::rollBack();
             throw $e;
         }
+    }
+
+    public function Kontrak(Request $request)
+    {
+        $id = $request->route('id');
+
+        $data = M_kontrak::where('id_vessel', $id)->get();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Data M_kontrak dari M_vessel berhasil diambil',
+            'data'    => $data
+        ]);
     }
 }
