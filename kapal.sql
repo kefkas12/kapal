@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Mar 24, 2026 at 07:03 PM
+-- Generation Time: Mar 24, 2026 at 07:33 PM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -301,7 +301,7 @@ CREATE TABLE `personal_access_tokens` (
 --
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(9, 'App\\Models\\User', 1, 'api-token', '48920dc0eda16c0dbc58eccdf569cf2b91d66ad1aa7f8ce6c2d51875ecaad8b9', '[\"*\"]', '2026-03-24 11:56:36', NULL, '2026-03-24 07:41:51', '2026-03-24 11:56:36');
+(9, 'App\\Models\\User', 1, 'api-token', '48920dc0eda16c0dbc58eccdf569cf2b91d66ad1aa7f8ce6c2d51875ecaad8b9', '[\"*\"]', '2026-03-24 12:12:09', NULL, '2026-03-24 07:41:51', '2026-03-24 12:12:09');
 
 -- --------------------------------------------------------
 
@@ -323,7 +323,7 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('AXBO8lAjGXEbIny1E6IPIZGras4ywXnZAQHKI4sS', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJvZWxxRktRMU9ScUlDUXRsbDdSM2VFM1JTMW5Sc2YwSmV2NGllTmZqIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1774378295);
+('AXBO8lAjGXEbIny1E6IPIZGras4ywXnZAQHKI4sS', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJvZWxxRktRMU9ScUlDUXRsbDdSM2VFM1JTMW5Sc2YwSmV2NGllTmZqIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1774379012);
 
 -- --------------------------------------------------------
 
@@ -334,16 +334,23 @@ INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, 
 CREATE TABLE `t_klaim` (
   `id` int NOT NULL,
   `id_vessel` int NOT NULL,
-  `no_klaim_awal` varchar(100) NOT NULL,
-  `tgl_klaim_awal` varchar(100) NOT NULL,
-  `jenis_klaim` varchar(100) NOT NULL,
-  `currency` varchar(100) NOT NULL,
-  `no_klaim_akhir` varchar(100) NOT NULL,
-  `tgl_klaim_akhir` varchar(100) NOT NULL,
+  `no_klaim_awal` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `tgl_klaim_awal` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `jenis_klaim` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `currency` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `no_klaim_akhir` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `tgl_klaim_akhir` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `user_id` int NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `t_klaim`
+--
+
+INSERT INTO `t_klaim` (`id`, `id_vessel`, `no_klaim_awal`, `tgl_klaim_awal`, `jenis_klaim`, `currency`, `no_klaim_akhir`, `tgl_klaim_akhir`, `user_id`, `created_at`, `updated_at`) VALUES
+(1, 1, '1', '2026-03-25', 'SS', 'USD', NULL, NULL, 1, '2026-03-24 12:10:14', '2026-03-24 12:10:14');
 
 -- --------------------------------------------------------
 
@@ -353,8 +360,9 @@ CREATE TABLE `t_klaim` (
 
 CREATE TABLE `t_klaim_detail` (
   `id` int NOT NULL,
-  `no_klaim_awal` varchar(100) DEFAULT NULL,
-  `jenis_klaim` varchar(100) DEFAULT NULL,
+  `id_klaim` int NOT NULL,
+  `id_cable` int DEFAULT NULL,
+  `id_kontrak` int DEFAULT NULL,
   `no_urut` varchar(100) DEFAULT NULL,
   `no_voyage_gab` varchar(100) DEFAULT NULL,
   `no_kontrak` varchar(100) DEFAULT NULL,
@@ -627,7 +635,7 @@ ALTER TABLE `personal_access_tokens`
 -- AUTO_INCREMENT for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail`

@@ -38,8 +38,9 @@ class T_klaim_detailController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim_detail = new T_klaim_detail();
-            $t_klaim_detail->no_klaim_awal = $request->input('no_klaim_awal');
-            $t_klaim_detail->jenis_klaim = $request->input('jenis_klaim');
+            $t_klaim_detail->id_klaim = $request->input('id_klaim');
+            $t_klaim_detail->id_cable = $request->input('id_cable');
+            $t_klaim_detail->id_kontrak = $request->input('id_kontrak');
             $t_klaim_detail->no_urut = $request->input('no_urut');
             $t_klaim_detail->no_voyage_gab = $request->input('no_voyage_gab');
             $t_klaim_detail->no_kontrak = $request->input('no_kontrak');
@@ -74,8 +75,9 @@ class T_klaim_detailController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
-            $t_klaim_detail->no_klaim_awal = $request->input('no_klaim_awal');
-            $t_klaim_detail->jenis_klaim = $request->input('jenis_klaim');
+            $t_klaim_detail->id_klaim = $request->input('id_klaim');
+            $t_klaim_detail->id_cable = $request->input('id_cable');
+            $t_klaim_detail->id_kontrak = $request->input('id_kontrak');
             $t_klaim_detail->no_urut = $request->input('no_urut');
             $t_klaim_detail->no_voyage_gab = $request->input('no_voyage_gab');
             $t_klaim_detail->no_kontrak = $request->input('no_kontrak');
