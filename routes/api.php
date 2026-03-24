@@ -56,7 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', 'delete');
     });
 
-    Route::controller(T_master_cableController::class)->prefix('t_master_cable')->group(function () {
+    Route::controller(T_master_cableController::class)->prefix('cable')->group(function () {
         Route::get('/', 'index');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');

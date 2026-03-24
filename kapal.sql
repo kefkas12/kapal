@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Mar 22, 2026 at 03:58 AM
+-- Generation Time: Mar 24, 2026 at 05:32 PM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -131,8 +131,8 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 
 CREATE TABLE `m_kontrak` (
   `id` int NOT NULL,
+  `id_vessel` int NOT NULL,
   `no_kontrak` varchar(100) NOT NULL,
-  `kode_vessel` varchar(100) NOT NULL,
   `tgl_awal_kontrak` varchar(100) NOT NULL,
   `tgl_akhir_kontrak` varchar(100) NOT NULL,
   `charter_rate` varchar(100) NOT NULL,
@@ -146,6 +146,14 @@ CREATE TABLE `m_kontrak` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `m_kontrak`
+--
+
+INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_kontrak`, `tgl_awal_kontrak`, `tgl_akhir_kontrak`, `charter_rate`, `speed`, `me_ballast`, `me_laden`, `pumping_rate`, `status`, `file_upload`, `user_id`, `created_at`, `updated_at`) VALUES
+(1, 1, 'kontrak1', '2026-03-01', '2026-03-24', '11', '12', '13', '14', '15', 'NON ACTIVE', NULL, 1, '2026-03-24 09:12:59', '2026-03-24 10:06:40'),
+(2, 1, 'kontrak2', '2026-03-19', '2026-03-25', '21', '22', '23', '24', '25', 'NON ACTIVE', NULL, 1, '2026-03-24 10:04:05', '2026-03-24 10:06:27');
 
 -- --------------------------------------------------------
 
@@ -163,6 +171,15 @@ CREATE TABLE `m_vessel` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `m_vessel`
+--
+
+INSERT INTO `m_vessel` (`id`, `kode_vessel`, `nama_vessel`, `jenis_vessel`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(1, 'vessel1', 'vessel1', 'TB/OB', 'ACTIVE', 1, '2026-03-24 07:35:50', '2026-03-24 07:58:35'),
+(2, 'vessel2', 'vessel2', '/SMALL', 'ACTIVE', 1, '2026-03-24 07:58:51', '2026-03-24 07:58:51'),
+(3, 'vessel3', 'vessel3', 'I/SPOB', 'NON ACTIVE', 1, '2026-03-24 07:59:01', '2026-03-24 07:59:01');
 
 -- --------------------------------------------------------
 
@@ -284,7 +301,7 @@ CREATE TABLE `personal_access_tokens` (
 --
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(3, 'App\\Models\\User', 1, 'api-token', 'ea6e9ada20b3404f805a1d8a0ea4dcd2f788908fa86710fa3a69e455472fa6c0', '[\"*\"]', '2026-03-21 20:52:46', NULL, '2026-03-21 20:50:19', '2026-03-21 20:52:46');
+(9, 'App\\Models\\User', 1, 'api-token', '48920dc0eda16c0dbc58eccdf569cf2b91d66ad1aa7f8ce6c2d51875ecaad8b9', '[\"*\"]', '2026-03-24 10:16:21', NULL, '2026-03-24 07:41:51', '2026-03-24 10:16:21');
 
 -- --------------------------------------------------------
 
@@ -306,8 +323,7 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('OggKSRKYAJ1E3CcuVuiq1zKnuKyXD91FOj91LARx', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJjYkNGQVZPa3BUVzJ2MnY2eEExMGFFN2dMZHQwakd6VnppYXRQeW1KIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1774095827),
-('VTQ3GFt47jth7hNPkn5dGPpAUIdsSsglpLWTghpH', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiI3VVdLaWtzYzJuSnRBNWZxeU1FQWFKOEViRjdzbE13anlFNFczR0lHIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1774151378);
+('AXBO8lAjGXEbIny1E6IPIZGras4ywXnZAQHKI4sS', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJvZWxxRktRMU9ScUlDUXRsbDdSM2VFM1JTMW5Sc2YwSmV2NGllTmZqIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1774373513);
 
 -- --------------------------------------------------------
 
@@ -365,10 +381,10 @@ CREATE TABLE `t_klaim_detail` (
 
 CREATE TABLE `t_master_cable` (
   `id` int NOT NULL,
+  `id_vessel` int NOT NULL,
   `no_voyage_gab` varchar(100) NOT NULL,
   `no_voyage` varchar(10) NOT NULL,
   `jenis_voyage` varchar(30) NOT NULL,
-  `kode_vessel` varchar(100) NOT NULL,
   `captain` varchar(100) DEFAULT NULL,
   `atd_port` varchar(100) DEFAULT NULL,
   `atd_time` varchar(100) DEFAULT NULL,
@@ -585,19 +601,19 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `m_kontrak`
 --
 ALTER TABLE `m_kontrak`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `m_vessel`
 --
 ALTER TABLE `m_vessel`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `t_klaim`

@@ -38,10 +38,10 @@ class T_master_cableController extends Controller
         try {
             DB::beginTransaction();
             $t_master_cable = new T_master_cable();
+            $t_master_cable->id_vessel = $request->input('id_vessel');
             $t_master_cable->no_voyage_gab = $request->input('no_voyage_gab');
             $t_master_cable->no_voyage = $request->input('no_voyage');
             $t_master_cable->jenis_voyage = $request->input('jenis_voyage');
-            $t_master_cable->kode_vessel = $request->input('kode_vessel');
             $t_master_cable->captain = $request->input('captain');
             $t_master_cable->atd_port = $request->input('atd_port');
             $t_master_cable->atd_time = $request->input('atd_time');
