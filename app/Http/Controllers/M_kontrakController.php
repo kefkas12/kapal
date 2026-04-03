@@ -107,6 +107,15 @@ class M_kontrakController extends Controller
     {
         try {
             DB::beginTransaction();
+            $request->validate([
+                'no_kontrak' => 'required|string|unique:m_kontrak,no_kontrak',
+                'tgl_awal_kontrak' => 'nullable|date',
+                'tgl_akhir_kontrak' => 'nullable|date|after:tgl_awal_kontrak',
+            ], [
+                'no_kontrak.required' => 'No Kontrak wajib diisi.',
+                'no_kontrak.unique' => 'No Kontrak sudah digunakan.',
+                'tgl_akhir_kontrak.after' => 'Tgl akhir kontrak harus lebih besar dari tgl awal kontrak.',
+            ]);
             $m_kontrak = new M_kontrak();
             $m_kontrak->id_vessel = $request->input('id_vessel');
             $m_kontrak->no_kontrak = $request->input('no_kontrak');
@@ -120,6 +129,11 @@ class M_kontrakController extends Controller
             $m_kontrak->status = $request->input('status');
             $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
+
+            M_kontrak::where('id_vessel', $m_kontrak->id_vessel)
+                ->where('id', '!=', $m_kontrak->id)
+                ->update(['status' => 'NON ACTIVE']);
+
             DB::commit();
 
             return response()->json([
@@ -139,6 +153,15 @@ class M_kontrakController extends Controller
 
         try {
             DB::beginTransaction();
+            $request->validate([
+                'no_kontrak' => 'required|string|unique:m_kontrak,no_kontrak,' . $id,
+                'tgl_awal_kontrak' => 'nullable|date',
+                'tgl_akhir_kontrak' => 'nullable|date|after:tgl_awal_kontrak',
+            ], [
+                'no_kontrak.required' => 'No Kontrak wajib diisi.',
+                'no_kontrak.unique' => 'No Kontrak sudah digunakan.',
+                'tgl_akhir_kontrak.after' => 'Tgl akhir kontrak harus lebih besar dari tgl awal kontrak.',
+            ]);
             $m_kontrak = M_kontrak::where('id', $id)->firstOrFail();
             $m_kontrak->no_kontrak = $request->input('no_kontrak');
             $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
@@ -151,6 +174,12 @@ class M_kontrakController extends Controller
             $m_kontrak->status = $request->input('status');
             $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
+
+            if ($m_kontrak->status === 'ACTIVE') {
+                M_kontrak::where('id_vessel', $m_kontrak->id_vessel)
+                    ->where('id', '!=', $m_kontrak->id)
+                    ->update(['status' => 'NON ACTIVE']);
+            }
             DB::commit();
 
             return response()->json([
@@ -169,8 +198,28 @@ class M_kontrakController extends Controller
 
         try {
             DB::beginTransaction();
-            $m_kontrak = M_kontrak::where('id', $id)->firstOrFail();
+            $m_kontrak = M_kontrak::where('id', $id)->first();
+            if (!$m_kontrak) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data M_kontrak tidak ditemukan'
+                ]);
+            }
+            $idVessel = $m_kontrak->id_vessel;
+            $deletedStatus = $m_kontrak->status;
             $m_kontrak->delete();
+
+            if ($deletedStatus === 'ACTIVE') {
+                $latestKontrak = M_kontrak::where('id_vessel', $idVessel)
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if ($latestKontrak) {
+                    $latestKontrak->status = 'ACTIVE';
+                    $latestKontrak->save();
+                }
+            }
             DB::commit();
 
             return response()->json([

@@ -88,6 +88,12 @@ class M_vesselController extends Controller
     {
         try {
             DB::beginTransaction();
+            $request->validate([
+                'kode_vessel' => 'required|string|unique:m_vessel,kode_vessel',
+            ], [
+                'kode_vessel.required' => 'Kode vessel wajib diisi.',
+                'kode_vessel.unique' => 'Kode vessel sudah digunakan.',
+            ]);
             $m_vessel = new M_vessel();
             $m_vessel->kode_vessel = $request->input('kode_vessel');
             $m_vessel->nama_vessel = $request->input('nama_vessel');
@@ -114,6 +120,12 @@ class M_vesselController extends Controller
 
         try {
             DB::beginTransaction();
+            $request->validate([
+                'kode_vessel' => 'required|string|unique:m_vessel,kode_vessel,' . $id,
+            ], [
+                'kode_vessel.required' => 'Kode vessel wajib diisi.',
+                'kode_vessel.unique' => 'Kode vessel sudah digunakan.',
+            ]);
             $m_vessel = M_vessel::where('id', $id)->firstOrFail();
             $m_vessel->kode_vessel = $request->input('kode_vessel');
             $m_vessel->nama_vessel = $request->input('nama_vessel');
