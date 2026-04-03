@@ -11,7 +11,14 @@ class T_klaim_detailController extends Controller
 {
     public function index(Request $request)
     {
-        $data = T_klaim_detail::get();
+        $query = T_klaim_detail::query();
+
+        $idKlaim = $request->input('id_klaim');
+        if (!is_null($idKlaim) && $idKlaim !== '') {
+            $query->where('id_klaim', $idKlaim);
+        }
+
+        $data = $query->get();
 
         return response()->json([
             'success' => true,

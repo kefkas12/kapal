@@ -104,7 +104,10 @@ class T_klaimController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_klaim berhasil ditambah'
+                'message' => 'Data T_klaim berhasil ditambah',
+                'data' => [
+                    'id' => $t_klaim->id
+                ]
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

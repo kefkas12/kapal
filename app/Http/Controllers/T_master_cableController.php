@@ -40,6 +40,11 @@ class T_master_cableController extends Controller
             $query->where('status', $status);
         }
 
+        $idVessel = $request->input('id_vessel');
+        if (!is_null($idVessel) && $idVessel !== '') {
+            $query->where('id_vessel', $idVessel);
+        }
+
         $allowedSort = ['id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'captain', 'atd_port', 'ata_port', 'status', 'created_at'];
         $sortBy = $request->input('sort_by', 'id');
         if (!in_array($sortBy, $allowedSort, true)) {
