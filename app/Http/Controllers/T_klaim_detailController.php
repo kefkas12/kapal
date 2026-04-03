@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\T_klaim_detail;
 use App\Models\File_upload;
+use App\Models\T_master_cable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,11 +14,13 @@ class T_klaim_detailController extends Controller
 {
     public function index(Request $request)
     {
-        $query = T_klaim_detail::query();
+        $query = T_klaim_detail::query()
+            ->leftJoin('m_kontrak', 'm_kontrak.id', '=', 't_klaim_detail.id_kontrak')
+            ->select('t_klaim_detail.*', 'm_kontrak.no_kontrak as no_kontrak');
 
         $idKlaim = $request->input('id_klaim');
         if (!is_null($idKlaim) && $idKlaim !== '') {
-            $query->where('id_klaim', $idKlaim);
+            $query->where('t_klaim_detail.id_klaim', $idKlaim);
         }
 
         $data = $query->get();
@@ -33,7 +36,11 @@ class T_klaim_detailController extends Controller
     {
         $id = $request->route('id');
 
-        $data = T_klaim_detail::where('id', $id)->first();
+        $data = T_klaim_detail::query()
+            ->leftJoin('m_kontrak', 'm_kontrak.id', '=', 't_klaim_detail.id_kontrak')
+            ->where('t_klaim_detail.id', $id)
+            ->select('t_klaim_detail.*', 'm_kontrak.no_kontrak as no_kontrak')
+            ->first();
         $files = File_upload::where('id_klaim_detail', $id)
             ->orderBy('id', 'asc')
             ->get();
@@ -70,6 +77,11 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->status = $request->input('status');
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
+
+            if ($t_klaim_detail->status === 'CLOSE' && $t_klaim_detail->id_cable) {
+                T_master_cable::where('id', $t_klaim_detail->id_cable)
+                    ->update(['status' => 'CLOSE']);
+            }
 
             $files = $request->file('files', []);
             if ($files) {
@@ -120,6 +132,11 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->status = $request->input('status');
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
+
+            if ($t_klaim_detail->status === 'CLOSE' && $t_klaim_detail->id_cable) {
+                T_master_cable::where('id', $t_klaim_detail->id_cable)
+                    ->update(['status' => 'CLOSE']);
+            }
 
             $files = $request->file('files', []);
             if ($files) {

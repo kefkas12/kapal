@@ -22,29 +22,34 @@ class T_master_cableController extends Controller
             $perPage = 100;
         }
 
-        $query = T_master_cable::query();
+        $query = T_master_cable::query()
+            ->leftJoin('m_kontrak', function ($join) {
+                $join->on('m_kontrak.id_vessel', '=', 't_master_cable.id_vessel')
+                    ->where('m_kontrak.status', '=', 'ACTIVE');
+            })
+            ->select('t_master_cable.*', 'm_kontrak.id as id_kontrak', 'm_kontrak.no_kontrak');
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('no_voyage_gab', 'like', "%{$search}%")
-                    ->orWhere('no_voyage', 'like', "%{$search}%")
-                    ->orWhere('jenis_voyage', 'like', "%{$search}%")
-                    ->orWhere('captain', 'like', "%{$search}%")
-                    ->orWhere('atd_port', 'like', "%{$search}%")
-                    ->orWhere('ata_port', 'like', "%{$search}%")
-                    ->orWhere('status', 'like', "%{$search}%");
+                $q->where('t_master_cable.no_voyage_gab', 'like', "%{$search}%")
+                    ->orWhere('t_master_cable.no_voyage', 'like', "%{$search}%")
+                    ->orWhere('t_master_cable.jenis_voyage', 'like', "%{$search}%")
+                    ->orWhere('t_master_cable.captain', 'like', "%{$search}%")
+                    ->orWhere('t_master_cable.atd_port', 'like', "%{$search}%")
+                    ->orWhere('t_master_cable.ata_port', 'like', "%{$search}%")
+                    ->orWhere('t_master_cable.status', 'like', "%{$search}%");
             });
         }
 
         $status = $request->input('status');
         if (!is_null($status) && $status !== '') {
-            $query->where('status', $status);
+            $query->where('t_master_cable.status', $status);
         }
 
         $idVessel = $request->input('id_vessel');
         if (!is_null($idVessel) && $idVessel !== '') {
-            $query->where('id_vessel', $idVessel);
+            $query->where('t_master_cable.id_vessel', $idVessel);
         }
 
         $allowedSort = ['id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'captain', 'atd_port', 'ata_port', 'status', 'created_at'];
