@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\T_klaim_detail;
+use App\Models\File_upload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class T_klaim_detailController extends Controller
 {
@@ -32,11 +34,17 @@ class T_klaim_detailController extends Controller
         $id = $request->route('id');
 
         $data = T_klaim_detail::where('id', $id)->first();
+        $files = File_upload::where('id_klaim_detail', $id)
+            ->orderBy('id', 'asc')
+            ->get();
         
         return response()->json([
             'success' => true,
             'message' => 'Data details T_klaim_detail berhasil diambil',
-            'data'    => $data
+            'data'    => [
+                'detail' => $data,
+                'files' => $files,
+            ]
         ]);
     }
 
@@ -62,6 +70,20 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->status = $request->input('status');
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
+
+            $files = $request->file('files', []);
+            if ($files) {
+                foreach ($files as $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    $path = $file->store('uploads/klaim_detail', 'public');
+                    $upload = new File_upload();
+                    $upload->id_klaim_detail = $t_klaim_detail->id;
+                    $upload->nama_file = $path;
+                    $upload->save();
+                }
+            }
             DB::commit();
 
             return response()->json([
@@ -98,6 +120,20 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->status = $request->input('status');
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
+
+            $files = $request->file('files', []);
+            if ($files) {
+                foreach ($files as $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    $path = $file->store('uploads/klaim_detail', 'public');
+                    $upload = new File_upload();
+                    $upload->id_klaim_detail = $t_klaim_detail->id;
+                    $upload->nama_file = $path;
+                    $upload->save();
+                }
+            }
             DB::commit();
 
             return response()->json([

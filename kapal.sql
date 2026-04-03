@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 03, 2026 at 07:53 PM
+-- Generation Time: Apr 03, 2026 at 08:47 PM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -71,10 +71,22 @@ CREATE TABLE `file_upload` (
   `id` int NOT NULL,
   `id_kontrak` int DEFAULT NULL,
   `id_cable` int DEFAULT NULL,
+  `id_klaim_detail` int DEFAULT NULL,
   `nama_file` text,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `file_upload`
+--
+
+INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_detail`, `nama_file`, `created_at`, `updated_at`) VALUES
+(4, 16, NULL, NULL, 'uploads/kontrak/lsdzy4XLkdcuCGxlihAPUHHSvQpKccgwwjTiZ5bj.txt', '2026-04-03 13:09:16', '2026-04-03 13:09:16'),
+(5, 16, NULL, NULL, 'uploads/kontrak/pFpoFcur8RINZXmOG9YXKuacigrPMc9XAkbd7ZOg.txt', '2026-04-03 13:09:16', '2026-04-03 13:09:16'),
+(6, 16, NULL, NULL, 'uploads/kontrak/ObykSGi7Lq2jRRQmKgYUxHUabooVKY8PCS3SVXUD.png', '2026-04-03 13:09:16', '2026-04-03 13:09:16'),
+(8, NULL, 5, NULL, 'uploads/cable/WmbEkbsaRtkub9QaQH7fAIEqRXU6uxyYaQmuaDuQ.png', '2026-04-03 13:13:41', '2026-04-03 13:13:41'),
+(9, NULL, 5, NULL, 'uploads/cable/u8mZZJekYIPe0sFI3zfpA2VaTwW0QBwmy7W3J4K1.txt', '2026-04-03 13:13:41', '2026-04-03 13:13:41');
 
 -- --------------------------------------------------------
 
@@ -136,7 +148,32 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (6, '2026_03_21_121229_create_oauth_access_tokens_table', 1),
 (7, '2026_03_21_121230_create_oauth_refresh_tokens_table', 1),
 (8, '2026_03_21_121231_create_oauth_clients_table', 1),
-(9, '2026_03_21_121232_create_oauth_device_codes_table', 1);
+(9, '2026_03_21_121232_create_oauth_device_codes_table', 1),
+(10, '2026_04_03_202048_create_permission_tables', 2);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `model_has_permissions`
+--
+
+CREATE TABLE `model_has_permissions` (
+  `permission_id` bigint UNSIGNED NOT NULL,
+  `model_type` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `model_id` bigint UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `model_has_roles`
+--
+
+CREATE TABLE `model_has_roles` (
+  `role_id` bigint UNSIGNED NOT NULL,
+  `model_type` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `model_id` bigint UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -166,8 +203,8 @@ CREATE TABLE `m_kontrak` (
 --
 
 INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_kontrak`, `tgl_awal_kontrak`, `tgl_akhir_kontrak`, `charter_rate`, `speed`, `me_ballast`, `me_laden`, `pumping_rate`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(16, 34, '004/TCP/1/2024', '2024-01-04T00:00', '2026-01-04T00:00', '55000', '4', '1.8', '1.8', '200', 'NON ACTIVE', 1, '2026-04-03 09:02:34', '2026-04-03 10:43:00'),
-(17, 34, '038/TCP/V/2025', '2025-05-05T13:24', '2026-05-05T13:24', '55000', '4', '10.2', '10.2', '200', 'ACTIVE', 1, '2026-04-03 09:04:40', '2026-04-03 10:43:00');
+(16, 34, '004/TCP/1/2024', '2024-01-04T00:00', '2026-01-04T00:00', '55000', '4', '1.8', '1.8', '200', 'NON ACTIVE', 1, '2026-04-03 09:02:34', '2026-04-03 13:38:37'),
+(17, 34, '038/TCP/V/2025', '2025-05-05T13:24', '2026-05-05T13:24', '55000', '4', '10.2', '10.2', '200', 'ACTIVE', 1, '2026-04-03 09:04:40', '2026-04-03 13:38:43');
 
 -- --------------------------------------------------------
 
@@ -292,6 +329,20 @@ CREATE TABLE `password_reset_tokens` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `permissions`
+--
+
+CREATE TABLE `permissions` (
+  `id` bigint UNSIGNED NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `guard_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `personal_access_tokens`
 --
 
@@ -313,7 +364,33 @@ CREATE TABLE `personal_access_tokens` (
 --
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(22, 'App\\Models\\User', 1, 'api-token', '8cdb0b3214096ce632f0885a07ccc93b61b8a405083dd3e4256e689227382531', '[\"*\"]', '2026-04-03 12:52:50', NULL, '2026-04-03 02:14:46', '2026-04-03 12:52:50');
+(22, 'App\\Models\\User', 1, 'api-token', '8cdb0b3214096ce632f0885a07ccc93b61b8a405083dd3e4256e689227382531', '[\"*\"]', '2026-04-03 13:17:49', NULL, '2026-04-03 02:14:46', '2026-04-03 13:17:49'),
+(24, 'App\\Models\\User', 2, 'api-token', '97e6a6fb374ad7e4ec4207b532773a5fd7e50fd7abc59bdec0e055cfb1d11543', '[\"*\"]', '2026-04-03 13:46:33', NULL, '2026-04-03 13:28:58', '2026-04-03 13:46:33');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `roles`
+--
+
+CREATE TABLE `roles` (
+  `id` bigint UNSIGNED NOT NULL,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `guard_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `role_has_permissions`
+--
+
+CREATE TABLE `role_has_permissions` (
+  `permission_id` bigint UNSIGNED NOT NULL,
+  `role_id` bigint UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -385,7 +462,7 @@ CREATE TABLE `t_klaim` (
 --
 
 INSERT INTO `t_klaim` (`id`, `id_vessel`, `no_klaim_awal`, `tgl_klaim_awal`, `jenis_klaim`, `currency`, `no_klaim_akhir`, `tgl_klaim_akhir`, `user_id`, `created_at`, `updated_at`) VALUES
-(11, 34, '6003/PIS2330/2025-S6', '2026-04-04', 'SS', 'USD', NULL, NULL, 1, '2026-04-03 12:45:19', '2026-04-03 12:45:19');
+(14, 34, '6003/PIS2330/2025-S6', '2026-04-04', 'SS', 'IDR', NULL, NULL, 2, '2026-04-03 13:41:40', '2026-04-03 13:41:40');
 
 -- --------------------------------------------------------
 
@@ -421,8 +498,10 @@ CREATE TABLE `t_klaim_detail` (
 --
 
 INSERT INTO `t_klaim_detail` (`id`, `id_klaim`, `id_cable`, `id_kontrak`, `no_urut`, `no_voyage_gab`, `no_kontrak`, `val_potensi`, `val_klaim_awal`, `val_klaim_akhir`, `kurs`, `val_klaim_akhir_idr`, `keterangan`, `no_tagihan_klaim`, `no_tagihan_dipotong`, `status`, `file_upload`, `user_id`, `created_at`, `updated_at`) VALUES
-(9, 11, 5, NULL, '01', '26002/D2', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'OPEN', NULL, 1, '2026-04-03 12:52:47', '2026-04-03 12:52:48'),
-(10, 11, 4, NULL, '02', '26001/L', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'OPEN', NULL, 1, '2026-04-03 12:52:48', '2026-04-03 12:52:49');
+(13, 13, 5, NULL, '01', '26002/D2', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'OPEN', NULL, 2, '2026-04-03 13:34:27', '2026-04-03 13:34:27'),
+(14, 13, 4, NULL, '02', '26001/L', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'OPEN', NULL, 2, '2026-04-03 13:34:28', '2026-04-03 13:34:28'),
+(15, 14, 5, NULL, '01', '26002/D2', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'OPEN', NULL, 2, '2026-04-03 13:41:40', '2026-04-03 13:41:40'),
+(16, 14, 4, NULL, '02', '26001/L', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'OPEN', NULL, 2, '2026-04-03 13:41:41', '2026-04-03 13:41:41');
 
 -- --------------------------------------------------------
 
@@ -465,8 +544,8 @@ CREATE TABLE `t_master_cable` (
 --
 
 INSERT INTO `t_master_cable` (`id`, `id_vessel`, `no_voyage_gab`, `no_voyage`, `jenis_voyage`, `captain`, `atd_port`, `atd_time`, `atd_rob`, `ata_port`, `ata_time`, `ata_rob`, `distance`, `speed`, `est_sail_day`, `act_sail_day`, `charter_rate_day`, `est_claim_speed`, `std_bunker_cons`, `act_bunker_cons`, `excess_bunker`, `bunker_price`, `est_claim_bunker`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(4, 34, '26001/L', '26001', 'L', 'STEVEN', 'JAMBI', '2025-06-03T09:00', '28.807', 'PANJANG', '2025-06-08T07:30', '18.154', '480', '4', '5', '4.9375', '1833.333333', '-114.583333', '10.2', '10.653', '0.453', '13500', '5179828.5', 'OPEN', 1, '2026-04-03 10:28:03', '2026-04-03 11:06:35'),
-(5, 34, '26002/D2', '26002', 'D2', 'STEVEN', 'PANJANG', '2025-06-10T20:00', '56.832', 'JAMBI', '2025-06-15T19:30', '45.849', '480', '4', '5', '4.979167', '1833.333333', '-38.193833', '10.2', '10.983', '0.783', '13500', '8953213.5', 'OPEN', 1, '2026-04-03 10:46:06', '2026-04-03 11:19:48');
+(4, 34, '26001/L', '26001', 'L', 'STEVEN', 'JAMBI', '2025-06-03T09:00', '28.807', 'PANJANG', '2025-06-08T07:30', '18.154', '480', '4', '5', '4.9375', '1833.333333', '-114.583333', '10.2', '10.653', '0.453', '13500', '5179828.5', 'APPROVE', 2, '2026-04-03 10:28:03', '2026-04-03 13:32:28'),
+(5, 34, '26002/D2', '26002', 'D2', 'STEVEN', 'PANJANG', '2025-06-10T20:00', '56.832', 'JAMBI', '2025-06-15T19:30', '45.849', '480', '4', '5', '4.979167', '1833.333333', '-38.193833', '10.2', '10.983', '0.783', '13500', '8953213.5', 'APPROVE', 2, '2026-04-03 10:46:06', '2026-04-03 13:34:06');
 
 -- --------------------------------------------------------
 
@@ -490,7 +569,8 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `password`, `remember_token`, `created_at`, `updated_at`) VALUES
-(1, 'steven', 'work.stevensantoso@gmail.com', NULL, '$2y$12$wOlAWPsdCj1RgS.7ObDT3O6LaLljs3fWJkuC1nEni2tx7mqIyarl2', NULL, '2026-03-21 05:20:52', '2026-03-21 05:20:52');
+(1, 'steven', 'work.stevensantoso@gmail.com', NULL, '$2y$12$wOlAWPsdCj1RgS.7ObDT3O6LaLljs3fWJkuC1nEni2tx7mqIyarl2', NULL, '2026-03-21 05:20:52', '2026-03-21 05:20:52'),
+(2, 'approve steven', 'approve.stevensantoso@gmail.com', NULL, '$2y$12$Iy9zQs2qRJB3QuwTiRqDiuC9qxlhmGFDKRjXyWqtUxz5ro/cOYUOa', NULL, '2026-04-03 13:18:28', '2026-04-03 13:18:28');
 
 --
 -- Indexes for dumped tables
@@ -541,6 +621,20 @@ ALTER TABLE `job_batches`
 --
 ALTER TABLE `migrations`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `model_has_permissions`
+--
+ALTER TABLE `model_has_permissions`
+  ADD PRIMARY KEY (`permission_id`,`model_id`,`model_type`),
+  ADD KEY `model_has_permissions_model_id_model_type_index` (`model_id`,`model_type`);
+
+--
+-- Indexes for table `model_has_roles`
+--
+ALTER TABLE `model_has_roles`
+  ADD PRIMARY KEY (`role_id`,`model_id`,`model_type`),
+  ADD KEY `model_has_roles_model_id_model_type_index` (`model_id`,`model_type`);
 
 --
 -- Indexes for table `m_kontrak`
@@ -598,6 +692,13 @@ ALTER TABLE `password_reset_tokens`
   ADD PRIMARY KEY (`email`);
 
 --
+-- Indexes for table `permissions`
+--
+ALTER TABLE `permissions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `permissions_name_guard_name_unique` (`name`,`guard_name`);
+
+--
 -- Indexes for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
@@ -605,6 +706,20 @@ ALTER TABLE `personal_access_tokens`
   ADD UNIQUE KEY `personal_access_tokens_token_unique` (`token`),
   ADD KEY `personal_access_tokens_tokenable_type_tokenable_id_index` (`tokenable_type`,`tokenable_id`),
   ADD KEY `personal_access_tokens_expires_at_index` (`expires_at`);
+
+--
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `roles_name_guard_name_unique` (`name`,`guard_name`);
+
+--
+-- Indexes for table `role_has_permissions`
+--
+ALTER TABLE `role_has_permissions`
+  ADD PRIMARY KEY (`permission_id`,`role_id`),
+  ADD KEY `role_has_permissions_role_id_foreign` (`role_id`);
 
 --
 -- Indexes for table `sessions`
@@ -659,7 +774,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `file_upload`
 --
 ALTER TABLE `file_upload`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -671,13 +786,13 @@ ALTER TABLE `jobs`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `m_kontrak`
 --
 ALTER TABLE `m_kontrak`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `m_vessel`
@@ -686,10 +801,22 @@ ALTER TABLE `m_vessel`
   MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
+-- AUTO_INCREMENT for table `permissions`
+--
+ALTER TABLE `permissions`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+
+--
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `settings`
@@ -701,13 +828,13 @@ ALTER TABLE `settings`
 -- AUTO_INCREMENT for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail`
 --
 ALTER TABLE `t_klaim_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `t_master_cable`
@@ -719,7 +846,30 @@ ALTER TABLE `t_master_cable`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `model_has_permissions`
+--
+ALTER TABLE `model_has_permissions`
+  ADD CONSTRAINT `model_has_permissions_permission_id_foreign` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `model_has_roles`
+--
+ALTER TABLE `model_has_roles`
+  ADD CONSTRAINT `model_has_roles_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `role_has_permissions`
+--
+ALTER TABLE `role_has_permissions`
+  ADD CONSTRAINT `role_has_permissions_permission_id_foreign` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `role_has_permissions_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
