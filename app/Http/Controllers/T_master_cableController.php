@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\T_master_cable;
+use App\Models\File_upload;
 use App\Models\Settings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class T_master_cableController extends Controller
 {
@@ -79,11 +81,17 @@ class T_master_cableController extends Controller
         $id = $request->route('id');
 
         $data = T_master_cable::where('id', $id)->first();
+        $files = File_upload::where('id_cable', $id)
+            ->orderBy('id', 'asc')
+            ->get();
         
         return response()->json([
             'success' => true,
             'message' => 'Data details T_master_cable berhasil diambil',
-            'data'    => $data
+            'data'    => [
+                'detail' => $data,
+                'files' => $files,
+            ]
         ]);
     }
 
@@ -188,6 +196,21 @@ class T_master_cableController extends Controller
             $t_master_cable->status = 'OPEN';
             $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
+
+            $files = $request->file('files', []);
+            if ($files) {
+                foreach ($files as $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    $path = $file->store('uploads/cable', 'public');
+                    $upload = new File_upload();
+                    $upload->id_cable = $t_master_cable->id;
+                    $upload->nama_file = $path;
+                    $upload->save();
+                }
+            }
+
             DB::commit();
 
             return response()->json([
@@ -231,6 +254,21 @@ class T_master_cableController extends Controller
             $t_master_cable->status = 'OPEN';
             $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
+
+            $files = $request->file('files', []);
+            if ($files) {
+                foreach ($files as $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    $path = $file->store('uploads/cable', 'public');
+                    $upload = new File_upload();
+                    $upload->id_cable = $t_master_cable->id;
+                    $upload->nama_file = $path;
+                    $upload->save();
+                }
+            }
+
             DB::commit();
 
             return response()->json([

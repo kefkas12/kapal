@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\M_kontrak;
+use App\Models\File_upload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class M_kontrakController extends Controller
 {
@@ -95,11 +97,18 @@ class M_kontrakController extends Controller
             ->where('m_kontrak.id', $id)
             ->select('m_kontrak.*', 'm_vessel.kode_vessel')
             ->first();
+
+        $files = File_upload::where('id_kontrak', $id)
+            ->orderBy('id', 'asc')
+            ->get();
         
         return response()->json([
             'success' => true,
             'message' => 'Data details M_kontrak berhasil diambil',
-            'data'    => $data
+            'data'    => [
+                'detail' => $data,
+                'files' => $files,
+            ]
         ]);
     }
 
@@ -129,6 +138,20 @@ class M_kontrakController extends Controller
             $m_kontrak->status = $request->input('status');
             $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
+
+            $files = $request->file('files', []);
+            if ($files) {
+                foreach ($files as $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    $path = $file->store('uploads/kontrak', 'public');
+                    $upload = new File_upload();
+                    $upload->id_kontrak = $m_kontrak->id;
+                    $upload->nama_file = $path;
+                    $upload->save();
+                }
+            }
 
             M_kontrak::where('id_vessel', $m_kontrak->id_vessel)
                 ->where('id', '!=', $m_kontrak->id)
@@ -174,6 +197,20 @@ class M_kontrakController extends Controller
             $m_kontrak->status = $request->input('status');
             $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
+
+            $files = $request->file('files', []);
+            if ($files) {
+                foreach ($files as $file) {
+                    if (!$file) {
+                        continue;
+                    }
+                    $path = $file->store('uploads/kontrak', 'public');
+                    $upload = new File_upload();
+                    $upload->id_kontrak = $m_kontrak->id;
+                    $upload->nama_file = $path;
+                    $upload->save();
+                }
+            }
 
             if ($m_kontrak->status === 'ACTIVE') {
                 M_kontrak::where('id_vessel', $m_kontrak->id_vessel)

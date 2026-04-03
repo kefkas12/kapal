@@ -16,6 +16,12 @@ Route::options('{any}', function () {
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
+Route::controller(\App\Http\Controllers\File_uploadController::class)->prefix('file_upload')->group(function () {
+    Route::get('/view/{id}', 'view');
+    Route::get('/download/{id}', 'download');
+    Route::delete('/{id}', 'delete');
+});
+
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/me', function (Request $request) {
@@ -68,6 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', 'edit');
         Route::delete('/{id}', 'delete');
     });
+
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
