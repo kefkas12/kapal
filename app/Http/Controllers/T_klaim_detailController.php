@@ -153,6 +153,18 @@ class T_klaim_detailController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
+
+            $files = File_upload::where('id_klaim_detail', $id)->get();
+            foreach ($files as $file) {
+                if ($file->nama_file) {
+                    $disk = Storage::disk('public');
+                    if ($disk->exists($file->nama_file)) {
+                        $disk->delete($file->nama_file);
+                    }
+                }
+                $file->delete();
+            }
+
             $t_klaim_detail->delete();
             DB::commit();
 

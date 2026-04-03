@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\T_klaim;
+use App\Models\T_klaim_detail;
+use App\Models\File_upload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class T_klaimController extends Controller
 {
@@ -150,6 +153,22 @@ class T_klaimController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim = T_klaim::where('id', $id)->firstOrFail();
+
+            $details = T_klaim_detail::where('id_klaim', $id)->get();
+            foreach ($details as $detail) {
+                $files = File_upload::where('id_klaim_detail', $detail->id)->get();
+                foreach ($files as $file) {
+                    if ($file->nama_file) {
+                        $disk = Storage::disk('public');
+                        if ($disk->exists($file->nama_file)) {
+                            $disk->delete($file->nama_file);
+                        }
+                    }
+                    $file->delete();
+                }
+                $detail->delete();
+            }
+
             $t_klaim->delete();
             DB::commit();
 
