@@ -124,7 +124,8 @@ class M_kontrakController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data M_kontrak berhasil ditambah'
+                'message' => 'Data M_kontrak berhasil ditambah',
+                'data' => $m_kontrak
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

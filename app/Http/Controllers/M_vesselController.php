@@ -99,7 +99,8 @@ class M_vesselController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data M_vessel berhasil ditambah'
+                'message' => 'Data M_vessel berhasil ditambah',
+                'data' => $m_vessel
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
