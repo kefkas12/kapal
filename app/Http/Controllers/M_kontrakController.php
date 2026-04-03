@@ -245,6 +245,18 @@ class M_kontrakController extends Controller
             }
             $idVessel = $m_kontrak->id_vessel;
             $deletedStatus = $m_kontrak->status;
+
+            $files = File_upload::where('id_kontrak', $id)->get();
+            foreach ($files as $file) {
+                if ($file->nama_file) {
+                    $disk = Storage::disk('public');
+                    if ($disk->exists($file->nama_file)) {
+                        $disk->delete($file->nama_file);
+                    }
+                }
+                $file->delete();
+            }
+
             $m_kontrak->delete();
 
             if ($deletedStatus === 'ACTIVE') {

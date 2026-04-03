@@ -281,6 +281,28 @@ class T_master_cableController extends Controller
         }
     }
 
+    public function approve(Request $request)
+    {
+        $id = $request->route('id');
+
+        try {
+            DB::beginTransaction();
+            $t_master_cable = T_master_cable::where('id', $id)->firstOrFail();
+            $t_master_cable->status = 'APPROVE';
+            $t_master_cable->user_id = Auth::id();
+            $t_master_cable->save();
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cable berhasil di-approve'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
     public function delete(Request $request)
     {
         $id = $request->route('id');
@@ -288,6 +310,18 @@ class T_master_cableController extends Controller
         try {
             DB::beginTransaction();
             $t_master_cable = T_master_cable::where('id', $id)->firstOrFail();
+
+            $files = File_upload::where('id_cable', $id)->get();
+            foreach ($files as $file) {
+                if ($file->nama_file) {
+                    $disk = Storage::disk('public');
+                    if ($disk->exists($file->nama_file)) {
+                        $disk->delete($file->nama_file);
+                    }
+                }
+                $file->delete();
+            }
+
             $t_master_cable->delete();
             DB::commit();
 
