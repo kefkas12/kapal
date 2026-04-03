@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\T_master_cable;
+use App\Models\Settings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -95,6 +96,7 @@ class T_master_cableController extends Controller
         $atdPorts = [];
         $ataPorts = [];
         $kontrak = null;
+        $settings = null;
 
         if ($idVessel) {
             $lastCable = T_master_cable::where('id_vessel', $idVessel)
@@ -128,6 +130,14 @@ class T_master_cableController extends Controller
                 ->first();
         }
 
+        $settingValue = Settings::where('nama', 'variable est_claim_bunker')
+            ->where('status', 'ACTIVE')
+            ->orderByDesc('id')
+            ->value('value');
+        $settings = [
+            'est_claim_bunker' => $settingValue
+        ];
+
         return response()->json([
             'success' => true,
             'message' => 'Referensi cable berhasil diambil',
@@ -138,6 +148,7 @@ class T_master_cableController extends Controller
                 'atd_ports' => $atdPorts,
                 'ata_ports' => $ataPorts,
                 'kontrak' => $kontrak,
+                'settings' => $settings,
             ]
         ]);
     }
@@ -194,7 +205,6 @@ class T_master_cableController extends Controller
             $t_master_cable->no_voyage_gab = $request->input('no_voyage_gab');
             $t_master_cable->no_voyage = $request->input('no_voyage');
             $t_master_cable->jenis_voyage = $request->input('jenis_voyage');
-            $t_master_cable->kode_vessel = $request->input('kode_vessel');
             $t_master_cable->captain = $request->input('captain');
             $t_master_cable->atd_port = $request->input('atd_port');
             $t_master_cable->atd_time = $request->input('atd_time');
@@ -247,4 +257,5 @@ class T_master_cableController extends Controller
             throw $e;
         }
     }
+
 }

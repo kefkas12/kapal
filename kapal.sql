@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Mar 24, 2026 at 07:33 PM
+-- Generation Time: Apr 03, 2026 at 04:44 PM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -132,11 +132,11 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 CREATE TABLE `m_kontrak` (
   `id` int NOT NULL,
   `id_vessel` int NOT NULL,
-  `no_kontrak` varchar(100) NOT NULL,
-  `tgl_awal_kontrak` varchar(100) NOT NULL,
-  `tgl_akhir_kontrak` varchar(100) NOT NULL,
-  `charter_rate` varchar(100) NOT NULL,
-  `speed` varchar(100) NOT NULL,
+  `no_kontrak` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `tgl_awal_kontrak` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `tgl_akhir_kontrak` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `charter_rate` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `speed` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `me_ballast` varchar(100) DEFAULT NULL,
   `me_laden` varchar(100) DEFAULT NULL,
   `pumping_rate` varchar(100) DEFAULT NULL,
@@ -152,8 +152,8 @@ CREATE TABLE `m_kontrak` (
 --
 
 INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_kontrak`, `tgl_awal_kontrak`, `tgl_akhir_kontrak`, `charter_rate`, `speed`, `me_ballast`, `me_laden`, `pumping_rate`, `status`, `file_upload`, `user_id`, `created_at`, `updated_at`) VALUES
-(1, 1, 'kontrak1', '2026-03-01', '2026-03-24', '11', '12', '13', '14', '15', 'NON ACTIVE', NULL, 1, '2026-03-24 09:12:59', '2026-03-24 10:06:40'),
-(2, 1, 'kontrak2', '2026-03-19', '2026-03-25', '21', '22', '23', '24', '25', 'NON ACTIVE', NULL, 1, '2026-03-24 10:04:05', '2026-03-24 10:06:27');
+(16, 34, '004/TCP/1/2024', '2024-01-04T00:00', '2026-01-04T00:00', '55000', '4', '1.8', '1.8', '200', 'NON ACTIVE', NULL, 1, '2026-04-03 09:02:34', '2026-04-03 09:04:40'),
+(17, 34, '038/TCP/V/2025', '2025-05-05T13:24', '2026-05-05T13:24', '55000', '4', '2.29', '2.29', '200', 'ACTIVE', NULL, 1, '2026-04-03 09:04:40', '2026-04-03 09:04:40');
 
 -- --------------------------------------------------------
 
@@ -163,10 +163,10 @@ INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_kontrak`, `tgl_awal_kontrak`, `t
 
 CREATE TABLE `m_vessel` (
   `id` int NOT NULL,
-  `kode_vessel` varchar(100) NOT NULL,
-  `nama_vessel` varchar(100) NOT NULL,
-  `jenis_vessel` varchar(20) NOT NULL,
-  `status` varchar(20) NOT NULL,
+  `kode_vessel` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `nama_vessel` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `jenis_vessel` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `user_id` int NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -177,9 +177,7 @@ CREATE TABLE `m_vessel` (
 --
 
 INSERT INTO `m_vessel` (`id`, `kode_vessel`, `nama_vessel`, `jenis_vessel`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(1, 'vessel1', 'vessel1', 'TB/OB', 'ACTIVE', 1, '2026-03-24 07:35:50', '2026-03-24 07:58:35'),
-(2, 'vessel2', 'vessel2', '/SMALL', 'ACTIVE', 1, '2026-03-24 07:58:51', '2026-03-24 07:58:51'),
-(3, 'vessel3', 'vessel3', 'I/SPOB', 'NON ACTIVE', 1, '2026-03-24 07:59:01', '2026-03-24 07:59:01');
+(34, 'Albatross 2/Flamingo 8', 'Albatross 2/Flamingo 8', 'TB/OB', 'ACTIVE', 1, '2026-04-03 06:40:40', '2026-04-03 06:41:35');
 
 -- --------------------------------------------------------
 
@@ -301,7 +299,7 @@ CREATE TABLE `personal_access_tokens` (
 --
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(9, 'App\\Models\\User', 1, 'api-token', '48920dc0eda16c0dbc58eccdf569cf2b91d66ad1aa7f8ce6c2d51875ecaad8b9', '[\"*\"]', '2026-03-24 12:12:09', NULL, '2026-03-24 07:41:51', '2026-03-24 12:12:09');
+(22, 'App\\Models\\User', 1, 'api-token', '8cdb0b3214096ce632f0885a07ccc93b61b8a405083dd3e4256e689227382531', '[\"*\"]', '2026-04-03 09:36:27', NULL, '2026-04-03 02:14:46', '2026-04-03 09:36:27');
 
 -- --------------------------------------------------------
 
@@ -323,7 +321,30 @@ CREATE TABLE `sessions` (
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('AXBO8lAjGXEbIny1E6IPIZGras4ywXnZAQHKI4sS', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJvZWxxRktRMU9ScUlDUXRsbDdSM2VFM1JTMW5Sc2YwSmV2NGllTmZqIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1774379012);
+('AXBO8lAjGXEbIny1E6IPIZGras4ywXnZAQHKI4sS', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJvZWxxRktRMU9ScUlDUXRsbDdSM2VFM1JTMW5Sc2YwSmV2NGllTmZqIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1774379012),
+('B3CpnxukvbVK2Qwe3J5QG7PKB3TZfHmIQuaJbN39', NULL, '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJESW1iS2Z6OUtsRWxqQXRBZ0RsUUIxWk9YOEljSnN4MjlKS0dPVXdVIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cLzEyNy4wLjAuMTo4MDAwIiwicm91dGUiOm51bGx9LCJfZmxhc2giOnsib2xkIjpbXSwibmV3IjpbXX19', 1775232104);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `settings`
+--
+
+CREATE TABLE `settings` (
+  `id` int NOT NULL,
+  `nama` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `value` varchar(100) NOT NULL,
+  `status` varchar(100) NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `settings`
+--
+
+INSERT INTO `settings` (`id`, `nama`, `value`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'variable est_claim_bunker', '0.847', 'ACTIVE', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -344,13 +365,6 @@ CREATE TABLE `t_klaim` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `t_klaim`
---
-
-INSERT INTO `t_klaim` (`id`, `id_vessel`, `no_klaim_awal`, `tgl_klaim_awal`, `jenis_klaim`, `currency`, `no_klaim_akhir`, `tgl_klaim_akhir`, `user_id`, `created_at`, `updated_at`) VALUES
-(1, 1, '1', '2026-03-25', 'SS', 'USD', NULL, NULL, 1, '2026-03-24 12:10:14', '2026-03-24 12:10:14');
 
 -- --------------------------------------------------------
 
@@ -417,14 +431,6 @@ CREATE TABLE `t_master_cable` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `t_master_cable`
---
-
-INSERT INTO `t_master_cable` (`id`, `id_vessel`, `no_voyage_gab`, `no_voyage`, `jenis_voyage`, `captain`, `atd_port`, `atd_time`, `atd_rob`, `ata_port`, `ata_time`, `ata_rob`, `distance`, `speed`, `est_sail_day`, `act_sail_day`, `charter_rate_day`, `est_claim_speed`, `std_bunker_cons`, `act_bunker_cons`, `excess_bunker`, `bunker_price`, `est_claim_bunker`, `status`, `file_upload`, `user_id`, `created_at`, `updated_at`) VALUES
-(1, 1, '001/L2025', '25001', 'L', 'captain1', 'Pangkalan Balam', '2025-01-05T13:59:31', '30.365', 'Tg. Uban', '2025-01-08T13:00:29', '15.683', '288', '22', '0.545455', '2.959005', '0.677419', '1.634985', '12', '14.682', '2.682', '14950', '33961227.3', 'OPEN', NULL, 1, '2026-03-24 11:31:18', '2026-03-24 11:31:18'),
-(2, 1, '001/L2026', '26001', 'L', 'captain2', 'Panjang', '2026-01-04T17:30', '62.019', 'Belinyu', '2026-01-10T12:00', '49.363', '425', '4', '4.427083', '5.770833', '0.677419', '0.910282', '10', '12.656', '2.656', '15000', '33744480', 'OPEN', NULL, 1, '2026-03-24 11:40:49', '2026-03-24 11:40:49');
 
 -- --------------------------------------------------------
 
@@ -567,6 +573,12 @@ ALTER TABLE `sessions`
   ADD KEY `sessions_last_activity_index` (`last_activity`);
 
 --
+-- Indexes for table `settings`
+--
+ALTER TABLE `settings`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
@@ -617,37 +629,43 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `m_kontrak`
 --
 ALTER TABLE `m_kontrak`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `m_vessel`
 --
 ALTER TABLE `m_vessel`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+
+--
+-- AUTO_INCREMENT for table `settings`
+--
+ALTER TABLE `settings`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail`
 --
 ALTER TABLE `t_klaim_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `t_master_cable`
 --
 ALTER TABLE `t_master_cable`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `users`
