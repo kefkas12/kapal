@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 03, 2026 at 04:44 PM
+-- Generation Time: Apr 03, 2026 at 07:53 PM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -60,6 +60,21 @@ CREATE TABLE `failed_jobs` (
   `exception` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
   `failed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `file_upload`
+--
+
+CREATE TABLE `file_upload` (
+  `id` int NOT NULL,
+  `id_kontrak` int DEFAULT NULL,
+  `id_cable` int DEFAULT NULL,
+  `nama_file` text,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -141,7 +156,6 @@ CREATE TABLE `m_kontrak` (
   `me_laden` varchar(100) DEFAULT NULL,
   `pumping_rate` varchar(100) DEFAULT NULL,
   `status` varchar(20) NOT NULL,
-  `file_upload` text,
   `user_id` int NOT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -151,9 +165,9 @@ CREATE TABLE `m_kontrak` (
 -- Dumping data for table `m_kontrak`
 --
 
-INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_kontrak`, `tgl_awal_kontrak`, `tgl_akhir_kontrak`, `charter_rate`, `speed`, `me_ballast`, `me_laden`, `pumping_rate`, `status`, `file_upload`, `user_id`, `created_at`, `updated_at`) VALUES
-(16, 34, '004/TCP/1/2024', '2024-01-04T00:00', '2026-01-04T00:00', '55000', '4', '1.8', '1.8', '200', 'NON ACTIVE', NULL, 1, '2026-04-03 09:02:34', '2026-04-03 09:04:40'),
-(17, 34, '038/TCP/V/2025', '2025-05-05T13:24', '2026-05-05T13:24', '55000', '4', '2.29', '2.29', '200', 'ACTIVE', NULL, 1, '2026-04-03 09:04:40', '2026-04-03 09:04:40');
+INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_kontrak`, `tgl_awal_kontrak`, `tgl_akhir_kontrak`, `charter_rate`, `speed`, `me_ballast`, `me_laden`, `pumping_rate`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(16, 34, '004/TCP/1/2024', '2024-01-04T00:00', '2026-01-04T00:00', '55000', '4', '1.8', '1.8', '200', 'NON ACTIVE', 1, '2026-04-03 09:02:34', '2026-04-03 10:43:00'),
+(17, 34, '038/TCP/V/2025', '2025-05-05T13:24', '2026-05-05T13:24', '55000', '4', '10.2', '10.2', '200', 'ACTIVE', 1, '2026-04-03 09:04:40', '2026-04-03 10:43:00');
 
 -- --------------------------------------------------------
 
@@ -177,7 +191,7 @@ CREATE TABLE `m_vessel` (
 --
 
 INSERT INTO `m_vessel` (`id`, `kode_vessel`, `nama_vessel`, `jenis_vessel`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(34, 'Albatross 2/Flamingo 8', 'Albatross 2/Flamingo 8', 'TB/OB', 'ACTIVE', 1, '2026-04-03 06:40:40', '2026-04-03 06:41:35');
+(34, 'ALBATROSS 2/FLAMINGO 8', 'ALBATROSS 2/FLAMINGO 8', 'TB/OB', 'ACTIVE', 1, '2026-04-03 06:40:40', '2026-04-03 12:40:11');
 
 -- --------------------------------------------------------
 
@@ -299,7 +313,7 @@ CREATE TABLE `personal_access_tokens` (
 --
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(22, 'App\\Models\\User', 1, 'api-token', '8cdb0b3214096ce632f0885a07ccc93b61b8a405083dd3e4256e689227382531', '[\"*\"]', '2026-04-03 09:36:27', NULL, '2026-04-03 02:14:46', '2026-04-03 09:36:27');
+(22, 'App\\Models\\User', 1, 'api-token', '8cdb0b3214096ce632f0885a07ccc93b61b8a405083dd3e4256e689227382531', '[\"*\"]', '2026-04-03 12:52:50', NULL, '2026-04-03 02:14:46', '2026-04-03 12:52:50');
 
 -- --------------------------------------------------------
 
@@ -366,6 +380,13 @@ CREATE TABLE `t_klaim` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data for table `t_klaim`
+--
+
+INSERT INTO `t_klaim` (`id`, `id_vessel`, `no_klaim_awal`, `tgl_klaim_awal`, `jenis_klaim`, `currency`, `no_klaim_akhir`, `tgl_klaim_akhir`, `user_id`, `created_at`, `updated_at`) VALUES
+(11, 34, '6003/PIS2330/2025-S6', '2026-04-04', 'SS', 'USD', NULL, NULL, 1, '2026-04-03 12:45:19', '2026-04-03 12:45:19');
+
 -- --------------------------------------------------------
 
 --
@@ -394,6 +415,14 @@ CREATE TABLE `t_klaim_detail` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `t_klaim_detail`
+--
+
+INSERT INTO `t_klaim_detail` (`id`, `id_klaim`, `id_cable`, `id_kontrak`, `no_urut`, `no_voyage_gab`, `no_kontrak`, `val_potensi`, `val_klaim_awal`, `val_klaim_akhir`, `kurs`, `val_klaim_akhir_idr`, `keterangan`, `no_tagihan_klaim`, `no_tagihan_dipotong`, `status`, `file_upload`, `user_id`, `created_at`, `updated_at`) VALUES
+(9, 11, 5, NULL, '01', '26002/D2', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'OPEN', NULL, 1, '2026-04-03 12:52:47', '2026-04-03 12:52:48'),
+(10, 11, 4, NULL, '02', '26001/L', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'OPEN', NULL, 1, '2026-04-03 12:52:48', '2026-04-03 12:52:49');
 
 -- --------------------------------------------------------
 
@@ -426,11 +455,18 @@ CREATE TABLE `t_master_cable` (
   `bunker_price` varchar(100) DEFAULT NULL,
   `est_claim_bunker` varchar(100) DEFAULT NULL,
   `status` varchar(20) DEFAULT NULL,
-  `file_upload` text,
   `user_id` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `t_master_cable`
+--
+
+INSERT INTO `t_master_cable` (`id`, `id_vessel`, `no_voyage_gab`, `no_voyage`, `jenis_voyage`, `captain`, `atd_port`, `atd_time`, `atd_rob`, `ata_port`, `ata_time`, `ata_rob`, `distance`, `speed`, `est_sail_day`, `act_sail_day`, `charter_rate_day`, `est_claim_speed`, `std_bunker_cons`, `act_bunker_cons`, `excess_bunker`, `bunker_price`, `est_claim_bunker`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(4, 34, '26001/L', '26001', 'L', 'STEVEN', 'JAMBI', '2025-06-03T09:00', '28.807', 'PANJANG', '2025-06-08T07:30', '18.154', '480', '4', '5', '4.9375', '1833.333333', '-114.583333', '10.2', '10.653', '0.453', '13500', '5179828.5', 'OPEN', 1, '2026-04-03 10:28:03', '2026-04-03 11:06:35'),
+(5, 34, '26002/D2', '26002', 'D2', 'STEVEN', 'PANJANG', '2025-06-10T20:00', '56.832', 'JAMBI', '2025-06-15T19:30', '45.849', '480', '4', '5', '4.979167', '1833.333333', '-38.193833', '10.2', '10.983', '0.783', '13500', '8953213.5', 'OPEN', 1, '2026-04-03 10:46:06', '2026-04-03 11:19:48');
 
 -- --------------------------------------------------------
 
@@ -480,6 +516,12 @@ ALTER TABLE `cache_locks`
 ALTER TABLE `failed_jobs`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `failed_jobs_uuid_unique` (`uuid`);
+
+--
+-- Indexes for table `file_upload`
+--
+ALTER TABLE `file_upload`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `jobs`
@@ -614,6 +656,12 @@ ALTER TABLE `failed_jobs`
   MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `file_upload`
+--
+ALTER TABLE `file_upload`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `jobs`
 --
 ALTER TABLE `jobs`
@@ -653,19 +701,19 @@ ALTER TABLE `settings`
 -- AUTO_INCREMENT for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail`
 --
 ALTER TABLE `t_klaim_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `t_master_cable`
 --
 ALTER TABLE `t_master_cable`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `users`
