@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\T_master_cable;
 use App\Models\File_upload;
 use App\Models\Settings;
+use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -206,6 +207,14 @@ class T_master_cableController extends Controller
     {
         try {
             DB::beginTransaction();
+            $request->validate([
+                'files' => 'required|array|min:1',
+                'files.*' => 'file|max:51200',
+            ], [
+                'files.required' => 'File upload wajib diisi.',
+                'files.min' => 'Minimal 1 file harus diupload.',
+            ]);
+
             $idVessel = $request->input('id_vessel');
             $atdTimeBaru = $request->input('atd_time');
 
@@ -269,7 +278,7 @@ class T_master_cableController extends Controller
                     if (!$file) {
                         continue;
                     }
-                    $path = $file->store('uploads/cable', 'public');
+                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/cable');
                     $upload = new File_upload();
                     $upload->id_cable = $t_master_cable->id;
                     $upload->nama_file = $path;
@@ -295,6 +304,14 @@ class T_master_cableController extends Controller
 
         try {
             DB::beginTransaction();
+            $incomingFiles = array_filter((array) $request->file('files', []));
+            $hasExistingFiles = File_upload::where('id_cable', $id)->exists();
+            if (empty($incomingFiles) && !$hasExistingFiles) {
+                throw ValidationException::withMessages([
+                    'files' => 'File upload wajib diisi.',
+                ]);
+            }
+
             $activeKontrakCount = DB::table('m_kontrak')
                 ->where('id_vessel', $request->input('id_vessel'))
                 ->where('status', 'ACTIVE')
@@ -340,7 +357,7 @@ class T_master_cableController extends Controller
                     if (!$file) {
                         continue;
                     }
-                    $path = $file->store('uploads/cable', 'public');
+                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/cable');
                     $upload = new File_upload();
                     $upload->id_cable = $t_master_cable->id;
                     $upload->nama_file = $path;

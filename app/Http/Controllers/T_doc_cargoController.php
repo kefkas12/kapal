@@ -6,11 +6,13 @@ use App\Models\File_upload;
 use App\Models\M_grade;
 use App\Models\T_doc_cargo;
 use App\Models\T_master_cable;
+use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class T_doc_cargoController extends Controller
 {
@@ -276,6 +278,13 @@ class T_doc_cargoController extends Controller
     {
         try {
             DB::beginTransaction();
+            $request->validate([
+                'files' => 'required|array|min:1',
+                'files.*' => 'file|max:51200',
+            ], [
+                'files.required' => 'File upload wajib diisi.',
+                'files.min' => 'Minimal 1 file harus diupload.',
+            ]);
 
             $payload = $this->sanitizeDocCargoPayload($request);
             $payload['created_at'] = now();
@@ -291,7 +300,7 @@ class T_doc_cargoController extends Controller
                     if (!$file) {
                         continue;
                     }
-                    $path = $file->store('uploads/doc_cargo', 'public');
+                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/doc_cargo');
                     $upload = new File_upload();
                     $upload->id_doc_cargo = $docCargoId;
                     $upload->nama_file = $path;
@@ -320,6 +329,13 @@ class T_doc_cargoController extends Controller
 
         try {
             DB::beginTransaction();
+            $incomingFiles = array_filter((array) $request->file('files', []));
+            $hasExistingFiles = File_upload::where('id_doc_cargo', $id)->exists();
+            if (empty($incomingFiles) && !$hasExistingFiles) {
+                throw ValidationException::withMessages([
+                    'files' => 'File upload wajib diisi.',
+                ]);
+            }
 
             $existing = T_doc_cargo::where('id', $id)->firstOrFail();
             $payload = $this->sanitizeDocCargoPayload($request);
@@ -335,7 +351,7 @@ class T_doc_cargoController extends Controller
                     if (!$file) {
                         continue;
                     }
-                    $path = $file->store('uploads/doc_cargo', 'public');
+                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/doc_cargo');
                     $upload = new File_upload();
                     $upload->id_doc_cargo = $existing->id;
                     $upload->nama_file = $path;

@@ -6,11 +6,14 @@ use App\Models\T_klaim_detail;
 use App\Models\T_klaim_detail_nilai;
 use App\Models\T_klaim;
 use App\Models\File_upload;
+use App\Models\T_doc_cargo;
 use App\Models\T_master_cable;
+use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class T_klaim_detailController extends Controller
 {
@@ -40,16 +43,37 @@ class T_klaim_detailController extends Controller
         return [];
     }
 
+    private function findDocCargoByKlaimContext($idCable, $noVoyageGab): ?T_doc_cargo
+    {
+        $query = T_doc_cargo::query();
+
+        if (!empty($idCable)) {
+            $query->where('id_cable', $idCable);
+        } elseif (!empty($noVoyageGab)) {
+            $query->where('no_voyage_gab', $noVoyageGab);
+        } else {
+            return null;
+        }
+
+        return $query->orderByDesc('id')->first();
+    }
+
     private function syncNilaiRows(int $klaimDetailId, int $klaimId, Request $request): array
     {
         $klaim = T_klaim::where('id', $klaimId)->first();
+        $jenisKlaim = strtoupper((string) $klaim?->jenis_klaim);
         $subJenisDefaults = $this->getSubJenisByJenisKlaim($klaim?->jenis_klaim);
         $nilaiItems = $this->parseNilaiItems($request);
         $idCable = $request->input('id_cable');
+        $noVoyageGab = $request->input('no_voyage_gab');
+
         $cable = null;
         if ($idCable) {
             $cable = T_master_cable::where('id', $idCable)->first();
+            $noVoyageGab = $noVoyageGab ?: $cable?->no_voyage_gab;
         }
+
+        $docCargo = $this->findDocCargoByKlaimContext($idCable, $noVoyageGab);
 
         if (empty($nilaiItems)) {
             $nilaiItems = array_map(fn ($subJenis) => [
@@ -78,8 +102,16 @@ class T_klaim_detailController extends Controller
             $valPotensi = $item['val_potensi'] ?? $request->input('val_potensi');
             if ($subJenis === 'SS' && $cable) {
                 $valPotensi = $cable->est_claim_speed;
-            } elseif ($subJenis === 'OB' && $cable) {
-                $valPotensi = $cable->est_claim_bunker;
+            } elseif ($subJenis === 'OB') {
+                if ($jenisKlaim === 'SPOB' && $docCargo) {
+                    $valPotensi = $docCargo->est_claim_bunker;
+                } elseif ($cable) {
+                    $valPotensi = $cable->est_claim_bunker;
+                }
+            } elseif ($subJenis === 'SP' && $docCargo) {
+                $valPotensi = $docCargo->est_claim_pumping;
+            } elseif ($subJenis === 'TL' && $docCargo) {
+                $valPotensi = $docCargo->est_claim_transport ?? $docCargo->est_transport_loss;
             }
             $row->val_potensi = $valPotensi;
             $row->val_klaim_awal = $item['val_klaim_awal'] ?? $request->input('val_klaim_awal');
@@ -160,7 +192,7 @@ class T_klaim_detailController extends Controller
                     if (!$file) {
                         continue;
                     }
-                    $path = $file->store('uploads/klaim_detail', 'public');
+                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
                     $upload = new File_upload();
                     $upload->id_klaim_detail_nilai = $row->id;
                     $upload->nama_file = $path;
@@ -178,7 +210,7 @@ class T_klaim_detailController extends Controller
                     if (!$file) {
                         continue;
                     }
-                    $path = $file->store('uploads/klaim_detail', 'public');
+                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
                     $upload = new File_upload();
                     $upload->id_klaim_detail_nilai = $firstRow->id;
                     $upload->nama_file = $path;
@@ -215,6 +247,88 @@ class T_klaim_detailController extends Controller
         }
 
         return $details;
+    }
+
+    private function hasUploadedFiles($fileValue): bool
+    {
+        if (is_array($fileValue)) {
+            foreach ($fileValue as $f) {
+                if ($f) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return (bool) $fileValue;
+    }
+
+    private function isKlaimAwal(?T_klaim $klaim): bool
+    {
+        if (!$klaim) {
+            return false;
+        }
+
+        return empty($klaim->no_klaim_akhir) && empty($klaim->tgl_klaim_akhir);
+    }
+
+    private function validateRequiredFilesOnCreate(Request $request, int $klaimId): void
+    {
+        $klaim = T_klaim::where('id', $klaimId)->first();
+        $requiredSubJenis = $this->getSubJenisByJenisKlaim($klaim?->jenis_klaim);
+
+        $rawFilesBySubJenis = $request->file('files_by_sub_jenis', []);
+        $filesBySubJenis = [];
+        if (is_array($rawFilesBySubJenis)) {
+            foreach ($rawFilesBySubJenis as $key => $val) {
+                $filesBySubJenis[strtoupper((string) $key)] = $val;
+            }
+        }
+
+        $errors = [];
+        foreach ($requiredSubJenis as $subJenis) {
+            $sub = strtoupper((string) $subJenis);
+            $hasSubFiles = $this->hasUploadedFiles($filesBySubJenis[$sub] ?? null);
+            if (!$hasSubFiles) {
+                $errors["files_by_sub_jenis.$sub"] = "File upload untuk sub jenis {$sub} wajib diisi.";
+            }
+        }
+
+        if (empty($requiredSubJenis)) {
+            $legacyFiles = $request->file('files', []);
+            if (!$this->hasUploadedFiles($legacyFiles)) {
+                $errors['files'] = 'File upload wajib diisi.';
+            }
+        }
+
+        if (!empty($errors)) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    private function validateRequiredFilesOnEdit(Request $request, array $rowsBySubJenis): void
+    {
+        $rawFilesBySubJenis = $request->file('files_by_sub_jenis', []);
+        $filesBySubJenis = [];
+        if (is_array($rawFilesBySubJenis)) {
+            foreach ($rawFilesBySubJenis as $key => $val) {
+                $filesBySubJenis[strtoupper((string) $key)] = $val;
+            }
+        }
+
+        $errors = [];
+        foreach ($rowsBySubJenis as $subJenis => $row) {
+            $sub = strtoupper((string) $subJenis);
+            $hasIncomingFiles = $this->hasUploadedFiles($filesBySubJenis[$sub] ?? null);
+            $hasExistingFiles = File_upload::where('id_klaim_detail_nilai', $row->id)->exists();
+            if (!$hasIncomingFiles && !$hasExistingFiles) {
+                $errors["files_by_sub_jenis.$sub"] = "File upload untuk sub jenis {$sub} wajib diisi.";
+            }
+        }
+
+        if (!empty($errors)) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     public function index(Request $request)
@@ -282,8 +396,16 @@ class T_klaim_detailController extends Controller
     {
         try {
             DB::beginTransaction();
+            $idKlaim = (int) $request->input('id_klaim');
+            $klaim = $idKlaim > 0 ? T_klaim::where('id', $idKlaim)->first() : null;
+            $shouldRequireFiles = $idKlaim > 0 && !$this->isKlaimAwal($klaim);
+
+            if ($shouldRequireFiles) {
+                $this->validateRequiredFilesOnCreate($request, $idKlaim);
+            }
+
             $t_klaim_detail = new T_klaim_detail();
-            $t_klaim_detail->id_klaim = $request->input('id_klaim');
+            $t_klaim_detail->id_klaim = $idKlaim;
             $t_klaim_detail->id_cable = $request->input('id_cable');
             $t_klaim_detail->no_urut = $request->input('no_urut');
             $t_klaim_detail->no_voyage_gab = $request->input('no_voyage_gab');
@@ -294,6 +416,9 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->save();
 
             $rowsBySubJenis = $this->syncNilaiRows($t_klaim_detail->id, (int) $t_klaim_detail->id_klaim, $request);
+            if ($shouldRequireFiles) {
+                $this->validateRequiredFilesOnEdit($request, $rowsBySubJenis);
+            }
             $this->storeFilesPerNilai($request, $rowsBySubJenis);
 
             if ($t_klaim_detail->status === 'CLOSE' && $t_klaim_detail->id_cable) {

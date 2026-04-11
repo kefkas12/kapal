@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\M_kontrak;
 use App\Models\File_upload;
+use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -123,12 +124,16 @@ class M_kontrakController extends Controller
                 'no_kontrak' => 'required|string|unique:m_kontrak,no_kontrak',
                 'tgl_awal_kontrak' => 'nullable|date',
                 'tgl_akhir_kontrak' => 'nullable|date|after:tgl_awal_kontrak',
+                'files' => 'required|array|min:1',
+                'files.*' => 'file|max:51200',
             ], [
                 'id_vessel.required' => 'Vessel wajib diisi.',
                 'id_vessel.exists' => 'Vessel tidak valid.',
                 'no_kontrak.required' => 'No Kontrak wajib diisi.',
                 'no_kontrak.unique' => 'No Kontrak sudah digunakan.',
                 'tgl_akhir_kontrak.after' => 'Tgl akhir kontrak harus lebih besar dari tgl awal kontrak.',
+                'files.required' => 'File upload wajib diisi.',
+                'files.min' => 'Minimal 1 file harus diupload.',
             ]);
 
             $tglAwalBaru = $request->input('tgl_awal_kontrak');
@@ -168,7 +173,7 @@ class M_kontrakController extends Controller
                     if (!$file) {
                         continue;
                     }
-                    $path = $file->store('uploads/kontrak', 'public');
+                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/kontrak');
                     $upload = new File_upload();
                     $upload->id_kontrak = $m_kontrak->id;
                     $upload->nama_file = $path;
@@ -208,6 +213,14 @@ class M_kontrakController extends Controller
                 'no_kontrak.unique' => 'No Kontrak sudah digunakan.',
                 'tgl_akhir_kontrak.after' => 'Tgl akhir kontrak harus lebih besar dari tgl awal kontrak.',
             ]);
+            $incomingFiles = array_filter((array) $request->file('files', []));
+            $hasExistingFiles = File_upload::where('id_kontrak', $id)->exists();
+            if (empty($incomingFiles) && !$hasExistingFiles) {
+                throw ValidationException::withMessages([
+                    'files' => 'File upload wajib diisi.',
+                ]);
+            }
+
             $m_kontrak = M_kontrak::where('id', $id)->firstOrFail();
             $m_kontrak->no_kontrak = $request->input('no_kontrak');
             $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
@@ -228,7 +241,7 @@ class M_kontrakController extends Controller
                     if (!$file) {
                         continue;
                     }
-                    $path = $file->store('uploads/kontrak', 'public');
+                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/kontrak');
                     $upload = new File_upload();
                     $upload->id_kontrak = $m_kontrak->id;
                     $upload->nama_file = $path;
