@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\M_gradeController;
 use App\Http\Controllers\M_kontrakController;
 use App\Http\Controllers\M_vesselController;
 use App\Http\Controllers\T_klaim_detailController;
@@ -46,6 +47,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', 'delete');
 
         Route::get('/kontrak/{id}', 'kontrak');
+    });
+
+    Route::controller(M_gradeController::class)->prefix('grade')->group(function () {
+        Route::get('/', 'index');
+        Route::get('/search', 'search');
+        Route::get('/details/{id}', 'details');
+        Route::post('/', 'create');
+        Route::put('/{id}', 'edit');
+        Route::delete('/{id}', 'delete');
     });
 
     Route::controller(T_klaim_detailController::class)->prefix('klaim_detail')->group(function () {

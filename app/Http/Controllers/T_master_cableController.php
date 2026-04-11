@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class T_master_cableController extends Controller
 {
@@ -182,6 +183,23 @@ class T_master_cableController extends Controller
     {
         try {
             DB::beginTransaction();
+            $idVessel = $request->input('id_vessel');
+            $atdTimeBaru = $request->input('atd_time');
+
+            if ($idVessel && $atdTimeBaru) {
+                $lastCable = T_master_cable::where('id_vessel', $idVessel)
+                    ->whereNotNull('ata_time')
+                    ->orderByDesc('ata_time')
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($lastCable && strtotime((string) $atdTimeBaru) <= strtotime((string) $lastCable->ata_time)) {
+                    throw ValidationException::withMessages([
+                        'atd_time' => 'ATD Time baru harus lebih besar dari ATA Time cable terakhir (' . $lastCable->ata_time . ').',
+                    ]);
+                }
+            }
+
             $activeKontrakCount = DB::table('m_kontrak')
                 ->where('id_vessel', $request->input('id_vessel'))
                 ->where('status', 'ACTIVE')

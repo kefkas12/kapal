@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class M_kontrakController extends Controller
 {
@@ -117,14 +118,34 @@ class M_kontrakController extends Controller
         try {
             DB::beginTransaction();
             $request->validate([
+                'id_vessel' => 'required|exists:m_vessel,id',
                 'no_kontrak' => 'required|string|unique:m_kontrak,no_kontrak',
                 'tgl_awal_kontrak' => 'nullable|date',
                 'tgl_akhir_kontrak' => 'nullable|date|after:tgl_awal_kontrak',
             ], [
+                'id_vessel.required' => 'Vessel wajib diisi.',
+                'id_vessel.exists' => 'Vessel tidak valid.',
                 'no_kontrak.required' => 'No Kontrak wajib diisi.',
                 'no_kontrak.unique' => 'No Kontrak sudah digunakan.',
                 'tgl_akhir_kontrak.after' => 'Tgl akhir kontrak harus lebih besar dari tgl awal kontrak.',
             ]);
+
+            $tglAwalBaru = $request->input('tgl_awal_kontrak');
+            if ($tglAwalBaru) {
+                $lastKontrak = M_kontrak::where('id_vessel', $request->input('id_vessel'))
+                    ->whereNotNull('tgl_akhir_kontrak')
+                    ->orderByDesc('tgl_akhir_kontrak')
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($lastKontrak && strtotime($tglAwalBaru) <= strtotime((string) $lastKontrak->tgl_akhir_kontrak)) {
+                    DB::rollBack();
+                    throw ValidationException::withMessages([
+                        'tgl_awal_kontrak' => 'Tgl awal kontrak baru harus lebih besar dari tgl akhir kontrak terakhir (' . $lastKontrak->tgl_akhir_kontrak . ').',
+                    ]);
+                }
+            }
+
             $m_kontrak = new M_kontrak();
             $m_kontrak->id_vessel = $request->input('id_vessel');
             $m_kontrak->no_kontrak = $request->input('no_kontrak');
