@@ -86,7 +86,11 @@ class T_master_cableController extends Controller
     {
         $id = $request->route('id');
 
-        $data = T_master_cable::where('id', $id)->first();
+        $data = T_master_cable::query()
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_master_cable.id_vessel')
+            ->where('t_master_cable.id', $id)
+            ->select('t_master_cable.*', 'm_vessel.kode_vessel')
+            ->first();
         $files = File_upload::where('id_cable', $id)
             ->orderBy('id', 'asc')
             ->get();

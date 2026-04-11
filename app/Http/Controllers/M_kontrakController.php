@@ -46,6 +46,7 @@ class M_kontrakController extends Controller
                     ->orWhere('me_ballast', 'like', "%{$search}%")
                     ->orWhere('me_laden', 'like', "%{$search}%")
                     ->orWhere('pumping_rate', 'like', "%{$search}%")
+                    ->orWhere('discharge', 'like', "%{$search}%")
                     ->orWhere('status', 'like', "%{$search}%");
             });
         }
@@ -60,7 +61,7 @@ class M_kontrakController extends Controller
             $query->where('id_vessel', $idVessel);
         }
 
-        $allowedSort = ['id', 'no_kontrak', 'tgl_awal_kontrak', 'tgl_akhir_kontrak', 'charter_rate', 'speed', 'me_ballast', 'me_laden', 'pumping_rate', 'status', 'created_at'];
+        $allowedSort = ['id', 'no_kontrak', 'tgl_awal_kontrak', 'tgl_akhir_kontrak', 'charter_rate', 'speed', 'me_ballast', 'me_laden', 'pumping_rate', 'discharge', 'status', 'created_at'];
         $sortBy = $request->input('sort_by', 'id');
         if (!in_array($sortBy, $allowedSort, true)) {
             $sortBy = 'id';
@@ -156,6 +157,7 @@ class M_kontrakController extends Controller
             $m_kontrak->me_ballast = $request->input('me_ballast');
             $m_kontrak->me_laden = $request->input('me_laden');
             $m_kontrak->pumping_rate = $request->input('pumping_rate');
+            $m_kontrak->discharge = $request->input('discharge');
             $m_kontrak->status = $request->input('status');
             $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
@@ -215,6 +217,7 @@ class M_kontrakController extends Controller
             $m_kontrak->me_ballast = $request->input('me_ballast');
             $m_kontrak->me_laden = $request->input('me_laden');
             $m_kontrak->pumping_rate = $request->input('pumping_rate');
+            $m_kontrak->discharge = $request->input('discharge');
             $m_kontrak->status = $request->input('status');
             $m_kontrak->user_id = Auth::id();
             $m_kontrak->save();
