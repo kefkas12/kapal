@@ -53,6 +53,20 @@ class T_master_cableController extends Controller
             $query->where('t_master_cable.id_vessel', $idVessel);
         }
 
+        $availableForKlaim = $request->boolean('available_for_klaim', false);
+        if ($availableForKlaim) {
+            $excludeKlaimId = $request->input('exclude_klaim_id');
+            $query->whereNotExists(function ($sub) use ($excludeKlaimId) {
+                $sub->select(DB::raw(1))
+                    ->from('t_klaim_detail')
+                    ->whereColumn('t_klaim_detail.id_cable', 't_master_cable.id');
+
+                if (!is_null($excludeKlaimId) && $excludeKlaimId !== '') {
+                    $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
+                }
+            });
+        }
+
         $allowedSort = ['id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'captain', 'atd_port', 'ata_port', 'status', 'created_at'];
         $sortBy = $request->input('sort_by', 'id');
         if (!in_array($sortBy, $allowedSort, true)) {

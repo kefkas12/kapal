@@ -15,8 +15,7 @@ class T_klaim_detailController extends Controller
     public function index(Request $request)
     {
         $query = T_klaim_detail::query()
-            ->leftJoin('m_kontrak', 'm_kontrak.id', '=', 't_klaim_detail.id_kontrak')
-            ->select('t_klaim_detail.*', 'm_kontrak.no_kontrak as no_kontrak');
+            ->select('t_klaim_detail.*');
 
         $idKlaim = $request->input('id_klaim');
         if (!is_null($idKlaim) && $idKlaim !== '') {
@@ -37,9 +36,8 @@ class T_klaim_detailController extends Controller
         $id = $request->route('id');
 
         $data = T_klaim_detail::query()
-            ->leftJoin('m_kontrak', 'm_kontrak.id', '=', 't_klaim_detail.id_kontrak')
             ->where('t_klaim_detail.id', $id)
-            ->select('t_klaim_detail.*', 'm_kontrak.no_kontrak as no_kontrak')
+            ->select('t_klaim_detail.*')
             ->first();
         $files = File_upload::where('id_klaim_detail', $id)
             ->orderBy('id', 'asc')
@@ -62,7 +60,6 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail = new T_klaim_detail();
             $t_klaim_detail->id_klaim = $request->input('id_klaim');
             $t_klaim_detail->id_cable = $request->input('id_cable');
-            $t_klaim_detail->id_kontrak = $request->input('id_kontrak');
             $t_klaim_detail->no_urut = $request->input('no_urut');
             $t_klaim_detail->no_voyage_gab = $request->input('no_voyage_gab');
             $t_klaim_detail->no_kontrak = $request->input('no_kontrak');
@@ -117,7 +114,6 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
             $t_klaim_detail->id_klaim = $request->input('id_klaim');
             $t_klaim_detail->id_cable = $request->input('id_cable');
-            $t_klaim_detail->id_kontrak = $request->input('id_kontrak');
             $t_klaim_detail->no_urut = $request->input('no_urut');
             $t_klaim_detail->no_voyage_gab = $request->input('no_voyage_gab');
             $t_klaim_detail->no_kontrak = $request->input('no_kontrak');

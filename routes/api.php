@@ -75,6 +75,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', 'delete');
     });
 
+    Route::controller(T_doc_cargo_detailController::class)->prefix('doc_cargo_detail')->group(function () {
+        Route::get('/', 'index');
+        Route::get('/details/{id}', 'details');
+        Route::post('/', 'create');
+        Route::put('/{id}', 'edit');
+        Route::delete('/{id}', 'delete');
+    });
+
+    Route::controller(T_doc_cargoController::class)->prefix('doc_cargo')->group(function () {
+        Route::get('/', 'index');
+        Route::get('/search', 'search');
+        Route::get('/details/{id}', 'details');
+        Route::post('/', 'create');
+        Route::put('/{id}', 'edit');
+        Route::delete('/{id}', 'delete');
+    });
+
     Route::controller(T_master_cableController::class)->prefix('cable')->group(function () {
         Route::get('/', 'index');
         Route::get('/search', 'search');
