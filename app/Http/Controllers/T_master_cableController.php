@@ -178,8 +178,13 @@ class T_master_cableController extends Controller
             ->where('status', 'ACTIVE')
             ->orderByDesc('id')
             ->value('value');
+        $settingTransportValue = Settings::where('nama', 'variable est_claim_transport')
+            ->where('status', 'ACTIVE')
+            ->orderByDesc('id')
+            ->value('value');
         $settings = [
-            'est_claim_bunker' => $settingValue
+            'est_claim_bunker' => $settingValue,
+            'est_claim_transport' => $settingTransportValue
         ];
 
         return response()->json([
@@ -361,6 +366,15 @@ class T_master_cableController extends Controller
 
         try {
             DB::beginTransaction();
+            $user = Auth::user();
+            if (!$user || !($user->hasRole('approval') || $user->hasRole('superadmin'))) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.'
+                ], 403);
+            }
+
             $t_master_cable = T_master_cable::where('id', $id)->firstOrFail();
             $t_master_cable->status = 'APPROVE';
             $t_master_cable->user_id = Auth::id();

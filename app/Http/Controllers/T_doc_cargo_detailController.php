@@ -3,31 +3,104 @@
 namespace App\Http\Controllers;
 
 use App\Models\T_doc_cargo_detail;
-use App\Models\File_upload;
 use App\Models\T_master_cable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 
 class T_doc_cargo_detailController extends Controller
 {
-    public function index(Request $request)
+    private function detailColumns(): array
     {
-        $query = T_doc_cargo_detail::query()
-            ->select('t_klaim_detail.*');
+        return Schema::getColumnListing('t_doc_cargo_detail');
+    }
 
-        $idKlaim = $request->input('id_doc_cargo');
-        if (!is_null($idKlaim) && $idKlaim !== '') {
-            $query->where('t_doc_cargo_detail.id_doc_cargo', $idKlaim);
+    private function calcDischargeTime($startTime, $stopTime): ?string
+    {
+        if ($startTime === null || $stopTime === null || $startTime === '' || $stopTime === '') {
+            return null;
         }
 
-        $data = $query->get();
+        $startTs = strtotime((string) $startTime);
+        $stopTs = strtotime((string) $stopTime);
+        if ($startTs === false || $stopTs === false) {
+            return null;
+        }
+
+        $hours = ($stopTs - $startTs) / 3600;
+        $days = $hours / 24;
+
+        return number_format($days, 6, '.', '');
+    }
+
+    private function buildPayload(Request $request, ?int $id = null): array
+    {
+        $idDocCargo = $request->input('id_doc_cargo');
+
+        $noUrut = $request->input('no_urut');
+        if (($noUrut === null || $noUrut === '') && $idDocCargo) {
+            $maxNoUrut = DB::table('t_doc_cargo_detail')
+                ->where('id_doc_cargo', $idDocCargo)
+                ->when($id, fn ($q) => $q->where('id', '!=', $id))
+                ->get()
+                ->reduce(function ($carry, $row) {
+                    $raw = $row->no_urut ?? '';
+                    $num = (int) preg_replace('/\D/', '', (string) $raw);
+                    return max($carry, $num);
+                }, 0);
+            $noUrut = str_pad((string) ($maxNoUrut + 1), 2, '0', STR_PAD_LEFT);
+        }
+
+        $idCable = $request->input('id_cable');
+        $noVoyageGab = $request->input('no_voyage_gab');
+        if (($noVoyageGab === null || $noVoyageGab === '') && $idCable) {
+            $cable = T_master_cable::where('id', $idCable)->first();
+            $noVoyageGab = $cable?->no_voyage_gab;
+        }
+
+        $startTime = $request->input('start_time');
+        $stopTime = $request->input('stop_time');
+        $dischargeTime = $request->input('discharge_time');
+        if ($dischargeTime === null || $dischargeTime === '') {
+            $dischargeTime = $this->calcDischargeTime($startTime, $stopTime);
+        }
+
+        $payload = [
+            'id_doc_cargo' => $idDocCargo,
+            'id_cable' => $idCable,
+            'no_voyage_gab' => $noVoyageGab,
+            'no_urut' => $noUrut,
+            'start_time' => $startTime,
+            'stop_time' => $stopTime,
+            'discharge_time' => $dischargeTime,
+            'user_id' => Auth::id(),
+            'updated_at' => now(),
+        ];
+
+        if (!$id) {
+            $payload['created_at'] = now();
+        }
+
+        $allowed = array_flip($this->detailColumns());
+        return array_intersect_key($payload, $allowed);
+    }
+
+    public function index(Request $request)
+    {
+        $query = DB::table('t_doc_cargo_detail')->select('t_doc_cargo_detail.*');
+
+        $idDocCargo = $request->input('id_doc_cargo');
+        if (!is_null($idDocCargo) && $idDocCargo !== '') {
+            $query->where('t_doc_cargo_detail.id_doc_cargo', $idDocCargo);
+        }
+
+        $data = $query->orderBy('id', 'asc')->get();
 
         return response()->json([
             'success' => true,
             'message' => 'Data T_doc_cargo_detail berhasil diambil',
-            'data'    => $data
+            'data' => $data,
         ]);
     }
 
@@ -35,21 +108,17 @@ class T_doc_cargo_detailController extends Controller
     {
         $id = $request->route('id');
 
-        $data = T_doc_cargo_detail::query()
-            ->where('t_doc_cargo_detail.id', $id)
-            ->select('t_doc_cargo_detail.*')
+        $data = DB::table('t_doc_cargo_detail')
+            ->where('id', $id)
             ->first();
-        $files = File_upload::where('id_doc_cargo_detail', $id)
-            ->orderBy('id', 'asc')
-            ->get();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Data details T_doc_cargo_detail berhasil diambil',
-            'data'    => [
+            'data' => [
                 'detail' => $data,
-                'files' => $files,
-            ]
+                'files' => [],
+            ],
         ]);
     }
 
@@ -57,47 +126,18 @@ class T_doc_cargo_detailController extends Controller
     {
         try {
             DB::beginTransaction();
-            $t_doc_cargo_detail = new T_doc_cargo_detail();
-            $t_doc_cargo_detail->id_doc_cargo = $request->input('id_doc_cargo');
-            $t_doc_cargo_detail->id_cable = $request->input('id_cable');
-            $t_doc_cargo_detail->no_urut = $request->input('no_urut');
-            $t_doc_cargo_detail->no_voyage_gab = $request->input('no_voyage_gab');
-            $t_doc_cargo_detail->no_kontrak = $request->input('no_kontrak');
-            $t_doc_cargo_detail->val_potensi = $request->input('val_potensi');
-            $t_doc_cargo_detail->val_doc_cargo_awal = $request->input('val_doc_cargo_awal');
-            $t_doc_cargo_detail->val_doc_cargo_akhir = $request->input('val_doc_cargo_akhir');
-            $t_doc_cargo_detail->kurs = $request->input('kurs');
-            $t_doc_cargo_detail->val_doc_cargo_akhir_idr = $request->input('val_doc_cargo_akhir_idr');
-            $t_doc_cargo_detail->keterangan = $request->input('keterangan');
-            $t_doc_cargo_detail->no_tagihan_doc_cargo = $request->input('no_tagihan_doc_cargo');
-            $t_doc_cargo_detail->no_tagihan_dipotong = $request->input('no_tagihan_dipotong');
-            $t_doc_cargo_detail->status = $request->input('status');
-            $t_doc_cargo_detail->user_id = Auth::id();
-            $t_doc_cargo_detail->save();
 
-            if ($t_doc_cargo_detail->status === 'CLOSE' && $t_doc_cargo_detail->id_cable) {
-                T_master_cable::where('id', $t_doc_cargo_detail->id_cable)
-                    ->update(['status' => 'CLOSE']);
-            }
+            $payload = $this->buildPayload($request);
+            $id = DB::table('t_doc_cargo_detail')->insertGetId($payload);
 
-            $files = $request->file('files', []);
-            if ($files) {
-                foreach ($files as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = $file->store('uploads/doc_cargo_detail', 'public');
-                    $upload = new File_upload();
-                    $upload->id_doc_cargo_detail = $t_doc_cargo_detail->id;
-                    $upload->nama_file = $path;
-                    $upload->save();
-                }
-            }
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_doc_cargo_detail berhasil ditambah'
+                'message' => 'Data T_doc_cargo_detail berhasil ditambah',
+                'data' => [
+                    'id' => $id,
+                ],
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -107,51 +147,20 @@ class T_doc_cargo_detailController extends Controller
 
     public function edit(Request $request)
     {
-        $id = $request->route('id');
+        $id = (int) $request->route('id');
 
         try {
             DB::beginTransaction();
-            $t_doc_cargo_detail = T_doc_cargo_detail::where('id', $id)->firstOrFail();
-            $t_doc_cargo_detail->id_doc_cargo = $request->input('id_doc_cargo');
-            $t_doc_cargo_detail->id_cable = $request->input('id_cable');
-            $t_doc_cargo_detail->no_urut = $request->input('no_urut');
-            $t_doc_cargo_detail->no_voyage_gab = $request->input('no_voyage_gab');
-            $t_doc_cargo_detail->no_kontrak = $request->input('no_kontrak');
-            $t_doc_cargo_detail->val_potensi = $request->input('val_potensi');
-            $t_doc_cargo_detail->val_doc_cargo_awal = $request->input('val_doc_cargo_awal');
-            $t_doc_cargo_detail->val_doc_cargo_akhir = $request->input('val_doc_cargo_akhir');
-            $t_doc_cargo_detail->kurs = $request->input('kurs');
-            $t_doc_cargo_detail->val_doc_cargo_akhir_idr = $request->input('val_doc_cargo_akhir_idr');
-            $t_doc_cargo_detail->keterangan = $request->input('keterangan');
-            $t_doc_cargo_detail->no_tagihan_doc_cargo = $request->input('no_tagihan_doc_cargo');
-            $t_doc_cargo_detail->no_tagihan_dipotong = $request->input('no_tagihan_dipotong');
-            $t_doc_cargo_detail->status = $request->input('status');
-            $t_doc_cargo_detail->user_id = Auth::id();
-            $t_doc_cargo_detail->save();
+            T_doc_cargo_detail::where('id', $id)->firstOrFail();
 
-            if ($t_doc_cargo_detail->status === 'CLOSE' && $t_doc_cargo_detail->id_cable) {
-                T_master_cable::where('id', $t_doc_cargo_detail->id_cable)
-                    ->update(['status' => 'CLOSE']);
-            }
+            $payload = $this->buildPayload($request, $id);
+            DB::table('t_doc_cargo_detail')->where('id', $id)->update($payload);
 
-            $files = $request->file('files', []);
-            if ($files) {
-                foreach ($files as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = $file->store('uploads/doc_cargo_detail', 'public');
-                    $upload = new File_upload();
-                    $upload->id_doc_cargo_detail = $t_doc_cargo_detail->id;
-                    $upload->nama_file = $path;
-                    $upload->save();
-                }
-            }
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_doc_cargo_detail berhasil diubah'
+                'message' => 'Data T_doc_cargo_detail berhasil diubah',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -165,25 +174,13 @@ class T_doc_cargo_detailController extends Controller
 
         try {
             DB::beginTransaction();
-            $t_doc_cargo_detail = T_doc_cargo_detail::where('id', $id)->firstOrFail();
-
-            $files = File_upload::where('id_klaim_detail', $id)->get();
-            foreach ($files as $file) {
-                if ($file->nama_file) {
-                    $disk = Storage::disk('public');
-                    if ($disk->exists($file->nama_file)) {
-                        $disk->delete($file->nama_file);
-                    }
-                }
-                $file->delete();
-            }
-
-            $t_doc_cargo_detail->delete();
+            $detail = T_doc_cargo_detail::where('id', $id)->firstOrFail();
+            $detail->delete();
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_klaim_detail berhasil dihapus'
+                'message' => 'Data T_doc_cargo_detail berhasil dihapus',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

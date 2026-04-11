@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 11, 2026 at 06:56 PM
+-- Generation Time: Apr 11, 2026 at 07:44 PM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -71,7 +71,7 @@ CREATE TABLE `file_upload` (
   `id` int NOT NULL,
   `id_kontrak` int DEFAULT NULL,
   `id_cable` int DEFAULT NULL,
-  `id_klaim_detail` int DEFAULT NULL,
+  `id_klaim_detail_nilai` int DEFAULT NULL,
   `id_doc_cargo` int DEFAULT NULL,
   `nama_file` text,
   `created_at` timestamp NULL DEFAULT NULL,
@@ -82,7 +82,7 @@ CREATE TABLE `file_upload` (
 -- Dumping data for table `file_upload`
 --
 
-INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_detail`, `id_doc_cargo`, `nama_file`, `created_at`, `updated_at`) VALUES
+INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_detail_nilai`, `id_doc_cargo`, `nama_file`, `created_at`, `updated_at`) VALUES
 (4, 16, NULL, NULL, NULL, 'uploads/kontrak/lsdzy4XLkdcuCGxlihAPUHHSvQpKccgwwjTiZ5bj.txt', '2026-04-03 13:09:16', '2026-04-03 13:09:16'),
 (5, 16, NULL, NULL, NULL, 'uploads/kontrak/pFpoFcur8RINZXmOG9YXKuacigrPMc9XAkbd7ZOg.txt', '2026-04-03 13:09:16', '2026-04-03 13:09:16'),
 (6, 16, NULL, NULL, NULL, 'uploads/kontrak/ObykSGi7Lq2jRRQmKgYUxHUabooVKY8PCS3SVXUD.png', '2026-04-03 13:09:16', '2026-04-03 13:09:16');
@@ -386,7 +386,7 @@ CREATE TABLE `personal_access_tokens` (
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
 (24, 'App\\Models\\User', 2, 'api-token', '97e6a6fb374ad7e4ec4207b532773a5fd7e50fd7abc59bdec0e055cfb1d11543', '[\"*\"]', '2026-04-03 14:56:02', NULL, '2026-04-03 13:28:58', '2026-04-03 14:56:02'),
-(28, 'App\\Models\\User', 1, 'api-token', 'da6313984ee0243dff92ad261905561a0e8c0d3b998946b01c21b072664fd3ba', '[\"*\"]', '2026-04-11 11:55:48', NULL, '2026-04-11 10:15:42', '2026-04-11 11:55:48');
+(28, 'App\\Models\\User', 1, 'api-token', 'da6313984ee0243dff92ad261905561a0e8c0d3b998946b01c21b072664fd3ba', '[\"*\"]', '2026-04-11 12:28:40', NULL, '2026-04-11 10:15:42', '2026-04-11 12:28:40');
 
 -- --------------------------------------------------------
 
@@ -469,13 +469,25 @@ CREATE TABLE `t_doc_cargo` (
   `id` int NOT NULL,
   `id_cable` int NOT NULL,
   `id_grade` int NOT NULL,
+  `no_voyage_gab` varchar(100) DEFAULT NULL,
+  `grade` varchar(100) DEFAULT NULL,
+  `price_bbl` varchar(100) DEFAULT NULL,
   `bill_of_lading` varchar(100) DEFAULT NULL,
+  `r1` varchar(100) DEFAULT NULL,
+  `ratio_r1` varchar(100) DEFAULT NULL,
+  `r2` varchar(100) DEFAULT NULL,
+  `ratio_r2` varchar(100) DEFAULT NULL,
+  `r3` varchar(100) DEFAULT NULL,
+  `ratio_r3` varchar(100) DEFAULT NULL,
+  `r4` varchar(100) DEFAULT NULL,
+  `ratio_r4` varchar(100) DEFAULT NULL,
   `act_receipt` varchar(100) DEFAULT NULL,
   `est_discharge` varchar(100) DEFAULT NULL,
   `act_discharge` varchar(100) DEFAULT NULL,
   `overdue_discharge` varchar(100) DEFAULT NULL,
   `est_claim_pumping` varchar(100) DEFAULT NULL,
   `est_claim_bunker` varchar(100) DEFAULT NULL,
+  `est_claim_transport` varchar(100) DEFAULT NULL,
   `status` varchar(20) DEFAULT NULL,
   `user_id` int DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
@@ -491,6 +503,7 @@ CREATE TABLE `t_doc_cargo` (
 CREATE TABLE `t_doc_cargo_detail` (
   `id` int NOT NULL,
   `id_doc_cargo` int NOT NULL,
+  `no_voyage_gab` varchar(100) DEFAULT NULL,
   `no_urut` varchar(100) DEFAULT NULL,
   `start_time` varchar(100) DEFAULT NULL,
   `stop_time` varchar(100) DEFAULT NULL,
@@ -519,6 +532,13 @@ CREATE TABLE `t_klaim` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data for table `t_klaim`
+--
+
+INSERT INTO `t_klaim` (`id`, `id_vessel`, `no_klaim_awal`, `tgl_klaim_awal`, `jenis_klaim`, `no_klaim_akhir`, `tgl_klaim_akhir`, `user_id`, `created_at`, `updated_at`) VALUES
+(27, 34, '1', '2026-06-01', 'SSOB', NULL, NULL, 1, '2026-04-11 12:08:12', '2026-04-11 12:08:12');
+
 -- --------------------------------------------------------
 
 --
@@ -538,6 +558,13 @@ CREATE TABLE `t_klaim_detail` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `t_klaim_detail`
+--
+
+INSERT INTO `t_klaim_detail` (`id`, `id_klaim`, `id_cable`, `no_urut`, `no_voyage_gab`, `no_kontrak`, `keterangan`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(34, 27, 12, '01', '26001/L', '004/TCP/1/2024', NULL, 'OPEN', 1, '2026-04-11 12:08:13', '2026-04-11 12:08:13');
 
 -- --------------------------------------------------------
 
@@ -929,13 +956,13 @@ ALTER TABLE `t_doc_cargo_detail`
 -- AUTO_INCREMENT for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail`
 --
 ALTER TABLE `t_klaim_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail_nilai`

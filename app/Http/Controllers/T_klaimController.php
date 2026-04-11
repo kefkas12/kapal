@@ -33,7 +33,6 @@ class T_klaimController extends Controller
                     ->orWhere('t_klaim.tgl_klaim_awal', 'like', "%{$search}%")
                     ->orWhere('t_klaim.jenis_klaim', 'like', "%{$search}%")
                     ->orWhere('t_klaim.id_vessel', 'like', "%{$search}%")
-                    ->orWhere('t_klaim.currency', 'like', "%{$search}%")
                     ->orWhere('t_klaim.no_klaim_akhir', 'like', "%{$search}%")
                     ->orWhere('t_klaim.tgl_klaim_akhir', 'like', "%{$search}%")
                     ->orWhere('m_vessel.kode_vessel', 'like', "%{$search}%");
@@ -57,7 +56,6 @@ class T_klaimController extends Controller
             'jenis_klaim' => 't_klaim.jenis_klaim',
             'id_vessel' => 't_klaim.id_vessel',
             'kode_vessel' => 'm_vessel.kode_vessel',
-            'currency' => 't_klaim.currency',
             'no_klaim_akhir' => 't_klaim.no_klaim_akhir',
             'tgl_klaim_akhir' => 't_klaim.tgl_klaim_akhir',
             'created_at' => 't_klaim.created_at',
@@ -112,7 +110,6 @@ class T_klaimController extends Controller
             $t_klaim->no_klaim_awal = $request->input('no_klaim_awal');
             $t_klaim->tgl_klaim_awal = $request->input('tgl_klaim_awal');
             $t_klaim->jenis_klaim = $request->input('jenis_klaim');
-            $t_klaim->currency = $request->input('currency');
             $t_klaim->no_klaim_akhir = $request->input('no_klaim_akhir');
             $t_klaim->tgl_klaim_akhir = $request->input('tgl_klaim_akhir');
             $t_klaim->user_id = Auth::id();
@@ -143,7 +140,6 @@ class T_klaimController extends Controller
             $t_klaim->no_klaim_awal = $request->input('no_klaim_awal');
             $t_klaim->tgl_klaim_awal = $request->input('tgl_klaim_awal');
             $t_klaim->jenis_klaim = $request->input('jenis_klaim');
-            $t_klaim->currency = $request->input('currency');
             $t_klaim->no_klaim_akhir = $request->input('no_klaim_akhir');
             $t_klaim->tgl_klaim_akhir = $request->input('tgl_klaim_akhir');
             $t_klaim->user_id = Auth::id();
@@ -170,16 +166,6 @@ class T_klaimController extends Controller
 
             $details = T_klaim_detail::where('id_klaim', $id)->get();
             foreach ($details as $detail) {
-                $files = File_upload::where('id_klaim_detail', $detail->id)->get();
-                foreach ($files as $file) {
-                    if ($file->nama_file) {
-                        $disk = Storage::disk('public');
-                        if ($disk->exists($file->nama_file)) {
-                            $disk->delete($file->nama_file);
-                        }
-                    }
-                    $file->delete();
-                }
                 $detail->delete();
             }
 

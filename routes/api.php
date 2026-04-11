@@ -7,6 +7,9 @@ use App\Http\Controllers\M_vesselController;
 use App\Http\Controllers\T_klaim_detailController;
 use App\Http\Controllers\T_klaimController;
 use App\Http\Controllers\T_master_cableController;
+use App\Http\Controllers\T_doc_cargoController;
+use App\Http\Controllers\T_doc_cargo_detailController;
+use App\Http\Controllers\UserRoleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -26,7 +29,22 @@ Route::controller(\App\Http\Controllers\File_uploadController::class)->prefix('f
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/me', function (Request $request) {
-        return $request->user();
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(null, 401);
+        }
+
+        return response()->json(array_merge($user->toArray(), [
+            'roles' => $user->getRoleNames()->values()->all(),
+        ]));
+    });
+
+    Route::controller(UserRoleController::class)->prefix('user_role')->group(function () {
+        Route::get('/dashboard', 'dashboardData');
+        Route::get('/users', 'users');
+        Route::post('/users', 'createUser');
+        Route::put('/users/{id}/role', 'assignRole');
+        Route::post('/change-password', 'changeMyPassword');
     });
 
     Route::controller(M_kontrakController::class)->prefix('kontrak')->group(function () {
