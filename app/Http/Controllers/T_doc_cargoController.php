@@ -31,10 +31,29 @@ class T_doc_cargoController extends Controller
         if ($value === null || $value === '') {
             return 0.0;
         }
-        $cleaned = preg_replace('/[^0-9.\-]/', '', (string) $value);
+
+        $str = trim((string) $value);
+        if ($str === '') {
+            return 0.0;
+        }
+
+        // dukung format angka: 1.234,56 atau 1,234.56
+        if (str_contains($str, ',') && str_contains($str, '.')) {
+            if (strrpos($str, ',') > strrpos($str, '.')) {
+                $str = str_replace('.', '', $str);
+                $str = str_replace(',', '.', $str);
+            } else {
+                $str = str_replace(',', '', $str);
+            }
+        } elseif (str_contains($str, ',')) {
+            $str = str_replace(',', '.', $str);
+        }
+
+        $cleaned = preg_replace('/[^0-9.\-]/', '', $str);
         if ($cleaned === null || $cleaned === '' || $cleaned === '-' || $cleaned === '.') {
             return 0.0;
         }
+
         return (float) $cleaned;
     }
 
@@ -83,12 +102,17 @@ class T_doc_cargoController extends Controller
             $grade = M_grade::where('id', $idGrade)->first();
         }
 
+        $priceBbl = $grade?->price_bbl;
+        if ($priceBbl === null || $priceBbl === '') {
+            $priceBbl = $request->input('price_bbl');
+        }
+
         $payload = [
             'id_cable' => $idCable,
             'id_grade' => $idGrade,
             'no_voyage_gab' => $cable?->no_voyage_gab,
             'grade' => $grade?->grade,
-            'price_bbl' => $grade?->price_bbl,
+            'price_bbl' => $priceBbl,
             'bill_of_lading' => $request->input('bill_of_lading'),
             'r1' => $request->input('r1'),
             'ratio_r1' => $request->input('ratio_r1'),
