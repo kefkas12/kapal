@@ -22,39 +22,53 @@ class T_klaimController extends Controller
             $perPage = 100;
         }
 
-        $query = T_klaim::query();
+        $query = T_klaim::query()
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_klaim.id_vessel')
+            ->select('t_klaim.*', 'm_vessel.kode_vessel');
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('no_klaim_awal', 'like', "%{$search}%")
-                    ->orWhere('tgl_klaim_awal', 'like', "%{$search}%")
-                    ->orWhere('jenis_klaim', 'like', "%{$search}%")
-                    ->orWhere('id_vessel', 'like', "%{$search}%")
-                    ->orWhere('currency', 'like', "%{$search}%")
-                    ->orWhere('no_klaim_akhir', 'like', "%{$search}%")
-                    ->orWhere('tgl_klaim_akhir', 'like', "%{$search}%");
+                $q->where('t_klaim.no_klaim_awal', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.tgl_klaim_awal', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.jenis_klaim', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.id_vessel', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.currency', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.no_klaim_akhir', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.tgl_klaim_akhir', 'like', "%{$search}%")
+                    ->orWhere('m_vessel.kode_vessel', 'like', "%{$search}%");
             });
         }
 
         $idVessel = $request->input('id_vessel');
         if (!is_null($idVessel) && $idVessel !== '') {
-            $query->where('id_vessel', $idVessel);
+            $query->where('t_klaim.id_vessel', $idVessel);
         }
 
         $jenisKlaim = $request->input('jenis_klaim');
         if (!is_null($jenisKlaim) && $jenisKlaim !== '') {
-            $query->where('jenis_klaim', $jenisKlaim);
+            $query->where('t_klaim.jenis_klaim', $jenisKlaim);
         }
 
-        $allowedSort = ['id', 'no_klaim_awal', 'tgl_klaim_awal', 'jenis_klaim', 'id_vessel', 'currency', 'no_klaim_akhir', 'tgl_klaim_akhir', 'created_at'];
+        $allowedSort = [
+            'id' => 't_klaim.id',
+            'no_klaim_awal' => 't_klaim.no_klaim_awal',
+            'tgl_klaim_awal' => 't_klaim.tgl_klaim_awal',
+            'jenis_klaim' => 't_klaim.jenis_klaim',
+            'id_vessel' => 't_klaim.id_vessel',
+            'kode_vessel' => 'm_vessel.kode_vessel',
+            'currency' => 't_klaim.currency',
+            'no_klaim_akhir' => 't_klaim.no_klaim_akhir',
+            'tgl_klaim_akhir' => 't_klaim.tgl_klaim_akhir',
+            'created_at' => 't_klaim.created_at',
+        ];
         $sortBy = $request->input('sort_by', 'id');
-        if (!in_array($sortBy, $allowedSort, true)) {
+        if (!array_key_exists($sortBy, $allowedSort)) {
             $sortBy = 'id';
         }
         $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
-        $query->orderBy($sortBy, $sortDir);
+        $query->orderBy($allowedSort[$sortBy], $sortDir);
 
         $paginator = $query->paginate($perPage);
 
