@@ -105,7 +105,13 @@ class T_master_cableController extends Controller
         $idVessel = $request->query('id_vessel');
 
         $vessels = DB::table('m_vessel')
-            ->select('id', 'kode_vessel', 'nama_vessel', 'jenis_vessel', 'status')
+            ->join('m_kontrak', function ($join) {
+                $join->on('m_kontrak.id_vessel', '=', 'm_vessel.id')
+                    ->where('m_kontrak.status', '=', 'ACTIVE');
+            })
+            ->select('m_vessel.id', 'm_vessel.kode_vessel', 'm_vessel.nama_vessel', 'm_vessel.jenis_vessel', 'm_vessel.status')
+            ->groupBy('m_vessel.id', 'm_vessel.kode_vessel', 'm_vessel.nama_vessel', 'm_vessel.jenis_vessel', 'm_vessel.status')
+            ->havingRaw('COUNT(m_kontrak.id) = 1')
             ->orderBy('kode_vessel')
             ->get();
 
@@ -144,6 +150,7 @@ class T_master_cableController extends Controller
 
             $kontrak = DB::table('m_kontrak')
                 ->where('id_vessel', $idVessel)
+                ->where('status', 'ACTIVE')
                 ->orderByDesc('id')
                 ->first();
         }
@@ -175,6 +182,19 @@ class T_master_cableController extends Controller
     {
         try {
             DB::beginTransaction();
+            $activeKontrakCount = DB::table('m_kontrak')
+                ->where('id_vessel', $request->input('id_vessel'))
+                ->where('status', 'ACTIVE')
+                ->count();
+
+            if ($activeKontrakCount !== 1) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vessel harus memiliki tepat 1 kontrak ACTIVE.'
+                ], 422);
+            }
+
             $t_master_cable = new T_master_cable();
             $t_master_cable->id_vessel = $request->input('id_vessel');
             $t_master_cable->no_voyage_gab = $request->input('no_voyage_gab');
@@ -234,6 +254,19 @@ class T_master_cableController extends Controller
 
         try {
             DB::beginTransaction();
+            $activeKontrakCount = DB::table('m_kontrak')
+                ->where('id_vessel', $request->input('id_vessel'))
+                ->where('status', 'ACTIVE')
+                ->count();
+
+            if ($activeKontrakCount !== 1) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vessel harus memiliki tepat 1 kontrak ACTIVE.'
+                ], 422);
+            }
+
             $t_master_cable = T_master_cable::where('id', $id)->firstOrFail();
             $t_master_cable->no_voyage_gab = $request->input('no_voyage_gab');
             $t_master_cable->no_voyage = $request->input('no_voyage');
