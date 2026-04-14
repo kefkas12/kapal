@@ -119,13 +119,18 @@ class T_master_cableController extends Controller
         $availableForKlaim = $request->boolean('available_for_klaim', false);
         if ($availableForKlaim) {
             $excludeKlaimId = $request->input('exclude_klaim_id');
-            $query->whereNotExists(function ($sub) use ($excludeKlaimId) {
+            $jenisKlaim = trim((string) $request->input('jenis_klaim', ''));
+            $query->whereNotExists(function ($sub) use ($excludeKlaimId, $jenisKlaim) {
                 $sub->select(DB::raw(1))
                     ->from('t_klaim_detail')
+                    ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
                     ->whereColumn('t_klaim_detail.id_cable', 't_master_cable.id');
 
                 if (!is_null($excludeKlaimId) && $excludeKlaimId !== '') {
                     $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
+                }
+                if ($jenisKlaim !== '') {
+                    $sub->where('t_klaim.jenis_klaim', $jenisKlaim);
                 }
             });
         }
