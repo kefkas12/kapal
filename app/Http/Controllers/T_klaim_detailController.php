@@ -140,7 +140,7 @@ class T_klaim_detailController extends Controller
 
     private function deleteFilesByKlaimDetailId(int $klaimDetailId): void
     {
-        $files = File_upload::where('id_klaim_detail', $klaimDetailId)->get();
+        $files = $this->fileUploadQueryByKlaimDetailId($klaimDetailId)->get();
         foreach ($files as $file) {
             if ($file->nama_file) {
                 $disk = Storage::disk('public');
@@ -159,7 +159,7 @@ class T_klaim_detailController extends Controller
             return $nilaiRows;
         }
 
-        $files = File_upload::where('id_klaim_detail', $klaimDetailId)
+        $files = $this->fileUploadQueryByKlaimDetailId($klaimDetailId)
             ->orderBy('id', 'asc')
             ->get()
             ->values();
@@ -196,10 +196,31 @@ class T_klaim_detailController extends Controller
             }
             $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
             $upload = new File_upload();
-            $upload->id_klaim_detail = $klaimDetailId;
+            $column = $this->resolveFileUploadDetailColumn($klaimDetailId);
+            $upload->id_klaim_detail_awal = null;
+            $upload->id_klaim_detail_akhir = null;
+            $upload->{$column} = $klaimDetailId;
             $upload->nama_file = $path;
             $upload->save();
         }
+    }
+
+    private function resolveFileUploadDetailColumn(int $klaimDetailId): string
+    {
+        $detail = T_klaim_detail::query()
+            ->leftJoin('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
+            ->where('t_klaim_detail.id', $klaimDetailId)
+            ->select('t_klaim.no_klaim_akhir', 't_klaim.tgl_klaim_akhir')
+            ->first();
+
+        $isAwal = $detail && empty($detail->no_klaim_akhir) && empty($detail->tgl_klaim_akhir);
+        return $isAwal ? 'id_klaim_detail_awal' : 'id_klaim_detail_akhir';
+    }
+
+    private function fileUploadQueryByKlaimDetailId(int $klaimDetailId)
+    {
+        $column = $this->resolveFileUploadDetailColumn($klaimDetailId);
+        return File_upload::where($column, $klaimDetailId);
     }
 
     private function attachNilaiItemsToDetails($details)
@@ -291,7 +312,7 @@ class T_klaim_detailController extends Controller
         $errors = [];
         $hasIncomingFiles = $this->hasUploadedFiles($request->file('files', []))
             || $this->hasUploadedFilesBySubJenis($request->file('files_by_sub_jenis', []));
-        $hasExistingFiles = File_upload::where('id_klaim_detail', $klaimDetailId)->exists();
+        $hasExistingFiles = $this->fileUploadQueryByKlaimDetailId($klaimDetailId)->exists();
         if (!$hasIncomingFiles && !$hasExistingFiles) {
             $errors['files'] = 'File upload wajib diisi.';
         }
@@ -348,7 +369,7 @@ class T_klaim_detailController extends Controller
         }
 
         $files = $data?->id
-            ? File_upload::where('id_klaim_detail', $data->id)->orderBy('id', 'asc')->get()
+            ? $this->fileUploadQueryByKlaimDetailId((int) $data->id)->orderBy('id', 'asc')->get()
             : collect();
         
         return response()->json([
