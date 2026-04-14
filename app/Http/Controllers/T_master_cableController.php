@@ -135,6 +135,20 @@ class T_master_cableController extends Controller
             });
         }
 
+        $availableForDocCargo = $request->boolean('available_for_doc_cargo', false);
+        if ($availableForDocCargo) {
+            $excludeDocCargoId = $request->input('exclude_doc_cargo_id');
+            $query->whereNotExists(function ($sub) use ($excludeDocCargoId) {
+                $sub->select(DB::raw(1))
+                    ->from('t_doc_cargo')
+                    ->whereColumn('t_doc_cargo.id_cable', 't_master_cable.id');
+
+                if (!is_null($excludeDocCargoId) && $excludeDocCargoId !== '') {
+                    $sub->where('t_doc_cargo.id', '!=', $excludeDocCargoId);
+                }
+            });
+        }
+
         $allowedSort = ['id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'captain', 'atd_port', 'ata_port', 'status', 'created_at'];
         $sortBy = $request->input('sort_by', 'id');
         if (!in_array($sortBy, $allowedSort, true)) {
