@@ -119,7 +119,7 @@ class T_klaim_detailController extends Controller
             $row->val_klaim_akhir_idr = $item['val_klaim_akhir_idr'] ?? $request->input('val_klaim_akhir_idr');
             $row->no_tagihan_klaim = $item['no_tagihan_klaim'] ?? $request->input('no_tagihan_klaim');
             $row->no_tagihan_dipotong = $item['no_tagihan_dipotong'] ?? $request->input('no_tagihan_dipotong');
-            $row->status = $item['status'] ?? $request->input('status') ?? 'OPEN';
+            $row->status = 'OPEN';
             $row->user_id = Auth::id();
             $row->save();
 
@@ -380,7 +380,7 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->no_voyage_gab = $request->input('no_voyage_gab');
             $t_klaim_detail->no_kontrak = $request->input('no_kontrak');
             $t_klaim_detail->keterangan = $request->input('keterangan');
-            $t_klaim_detail->status = $request->input('status');
+            $t_klaim_detail->status = 'OPEN';
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
 
@@ -420,7 +420,6 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->no_voyage_gab = $request->input('no_voyage_gab');
             $t_klaim_detail->no_kontrak = $request->input('no_kontrak');
             $t_klaim_detail->keterangan = $request->input('keterangan');
-            $t_klaim_detail->status = $request->input('status');
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
 
