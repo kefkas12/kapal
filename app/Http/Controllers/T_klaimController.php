@@ -24,7 +24,7 @@ class T_klaimController extends Controller
 
         $query = T_klaim::query()
             ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_klaim.id_vessel')
-            ->select('t_klaim.*', 'm_vessel.kode_vessel');
+            ->select('t_klaim.*', 'm_vessel.nama_vessel');
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
@@ -35,7 +35,7 @@ class T_klaimController extends Controller
                     ->orWhere('t_klaim.id_vessel', 'like', "%{$search}%")
                     ->orWhere('t_klaim.no_klaim_akhir', 'like', "%{$search}%")
                     ->orWhere('t_klaim.tgl_klaim_akhir', 'like', "%{$search}%")
-                    ->orWhere('m_vessel.kode_vessel', 'like', "%{$search}%");
+                    ->orWhere('m_vessel.nama_vessel', 'like', "%{$search}%");
             });
         }
 
@@ -55,7 +55,7 @@ class T_klaimController extends Controller
             'tgl_klaim_awal' => 't_klaim.tgl_klaim_awal',
             'jenis_klaim' => 't_klaim.jenis_klaim',
             'id_vessel' => 't_klaim.id_vessel',
-            'kode_vessel' => 'm_vessel.kode_vessel',
+            'nama_vessel' => 'm_vessel.nama_vessel',
             'no_klaim_akhir' => 't_klaim.no_klaim_akhir',
             'tgl_klaim_akhir' => 't_klaim.tgl_klaim_akhir',
             'created_at' => 't_klaim.created_at',

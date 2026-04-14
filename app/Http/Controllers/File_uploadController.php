@@ -30,8 +30,9 @@ class File_uploadController extends Controller
         $path = $disk->path($file->nama_file);
         $mime = $disk->mimeType($file->nama_file) ?? 'application/octet-stream';
         $isImage = str_starts_with($mime, 'image/');
+        $isPdf = $mime === 'application/pdf';
 
-        if ($isImage) {
+        if ($isImage || $isPdf) {
             return response()->file($path, [
                 'Content-Type' => $mime,
                 'Content-Disposition' => 'inline'

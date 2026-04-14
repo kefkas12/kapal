@@ -129,7 +129,7 @@ class T_doc_cargoController extends Controller
             'est_claim_pumping' => $request->input('est_claim_pumping'),
             'est_claim_bunker' => $request->input('est_claim_bunker'),
             'est_claim_transport' => $request->input('est_claim_transport'),
-            'status' => $request->input('status') ?: 'OPEN',
+            'status' => 'OPEN',
             'user_id' => Auth::id(),
             'updated_at' => now(),
         ];
@@ -308,6 +308,7 @@ class T_doc_cargoController extends Controller
             ], [
                 'files.required' => 'File upload wajib diisi.',
                 'files.min' => 'Minimal 1 file harus diupload.',
+                'files.*.mimes' => 'File cable hanya boleh PDF.',
             ]);
 
             $payload = $this->sanitizeDocCargoPayload($request);

@@ -132,16 +132,15 @@ class T_klaim_detailController extends Controller
             ->get();
 
         foreach ($toDeleteRows as $row) {
-            $this->deleteFilesByNilaiId((int) $row->id);
             $row->delete();
         }
 
         return $rowsBySubJenis;
     }
 
-    private function deleteFilesByNilaiId(int $nilaiId): void
+    private function deleteFilesByKlaimDetailId(int $klaimDetailId): void
     {
-        $files = File_upload::where('id_klaim_detail_nilai', $nilaiId)->get();
+        $files = File_upload::where('id_klaim_detail', $klaimDetailId)->get();
         foreach ($files as $file) {
             if ($file->nama_file) {
                 $disk = Storage::disk('public');
@@ -153,70 +152,53 @@ class T_klaim_detailController extends Controller
         }
     }
 
-    private function attachFilesToNilaiRows($nilaiRows)
+    private function attachFilesToNilaiRows($nilaiRows, int $klaimDetailId)
     {
         $nilaiRows = collect($nilaiRows)->values();
-        $ids = $nilaiRows->pluck('id')->filter()->values();
-        if ($ids->isEmpty()) {
+        if ($nilaiRows->isEmpty()) {
             return $nilaiRows;
         }
 
-        $filesByNilai = File_upload::whereIn('id_klaim_detail_nilai', $ids)
+        $files = File_upload::where('id_klaim_detail', $klaimDetailId)
             ->orderBy('id', 'asc')
             ->get()
-            ->groupBy('id_klaim_detail_nilai');
+            ->values();
 
         foreach ($nilaiRows as $row) {
-            $row->files = collect($filesByNilai->get($row->id, []))->values();
+            $row->files = $files;
         }
 
         return $nilaiRows;
     }
 
-    private function storeFilesPerNilai(Request $request, array $rowsBySubJenis): void
+    private function storeFilesPerNilai(Request $request, int $klaimDetailId): void
     {
-        if (empty($rowsBySubJenis)) {
-            return;
-        }
+        $files = [];
 
+        $incomingFiles = $request->file('files', []);
+        if (!is_array($incomingFiles)) {
+            $incomingFiles = $incomingFiles ? [$incomingFiles] : [];
+        }
+        $files = array_merge($files, $incomingFiles);
+
+        // Backward compatibility: tetap terima payload lama files_by_sub_jenis[*][]
         $filesBySubJenis = $request->file('files_by_sub_jenis', []);
         if (is_array($filesBySubJenis)) {
-            foreach ($filesBySubJenis as $subJenis => $fileList) {
-                $sub = strtoupper((string) $subJenis);
-                $row = $rowsBySubJenis[$sub] ?? null;
-                if (!$row) {
-                    continue;
-                }
+            foreach ($filesBySubJenis as $fileList) {
                 $list = is_array($fileList) ? $fileList : [$fileList];
-                foreach ($list as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
-                    $upload = new File_upload();
-                    $upload->id_klaim_detail_nilai = $row->id;
-                    $upload->nama_file = $path;
-                    $upload->save();
-                }
+                $files = array_merge($files, $list);
             }
         }
 
-        // Backward compatibility: jika frontend lama kirim files[] umum, simpan ke sub-jenis pertama.
-        $legacyFiles = $request->file('files', []);
-        if ($legacyFiles) {
-            $firstRow = collect($rowsBySubJenis)->first();
-            if ($firstRow) {
-                foreach ($legacyFiles as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
-                    $upload = new File_upload();
-                    $upload->id_klaim_detail_nilai = $firstRow->id;
-                    $upload->nama_file = $path;
-                    $upload->save();
-                }
+        foreach ($files as $file) {
+            if (!$file) {
+                continue;
             }
+            $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
+            $upload = new File_upload();
+            $upload->id_klaim_detail = $klaimDetailId;
+            $upload->nama_file = $path;
+            $upload->save();
         }
     }
 
@@ -263,6 +245,21 @@ class T_klaim_detailController extends Controller
         return (bool) $fileValue;
     }
 
+    private function hasUploadedFilesBySubJenis($rawFilesBySubJenis): bool
+    {
+        if (!is_array($rawFilesBySubJenis)) {
+            return false;
+        }
+
+        foreach ($rawFilesBySubJenis as $fileValue) {
+            if ($this->hasUploadedFiles($fileValue)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function isKlaimAwal(?T_klaim $klaim): bool
     {
         if (!$klaim) {
@@ -277,28 +274,11 @@ class T_klaim_detailController extends Controller
         $klaim = T_klaim::where('id', $klaimId)->first();
         $requiredSubJenis = $this->getSubJenisByJenisKlaim($klaim?->jenis_klaim);
 
-        $rawFilesBySubJenis = $request->file('files_by_sub_jenis', []);
-        $filesBySubJenis = [];
-        if (is_array($rawFilesBySubJenis)) {
-            foreach ($rawFilesBySubJenis as $key => $val) {
-                $filesBySubJenis[strtoupper((string) $key)] = $val;
-            }
-        }
-
         $errors = [];
-        foreach ($requiredSubJenis as $subJenis) {
-            $sub = strtoupper((string) $subJenis);
-            $hasSubFiles = $this->hasUploadedFiles($filesBySubJenis[$sub] ?? null);
-            if (!$hasSubFiles) {
-                $errors["files_by_sub_jenis.$sub"] = "File upload untuk sub jenis {$sub} wajib diisi.";
-            }
-        }
-
-        if (empty($requiredSubJenis)) {
-            $legacyFiles = $request->file('files', []);
-            if (!$this->hasUploadedFiles($legacyFiles)) {
-                $errors['files'] = 'File upload wajib diisi.';
-            }
+        $hasIncomingFiles = $this->hasUploadedFiles($request->file('files', []))
+            || $this->hasUploadedFilesBySubJenis($request->file('files_by_sub_jenis', []));
+        if (!empty($requiredSubJenis) && !$hasIncomingFiles) {
+            $errors['files'] = 'File upload wajib diisi.';
         }
 
         if (!empty($errors)) {
@@ -306,24 +286,14 @@ class T_klaim_detailController extends Controller
         }
     }
 
-    private function validateRequiredFilesOnEdit(Request $request, array $rowsBySubJenis): void
+    private function validateRequiredFilesOnEdit(Request $request, int $klaimDetailId): void
     {
-        $rawFilesBySubJenis = $request->file('files_by_sub_jenis', []);
-        $filesBySubJenis = [];
-        if (is_array($rawFilesBySubJenis)) {
-            foreach ($rawFilesBySubJenis as $key => $val) {
-                $filesBySubJenis[strtoupper((string) $key)] = $val;
-            }
-        }
-
         $errors = [];
-        foreach ($rowsBySubJenis as $subJenis => $row) {
-            $sub = strtoupper((string) $subJenis);
-            $hasIncomingFiles = $this->hasUploadedFiles($filesBySubJenis[$sub] ?? null);
-            $hasExistingFiles = File_upload::where('id_klaim_detail_nilai', $row->id)->exists();
-            if (!$hasIncomingFiles && !$hasExistingFiles) {
-                $errors["files_by_sub_jenis.$sub"] = "File upload untuk sub jenis {$sub} wajib diisi.";
-            }
+        $hasIncomingFiles = $this->hasUploadedFiles($request->file('files', []))
+            || $this->hasUploadedFilesBySubJenis($request->file('files_by_sub_jenis', []));
+        $hasExistingFiles = File_upload::where('id_klaim_detail', $klaimDetailId)->exists();
+        if (!$hasIncomingFiles && !$hasExistingFiles) {
+            $errors['files'] = 'File upload wajib diisi.';
         }
 
         if (!empty($errors)) {
@@ -364,7 +334,7 @@ class T_klaim_detailController extends Controller
                 ->orderBy('id', 'asc')
                 ->get()
                 ->values();
-            $rows = $this->attachFilesToNilaiRows($rows);
+            $rows = $this->attachFilesToNilaiRows($rows, (int) $data->id);
             $data->nilai_items = $rows;
 
             $first = $rows->first();
@@ -377,10 +347,9 @@ class T_klaim_detailController extends Controller
             $data->no_tagihan_dipotong = $first->no_tagihan_dipotong ?? null;
         }
 
-        $nilaiIds = collect($data?->nilai_items ?? [])->pluck('id')->filter()->values();
-        $files = $nilaiIds->isEmpty()
-            ? collect()
-            : File_upload::whereIn('id_klaim_detail_nilai', $nilaiIds)->orderBy('id', 'asc')->get();
+        $files = $data?->id
+            ? File_upload::where('id_klaim_detail', $data->id)->orderBy('id', 'asc')->get()
+            : collect();
         
         return response()->json([
             'success' => true,
@@ -415,11 +384,11 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
 
-            $rowsBySubJenis = $this->syncNilaiRows($t_klaim_detail->id, (int) $t_klaim_detail->id_klaim, $request);
+            $this->syncNilaiRows($t_klaim_detail->id, (int) $t_klaim_detail->id_klaim, $request);
             if ($shouldRequireFiles) {
-                $this->validateRequiredFilesOnEdit($request, $rowsBySubJenis);
+                $this->validateRequiredFilesOnEdit($request, (int) $t_klaim_detail->id);
             }
-            $this->storeFilesPerNilai($request, $rowsBySubJenis);
+            $this->storeFilesPerNilai($request, (int) $t_klaim_detail->id);
 
             if ($t_klaim_detail->status === 'CLOSE' && $t_klaim_detail->id_cable) {
                 T_master_cable::where('id', $t_klaim_detail->id_cable)
@@ -455,8 +424,8 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
 
-            $rowsBySubJenis = $this->syncNilaiRows($t_klaim_detail->id, (int) $t_klaim_detail->id_klaim, $request);
-            $this->storeFilesPerNilai($request, $rowsBySubJenis);
+            $this->syncNilaiRows($t_klaim_detail->id, (int) $t_klaim_detail->id_klaim, $request);
+            $this->storeFilesPerNilai($request, (int) $t_klaim_detail->id);
 
             if ($t_klaim_detail->status === 'CLOSE' && $t_klaim_detail->id_cable) {
                 T_master_cable::where('id', $t_klaim_detail->id_cable)
@@ -484,9 +453,7 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
 
             $nilaiRows = T_klaim_detail_nilai::where('id_klaim_detail', $id)->get();
-            foreach ($nilaiRows as $row) {
-                $this->deleteFilesByNilaiId((int) $row->id);
-            }
+            $this->deleteFilesByKlaimDetailId((int) $id);
             T_klaim_detail_nilai::where('id_klaim_detail', $id)->delete();
             $t_klaim_detail->delete();
             DB::commit();

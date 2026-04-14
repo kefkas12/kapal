@@ -41,7 +41,7 @@ class UserRoleController extends Controller
             return false;
         }
 
-        if ($user->hasRole('superadmin') || $user->hasRole('admin')) {
+        if ($user->hasRole('superadmin')) {
             return true;
         }
 

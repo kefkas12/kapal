@@ -209,10 +209,11 @@ class T_master_cableController extends Controller
             DB::beginTransaction();
             $request->validate([
                 'files' => 'required|array|min:1',
-                'files.*' => 'file|max:51200',
+                'files.*' => 'file|mimes:pdf|max:51200',
             ], [
                 'files.required' => 'File upload wajib diisi.',
                 'files.min' => 'Minimal 1 file harus diupload.',
+                'files.*.mimes' => 'File cable hanya boleh PDF.',
             ]);
 
             $idVessel = $request->input('id_vessel');
@@ -304,6 +305,13 @@ class T_master_cableController extends Controller
 
         try {
             DB::beginTransaction();
+            $request->validate([
+                'files' => 'nullable|array',
+                'files.*' => 'file|mimes:pdf|max:51200',
+            ], [
+                'files.*.mimes' => 'File cable hanya boleh PDF.',
+            ]);
+
             $incomingFiles = array_filter((array) $request->file('files', []));
             $hasExistingFiles = File_upload::where('id_cable', $id)->exists();
             if (empty($incomingFiles) && !$hasExistingFiles) {
