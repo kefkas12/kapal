@@ -14,6 +14,68 @@ use Illuminate\Validation\ValidationException;
 
 class T_master_cableController extends Controller
 {
+    private function getNextNoVoyageForNewSeries(): string
+    {
+        $yy = date('y');
+        $maxSeq = 0;
+
+        $noVoyages = T_master_cable::query()
+            ->where('no_voyage', 'like', $yy . '%')
+            ->pluck('no_voyage');
+
+        foreach ($noVoyages as $noVoyage) {
+            $trimmed = trim((string) $noVoyage);
+            if (!preg_match('/^' . preg_quote($yy, '/') . '(\d{3})$/', $trimmed, $matches)) {
+                continue;
+            }
+            $seq = (int) $matches[1];
+            if ($seq > $maxSeq) {
+                $maxSeq = $seq;
+            }
+        }
+
+        $nextSeq = $maxSeq + 1;
+        return $yy . str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
+    }
+
+    private function buildNextVoyageMeta(int $idVessel, bool $flagL): array
+    {
+        $latestCable = T_master_cable::query()
+            ->where('id_vessel', $idVessel)
+            ->orderByDesc('id')
+            ->first(['no_voyage', 'jenis_voyage']);
+
+        $hasCable = !is_null($latestCable);
+        $forceFlagL = !$hasCable;
+        $effectiveFlagL = $forceFlagL ? true : $flagL;
+
+        if ($effectiveFlagL) {
+            $nextNoVoyage = $this->getNextNoVoyageForNewSeries();
+            $nextJenisVoyage = 'L';
+        } else {
+            $currentNoVoyage = trim((string) ($latestCable?->no_voyage ?? ''));
+            if (!preg_match('/^\d{5}$/', $currentNoVoyage)) {
+                $currentNoVoyage = $this->getNextNoVoyageForNewSeries();
+            }
+            $lastJenis = strtoupper(trim((string) ($latestCable?->jenis_voyage ?? '')));
+            if (preg_match('/^D(\d+)$/', $lastJenis, $matches)) {
+                $nextJenisVoyage = 'D' . (((int) $matches[1]) + 1);
+            } else {
+                $nextJenisVoyage = 'D1';
+            }
+            $nextNoVoyage = $currentNoVoyage;
+        }
+
+        return [
+            'has_cable_for_vessel' => $hasCable,
+            'force_flag_l' => $forceFlagL,
+            'flag_l' => $effectiveFlagL,
+            'no_voyage' => $nextNoVoyage,
+            'jenis_voyage' => $nextJenisVoyage,
+            'no_voyage_gab' => $nextNoVoyage . '/' . $nextJenisVoyage,
+        ];
+    }
+
     public function index(Request $request)
     {
         $perPage = (int) $request->input('per_page', 10);
@@ -141,11 +203,13 @@ class T_master_cableController extends Controller
         $ataPorts = [];
         $kontrak = null;
         $settings = null;
+        $nextVoyage = null;
 
         if ($idVessel) {
             $lastCable = T_master_cable::where('id_vessel', $idVessel)
                 ->orderByDesc('id')
                 ->first();
+            $nextVoyage = $this->buildNextVoyageMeta((int) $idVessel, $request->boolean('flag_l', false));
 
             $captains = T_master_cable::where('id_vessel', $idVessel)
                 ->whereNotNull('captain')
@@ -199,6 +263,7 @@ class T_master_cableController extends Controller
                 'ata_ports' => $ataPorts,
                 'kontrak' => $kontrak,
                 'settings' => $settings,
+                'next_voyage' => $nextVoyage,
             ]
         ]);
     }
@@ -218,6 +283,13 @@ class T_master_cableController extends Controller
 
             $idVessel = $request->input('id_vessel');
             $atdTimeBaru = $request->input('atd_time');
+            if (!$idVessel) {
+                throw ValidationException::withMessages([
+                    'id_vessel' => 'Vessel wajib diisi.',
+                ]);
+            }
+
+            $nextVoyage = $this->buildNextVoyageMeta((int) $idVessel, $request->boolean('flag_l', false));
 
             if ($idVessel && $atdTimeBaru) {
                 $lastCable = T_master_cable::where('id_vessel', $idVessel)
@@ -248,9 +320,9 @@ class T_master_cableController extends Controller
 
             $t_master_cable = new T_master_cable();
             $t_master_cable->id_vessel = $request->input('id_vessel');
-            $t_master_cable->no_voyage_gab = $request->input('no_voyage_gab');
-            $t_master_cable->no_voyage = $request->input('no_voyage');
-            $t_master_cable->jenis_voyage = $request->input('jenis_voyage');
+            $t_master_cable->no_voyage_gab = $nextVoyage['no_voyage_gab'];
+            $t_master_cable->no_voyage = $nextVoyage['no_voyage'];
+            $t_master_cable->jenis_voyage = $nextVoyage['jenis_voyage'];
             $t_master_cable->captain = $request->input('captain');
             $t_master_cable->atd_port = $request->input('atd_port');
             $t_master_cable->atd_time = $request->input('atd_time');
@@ -291,7 +363,13 @@ class T_master_cableController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_master_cable berhasil ditambah'
+                'message' => 'Data T_master_cable berhasil ditambah',
+                'data' => [
+                    'id' => $t_master_cable->id,
+                    'no_voyage_gab' => $t_master_cable->no_voyage_gab,
+                    'no_voyage' => $t_master_cable->no_voyage,
+                    'jenis_voyage' => $t_master_cable->jenis_voyage,
+                ]
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
