@@ -363,6 +363,11 @@ class T_doc_cargoController extends Controller
             }
 
             $existing = T_doc_cargo::where('id', $id)->firstOrFail();
+            if (strtoupper((string) $existing->status) === 'APPROVE') {
+                throw ValidationException::withMessages([
+                    'status' => 'Doc Cargo yang sudah APPROVE tidak bisa diubah.',
+                ]);
+            }
             $payload = $this->sanitizeDocCargoPayload($request);
 
             DB::table('t_doc_cargo')->where('id', $existing->id)->update($payload);
@@ -396,6 +401,38 @@ class T_doc_cargoController extends Controller
         }
     }
 
+    public function approve(Request $request)
+    {
+        $id = $request->route('id');
+
+        try {
+            DB::beginTransaction();
+            $user = Auth::user();
+            if (!$user || !($user->hasRole('approval') || $user->hasRole('superadmin'))) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.'
+                ], 403);
+            }
+
+            $docCargo = T_doc_cargo::where('id', $id)->firstOrFail();
+            $docCargo->status = 'APPROVE';
+            $docCargo->user_id = Auth::id();
+            $docCargo->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Doc Cargo berhasil di-approve',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
     public function delete(Request $request)
     {
         $id = $request->route('id');
@@ -403,6 +440,11 @@ class T_doc_cargoController extends Controller
         try {
             DB::beginTransaction();
             $t_doc_cargo = T_doc_cargo::where('id', $id)->firstOrFail();
+            if (strtoupper((string) $t_doc_cargo->status) === 'APPROVE') {
+                throw ValidationException::withMessages([
+                    'status' => 'Doc Cargo yang sudah APPROVE tidak bisa dihapus.',
+                ]);
+            }
 
             $files = File_upload::where('id_doc_cargo', $id)->get();
             foreach ($files as $file) {
