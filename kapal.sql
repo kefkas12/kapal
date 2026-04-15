@@ -917,7 +917,9 @@ ALTER TABLE `t_klaim_detail`
 -- Indexes for table `t_klaim_detail_nilai`
 --
 ALTER TABLE `t_klaim_detail_nilai`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `t_klaim_detail_nilai_no_tagihan_klaim_unique` (`no_tagihan_klaim`),
+  ADD UNIQUE KEY `t_klaim_detail_nilai_no_tagihan_dipotong_unique` (`no_tagihan_dipotong`);
 
 --
 -- Indexes for table `t_master_cable`

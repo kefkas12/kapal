@@ -58,6 +58,22 @@ class T_klaim_detailController extends Controller
         return $query->orderByDesc('id')->first();
     }
 
+    private function noTagihanExistsInDatabase(string $value, ?int $excludeId = null): bool
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return false;
+        }
+
+        return T_klaim_detail_nilai::query()
+            ->where(function ($q) use ($value) {
+                $q->where('no_tagihan_klaim', $value)
+                    ->orWhere('no_tagihan_dipotong', $value);
+            })
+            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
+            ->exists();
+    }
+
     private function syncNilaiRows(int $klaimDetailId, int $klaimId, Request $request): array
     {
         $klaim = T_klaim::where('id', $klaimId)->first();
@@ -88,6 +104,8 @@ class T_klaim_detailController extends Controller
         $keepIds = [];
         $rowsBySubJenis = [];
 
+        $usedNoTagihan = [];
+
         foreach ($nilaiItems as $item) {
             $subJenis = strtoupper(trim((string) ($item['sub_jenis'] ?? '')));
             if ($subJenis === '') {
@@ -117,8 +135,43 @@ class T_klaim_detailController extends Controller
             $row->val_klaim_awal = $item['val_klaim_awal'] ?? $request->input('val_klaim_awal');
             $row->val_klaim_akhir = $item['val_klaim_akhir'] ?? $request->input('val_klaim_akhir');
             $row->val_klaim_akhir_idr = $item['val_klaim_akhir_idr'] ?? $request->input('val_klaim_akhir_idr');
-            $row->no_tagihan_klaim = $item['no_tagihan_klaim'] ?? $request->input('no_tagihan_klaim');
-            $row->no_tagihan_dipotong = $item['no_tagihan_dipotong'] ?? $request->input('no_tagihan_dipotong');
+            $noTagihanKlaim = trim((string) ($item['no_tagihan_klaim'] ?? $request->input('no_tagihan_klaim') ?? ''));
+            $noTagihanDipotong = trim((string) ($item['no_tagihan_dipotong'] ?? $request->input('no_tagihan_dipotong') ?? ''));
+            $excludeId = $row->exists ? (int) $row->id : null;
+
+            if ($noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
+                throw ValidationException::withMessages([
+                    'no_tagihan_klaim' => 'No Tagihan Klaim dan No Tagihan Dipotong tidak boleh sama.',
+                    'no_tagihan_dipotong' => 'No Tagihan Klaim dan No Tagihan Dipotong tidak boleh sama.',
+                ]);
+            }
+
+            foreach ([
+                ['field' => 'no_tagihan_klaim', 'label' => 'No Tagihan Klaim', 'value' => $noTagihanKlaim],
+                ['field' => 'no_tagihan_dipotong', 'label' => 'No Tagihan Dipotong', 'value' => $noTagihanDipotong],
+            ] as $tagihan) {
+                $value = $tagihan['value'];
+                if ($value === '') {
+                    continue;
+                }
+
+                if (in_array($value, $usedNoTagihan, true)) {
+                    throw ValidationException::withMessages([
+                        $tagihan['field'] => "{$tagihan['label']} harus unik, tidak boleh sama kiri kanan."
+                    ]);
+                }
+
+                if ($this->noTagihanExistsInDatabase($value, $excludeId)) {
+                    throw ValidationException::withMessages([
+                        $tagihan['field'] => "{$tagihan['label']} '{$value}' sudah ada di database."
+                    ]);
+                }
+
+                $usedNoTagihan[] = $value;
+            }
+
+            $row->no_tagihan_klaim = $noTagihanKlaim;
+            $row->no_tagihan_dipotong = $noTagihanDipotong;
             $row->status = 'OPEN';
             $row->user_id = Auth::id();
             $row->save();
@@ -173,6 +226,58 @@ class T_klaim_detailController extends Controller
 
     private function storeFilesPerNilai(Request $request, int $klaimDetailId): void
     {
+        $files = $this->getIncomingUploadFiles($request);
+
+        foreach ($files as $file) {
+            if (!$file) {
+                continue;
+            }
+            $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
+            $upload = new File_upload();
+            $column = $this->resolveFileUploadDetailColumn($klaimDetailId, $request);
+            $upload->id_klaim_detail_awal = null;
+            $upload->id_klaim_detail_akhir = null;
+            $upload->{$column} = $klaimDetailId;
+            $upload->nama_file = $path;
+            $upload->save();
+        }
+    }
+
+    private function resolveFileUploadDetailColumn(int $klaimDetailId, ?Request $request = null): string
+    {
+        $requestedType = strtoupper((string) ($request?->input('klaim_detail_type') ?? ''));
+        if ($requestedType === 'AWAL') {
+            return 'id_klaim_detail_awal';
+        }
+        if ($requestedType === 'AKHIR') {
+            return 'id_klaim_detail_akhir';
+        }
+
+        $detail = T_klaim_detail::query()
+            ->leftJoin('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
+            ->where('t_klaim_detail.id', $klaimDetailId)
+            ->select('t_klaim.no_klaim_akhir', 't_klaim.tgl_klaim_akhir')
+            ->first();
+
+        $isAwal = $detail && empty($detail->no_klaim_akhir) && empty($detail->tgl_klaim_akhir);
+        return $isAwal ? 'id_klaim_detail_awal' : 'id_klaim_detail_akhir';
+    }
+
+    private function fileUploadQueryByKlaimDetailId(int $klaimDetailId)
+    {
+        $primaryColumn = $this->resolveFileUploadDetailColumn($klaimDetailId);
+        $secondaryColumn = $primaryColumn === 'id_klaim_detail_awal'
+            ? 'id_klaim_detail_akhir'
+            : 'id_klaim_detail_awal';
+
+        return File_upload::where(function ($q) use ($klaimDetailId, $primaryColumn, $secondaryColumn) {
+            $q->where($primaryColumn, $klaimDetailId)
+                ->orWhere($secondaryColumn, $klaimDetailId);
+        });
+    }
+
+    private function getIncomingUploadFiles(Request $request): array
+    {
         $files = [];
 
         $incomingFiles = $request->file('files', []);
@@ -190,37 +295,20 @@ class T_klaim_detailController extends Controller
             }
         }
 
+        return array_values(array_filter($files));
+    }
+
+    private function validateIncomingUploadFilesArePdf(Request $request): void
+    {
+        $files = $this->getIncomingUploadFiles($request);
         foreach ($files as $file) {
-            if (!$file) {
-                continue;
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            if ($ext !== 'pdf') {
+                throw ValidationException::withMessages([
+                    'files' => 'File upload hanya boleh PDF.'
+                ]);
             }
-            $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
-            $upload = new File_upload();
-            $column = $this->resolveFileUploadDetailColumn($klaimDetailId);
-            $upload->id_klaim_detail_awal = null;
-            $upload->id_klaim_detail_akhir = null;
-            $upload->{$column} = $klaimDetailId;
-            $upload->nama_file = $path;
-            $upload->save();
         }
-    }
-
-    private function resolveFileUploadDetailColumn(int $klaimDetailId): string
-    {
-        $detail = T_klaim_detail::query()
-            ->leftJoin('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
-            ->where('t_klaim_detail.id', $klaimDetailId)
-            ->select('t_klaim.no_klaim_akhir', 't_klaim.tgl_klaim_akhir')
-            ->first();
-
-        $isAwal = $detail && empty($detail->no_klaim_akhir) && empty($detail->tgl_klaim_akhir);
-        return $isAwal ? 'id_klaim_detail_awal' : 'id_klaim_detail_akhir';
-    }
-
-    private function fileUploadQueryByKlaimDetailId(int $klaimDetailId)
-    {
-        $column = $this->resolveFileUploadDetailColumn($klaimDetailId);
-        return File_upload::where($column, $klaimDetailId);
     }
 
     private function attachNilaiItemsToDetails($details)
@@ -368,9 +456,13 @@ class T_klaim_detailController extends Controller
             $data->no_tagihan_dipotong = $first->no_tagihan_dipotong ?? null;
         }
 
-        $files = $data?->id
-            ? $this->fileUploadQueryByKlaimDetailId((int) $data->id)->orderBy('id', 'asc')->get()
+        $filesAwal = $data?->id
+            ? File_upload::where('id_klaim_detail_awal', (int) $data->id)->orderBy('id', 'asc')->get()
             : collect();
+        $filesAkhir = $data?->id
+            ? File_upload::where('id_klaim_detail_akhir', (int) $data->id)->orderBy('id', 'asc')->get()
+            : collect();
+        $files = $filesAwal->concat($filesAkhir)->unique('id')->values();
         
         return response()->json([
             'success' => true,
@@ -378,6 +470,8 @@ class T_klaim_detailController extends Controller
             'data'    => [
                 'detail' => $data,
                 'files' => $files,
+                'files_awal' => $filesAwal->values(),
+                'files_akhir' => $filesAkhir->values(),
             ]
         ]);
     }
@@ -386,6 +480,7 @@ class T_klaim_detailController extends Controller
     {
         try {
             DB::beginTransaction();
+            $this->validateIncomingUploadFilesArePdf($request);
             $idKlaim = (int) $request->input('id_klaim');
             $klaim = $idKlaim > 0 ? T_klaim::where('id', $idKlaim)->first() : null;
             $shouldRequireFiles = $idKlaim > 0 && !$this->isKlaimAwal($klaim);
@@ -434,6 +529,7 @@ class T_klaim_detailController extends Controller
 
         try {
             DB::beginTransaction();
+            $this->validateIncomingUploadFilesArePdf($request);
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
             $t_klaim_detail->id_klaim = $request->input('id_klaim');
             $t_klaim_detail->id_cable = $request->input('id_cable');
