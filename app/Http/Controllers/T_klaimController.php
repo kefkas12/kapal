@@ -135,6 +135,17 @@ class T_klaimController extends Controller
 
         try {
             DB::beginTransaction();
+            $hasClosedDetail = T_klaim_detail::where('id_klaim', $id)
+                ->where('status', 'CLOSE')
+                ->exists();
+            if ($hasClosedDetail) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Klaim yang sudah CLOSE tidak bisa diubah.'
+                ], 422);
+            }
+
             $t_klaim = T_klaim::where('id', $id)->firstOrFail();
             $t_klaim->id_vessel = $request->input('id_vessel');
             $t_klaim->no_klaim_awal = $request->input('no_klaim_awal');
@@ -162,6 +173,17 @@ class T_klaimController extends Controller
 
         try {
             DB::beginTransaction();
+            $hasClosedDetail = T_klaim_detail::where('id_klaim', $id)
+                ->where('status', 'CLOSE')
+                ->exists();
+            if ($hasClosedDetail) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Klaim yang sudah CLOSE tidak bisa dihapus.'
+                ], 422);
+            }
+
             $t_klaim = T_klaim::where('id', $id)->firstOrFail();
 
             $details = T_klaim_detail::where('id_klaim', $id)->get();
@@ -175,6 +197,63 @@ class T_klaimController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Data T_klaim berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function close(Request $request)
+    {
+        $id = (int) $request->route('id');
+
+        try {
+            DB::beginTransaction();
+
+            $user = Auth::user();
+            if (!$user || !($user->hasRole('approval') || $user->hasRole('superadmin'))) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan close.'
+                ], 403);
+            }
+
+            $klaim = T_klaim::where('id', $id)->firstOrFail();
+
+            $details = T_klaim_detail::where('id_klaim', $id)->get();
+            foreach ($details as $detail) {
+                $detail->status = 'CLOSE';
+                $detail->user_id = Auth::id();
+                $detail->save();
+
+                DB::table('t_klaim_detail_nilai')
+                    ->where('id_klaim_detail', $detail->id)
+                    ->update([
+                        'status' => 'CLOSE',
+                        'user_id' => Auth::id(),
+                        'updated_at' => now(),
+                    ]);
+
+                if (!empty($detail->id_cable)) {
+                    DB::table('t_master_cable')
+                        ->where('id', $detail->id_cable)
+                        ->update([
+                            'status' => 'CLOSE',
+                            'updated_at' => now(),
+                        ]);
+                }
+            }
+
+            $klaim->user_id = Auth::id();
+            $klaim->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Close Klaim berhasil diproses.'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

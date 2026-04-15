@@ -531,6 +531,13 @@ class T_klaim_detailController extends Controller
             DB::beginTransaction();
             $this->validateIncomingUploadFilesArePdf($request);
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
+            if (strtoupper((string) $t_klaim_detail->status) === 'CLOSE') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data Close Klaim Detail yang sudah CLOSE tidak bisa diubah.'
+                ], 422);
+            }
             $t_klaim_detail->id_klaim = $request->input('id_klaim');
             $t_klaim_detail->id_cable = $request->input('id_cable');
             $t_klaim_detail->no_urut = $request->input('no_urut');
@@ -567,6 +574,13 @@ class T_klaim_detailController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
+            if (strtoupper((string) $t_klaim_detail->status) === 'CLOSE') {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data Close Klaim Detail yang sudah CLOSE tidak bisa dihapus.'
+                ], 422);
+            }
 
             $nilaiRows = T_klaim_detail_nilai::where('id_klaim_detail', $id)->get();
             $this->deleteFilesByKlaimDetailId((int) $id);
