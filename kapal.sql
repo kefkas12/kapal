@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 14, 2026 at 07:51 PM
+-- Generation Time: Apr 15, 2026 at 03:59 AM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -407,7 +407,7 @@ CREATE TABLE `personal_access_tokens` (
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
 (45, 'App\\Models\\User', 2, 'api-token', '5698bc8755b57f5b8888270c8f43135e14e807a64c077cb6561e1eb5f154806b', '[\"*\"]', '2026-04-13 01:12:09', NULL, '2026-04-13 00:56:18', '2026-04-13 01:12:09'),
 (48, 'App\\Models\\User', 1, 'api-token', '93f8a0097bf106be92baab11cc3e3091b20d5da2083b77627f9fbe4891e68ec2', '[\"*\"]', '2026-04-14 08:45:35', NULL, '2026-04-14 05:04:24', '2026-04-14 08:45:35'),
-(50, 'App\\Models\\User', 3, 'api-token', 'ea46e12893d7625f5ba471e546eb87b7b87c3c1802d4a87b8c2b667bede6ff87', '[\"*\"]', '2026-04-14 12:50:43', NULL, '2026-04-14 10:24:50', '2026-04-14 12:50:43');
+(50, 'App\\Models\\User', 3, 'api-token', 'ea46e12893d7625f5ba471e546eb87b7b87c3c1802d4a87b8c2b667bede6ff87', '[\"*\"]', '2026-04-14 20:58:07', NULL, '2026-04-14 10:24:50', '2026-04-14 20:58:07');
 
 -- --------------------------------------------------------
 
@@ -749,9 +749,7 @@ ALTER TABLE `failed_jobs`
 -- Indexes for table `file_upload`
 --
 ALTER TABLE `file_upload`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `file_upload_id_klaim_detail_awal_index` (`id_klaim_detail_awal`),
-  ADD KEY `file_upload_id_klaim_detail_akhir_index` (`id_klaim_detail_akhir`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `jobs`
