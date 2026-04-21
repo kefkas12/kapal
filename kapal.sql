@@ -489,7 +489,7 @@ CREATE TABLE `settings` (
 
 INSERT INTO `settings` (`id`, `nama`, `value`, `status`, `created_at`, `updated_at`) VALUES
 (1, 'variable est_claim_bunker', '0.847', 'ACTIVE', NULL, NULL),
-(2, 'variable est_claim_transport', '0.07', 'ACTIVE', NULL, NULL);
+(2, 'variable est_claim_transport', '-0.07', 'ACTIVE', NULL, NULL);
 
 -- --------------------------------------------------------
 
