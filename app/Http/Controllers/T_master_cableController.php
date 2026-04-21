@@ -14,18 +14,30 @@ use Illuminate\Validation\ValidationException;
 
 class T_master_cableController extends Controller
 {
-    private function getNextNoVoyageForNewSeries(): string
+    private function parseNoVoyageBase(string $raw): ?string
+    {
+        $trimmed = trim($raw);
+        if ($trimmed === '') {
+            return null;
+        }
+        if (preg_match('/^(\d{5})(?:\/[A-Za-z0-9]+)?$/', $trimmed, $matches)) {
+            return $matches[1];
+        }
+        return null;
+    }
+
+    private function getNextNoVoyageForVessel(int $idVessel): string
     {
         $yy = date('y');
         $maxSeq = 0;
 
         $noVoyages = T_master_cable::query()
-            ->where('no_voyage', 'like', $yy . '%')
+            ->where('id_vessel', $idVessel)
             ->pluck('no_voyage');
 
         foreach ($noVoyages as $noVoyage) {
-            $trimmed = trim((string) $noVoyage);
-            if (!preg_match('/^' . preg_quote($yy, '/') . '(\d{3})$/', $trimmed, $matches)) {
+            $base = $this->parseNoVoyageBase((string) $noVoyage);
+            if (!$base || !preg_match('/^' . preg_quote($yy, '/') . '(\d{3})$/', $base, $matches)) {
                 continue;
             }
             $seq = (int) $matches[1];
@@ -44,18 +56,19 @@ class T_master_cableController extends Controller
             ->where('id_vessel', $idVessel)
             ->orderByDesc('id')
             ->first(['no_voyage', 'jenis_voyage']);
+        $kodeVessel = (string) (DB::table('m_vessel')->where('id', $idVessel)->value('kode_vessel') ?? '');
 
         $hasCable = !is_null($latestCable);
         $forceFlagL = !$hasCable;
         $effectiveFlagL = $forceFlagL ? true : $flagL;
 
         if ($effectiveFlagL) {
-            $nextNoVoyage = $this->getNextNoVoyageForNewSeries();
+            $nextNoVoyage = $this->getNextNoVoyageForVessel($idVessel);
             $nextJenisVoyage = 'L';
         } else {
-            $currentNoVoyage = trim((string) ($latestCable?->no_voyage ?? ''));
-            if (!preg_match('/^\d{5}$/', $currentNoVoyage)) {
-                $currentNoVoyage = $this->getNextNoVoyageForNewSeries();
+            $currentNoVoyage = $this->parseNoVoyageBase((string) ($latestCable?->no_voyage ?? ''));
+            if (!preg_match('/^\d{5}$/', (string) $currentNoVoyage)) {
+                $currentNoVoyage = $this->getNextNoVoyageForVessel($idVessel);
             }
             $lastJenis = strtoupper(trim((string) ($latestCable?->jenis_voyage ?? '')));
             if (preg_match('/^D(\d+)$/', $lastJenis, $matches)) {
@@ -66,13 +79,17 @@ class T_master_cableController extends Controller
             $nextNoVoyage = $currentNoVoyage;
         }
 
+        $noVoyageDisplay = $nextNoVoyage . '/' . $nextJenisVoyage;
+        $noVoyageGab = ($kodeVessel !== '' ? $kodeVessel . '/' : '') . $noVoyageDisplay;
+
         return [
             'has_cable_for_vessel' => $hasCable,
             'force_flag_l' => $forceFlagL,
             'flag_l' => $effectiveFlagL,
             'no_voyage' => $nextNoVoyage,
+            'no_voyage_display' => $noVoyageDisplay,
             'jenis_voyage' => $nextJenisVoyage,
-            'no_voyage_gab' => $nextNoVoyage . '/' . $nextJenisVoyage,
+            'no_voyage_gab' => $noVoyageGab,
         ];
     }
 

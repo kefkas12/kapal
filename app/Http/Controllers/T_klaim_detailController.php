@@ -191,6 +191,79 @@ class T_klaim_detailController extends Controller
         return $rowsBySubJenis;
     }
 
+    private function syncNoTagihanOnlyForClosed(int $klaimDetailId, Request $request): void
+    {
+        $nilaiItems = $this->parseNilaiItems($request);
+        if (empty($nilaiItems)) {
+            return;
+        }
+
+        $existingRows = T_klaim_detail_nilai::where('id_klaim_detail', $klaimDetailId)
+            ->get()
+            ->keyBy(fn ($row) => strtoupper((string) $row->sub_jenis));
+
+        if ($existingRows->isEmpty()) {
+            return;
+        }
+
+        $incomingBySubJenis = [];
+        foreach ($nilaiItems as $item) {
+            $subJenis = strtoupper(trim((string) ($item['sub_jenis'] ?? '')));
+            if ($subJenis === '') {
+                continue;
+            }
+            $incomingBySubJenis[$subJenis] = $item;
+        }
+
+        $usedNoTagihan = [];
+        foreach ($existingRows as $subJenis => $row) {
+            $incoming = $incomingBySubJenis[$subJenis] ?? null;
+            if (!$incoming) {
+                continue;
+            }
+
+            $noTagihanKlaim = trim((string) ($incoming['no_tagihan_klaim'] ?? ''));
+            $noTagihanDipotong = trim((string) ($incoming['no_tagihan_dipotong'] ?? ''));
+            $excludeId = (int) $row->id;
+
+            if ($noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
+                throw ValidationException::withMessages([
+                    'no_tagihan_klaim' => 'No Tagihan Klaim dan No Tagihan Dipotong tidak boleh sama.',
+                    'no_tagihan_dipotong' => 'No Tagihan Klaim dan No Tagihan Dipotong tidak boleh sama.',
+                ]);
+            }
+
+            foreach ([
+                ['field' => 'no_tagihan_klaim', 'label' => 'No Tagihan Klaim', 'value' => $noTagihanKlaim],
+                ['field' => 'no_tagihan_dipotong', 'label' => 'No Tagihan Dipotong', 'value' => $noTagihanDipotong],
+            ] as $tagihan) {
+                $value = $tagihan['value'];
+                if ($value === '') {
+                    continue;
+                }
+
+                if (in_array($value, $usedNoTagihan, true)) {
+                    throw ValidationException::withMessages([
+                        $tagihan['field'] => "{$tagihan['label']} harus unik, tidak boleh sama kiri kanan."
+                    ]);
+                }
+
+                if ($this->noTagihanExistsInDatabase($value, $excludeId)) {
+                    throw ValidationException::withMessages([
+                        $tagihan['field'] => "{$tagihan['label']} '{$value}' sudah ada di database."
+                    ]);
+                }
+
+                $usedNoTagihan[] = $value;
+            }
+
+            $row->no_tagihan_klaim = $noTagihanKlaim;
+            $row->no_tagihan_dipotong = $noTagihanDipotong;
+            $row->user_id = Auth::id();
+            $row->save();
+        }
+    }
+
     private function deleteFilesByKlaimDetailId(int $klaimDetailId): void
     {
         $files = $this->fileUploadQueryByKlaimDetailId($klaimDetailId)->get();
@@ -532,11 +605,15 @@ class T_klaim_detailController extends Controller
             $this->validateIncomingUploadFilesArePdf($request);
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
             if (strtoupper((string) $t_klaim_detail->status) === 'CLOSE') {
-                DB::rollBack();
+                $this->syncNoTagihanOnlyForClosed((int) $t_klaim_detail->id, $request);
+                $t_klaim_detail->user_id = Auth::id();
+                $t_klaim_detail->save();
+                DB::commit();
+
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Data Close Klaim Detail yang sudah CLOSE tidak bisa diubah.'
-                ], 422);
+                    'success' => true,
+                    'message' => 'No Tagihan Klaim dan No Tagihan Dipotong berhasil diubah.'
+                ]);
             }
             $t_klaim_detail->id_klaim = $request->input('id_klaim');
             $t_klaim_detail->id_cable = $request->input('id_cable');

@@ -16,6 +16,23 @@ use Illuminate\Validation\ValidationException;
 
 class T_doc_cargoController extends Controller
 {
+    private function ensureGradeNotUsedOnCable(int $idCable, int $idGrade, ?int $excludeDocCargoId = null): void
+    {
+        $query = T_doc_cargo::query()
+            ->where('id_cable', $idCable)
+            ->where('id_grade', $idGrade);
+
+        if (!is_null($excludeDocCargoId)) {
+            $query->where('id', '!=', $excludeDocCargoId);
+        }
+
+        if ($query->exists()) {
+            throw ValidationException::withMessages([
+                'id_grade' => 'Grade untuk No Voyage ini sudah pernah digunakan. Pilih grade lain.',
+            ]);
+        }
+    }
+
     private function docCargoColumns(): array
     {
         return Schema::getColumnListing('t_doc_cargo');
@@ -312,6 +329,11 @@ class T_doc_cargoController extends Controller
             ]);
 
             $payload = $this->sanitizeDocCargoPayload($request);
+            $idCable = (int) ($payload['id_cable'] ?? 0);
+            $idGrade = (int) ($payload['id_grade'] ?? 0);
+            if ($idCable > 0 && $idGrade > 0) {
+                $this->ensureGradeNotUsedOnCable($idCable, $idGrade);
+            }
             $payload['created_at'] = now();
 
             $docCargoId = DB::table('t_doc_cargo')->insertGetId($payload);
@@ -369,6 +391,11 @@ class T_doc_cargoController extends Controller
                 ]);
             }
             $payload = $this->sanitizeDocCargoPayload($request);
+            $idCable = (int) ($payload['id_cable'] ?? 0);
+            $idGrade = (int) ($payload['id_grade'] ?? 0);
+            if ($idCable > 0 && $idGrade > 0) {
+                $this->ensureGradeNotUsedOnCable($idCable, $idGrade, (int) $existing->id);
+            }
 
             DB::table('t_doc_cargo')->where('id', $existing->id)->update($payload);
 
@@ -426,6 +453,38 @@ class T_doc_cargoController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Doc Cargo berhasil di-approve',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function unapprove(Request $request)
+    {
+        $id = $request->route('id');
+
+        try {
+            DB::beginTransaction();
+            $user = Auth::user();
+            if (!$user || !$user->hasRole('approval')) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya role approval yang boleh melakukan unapprove.'
+                ], 403);
+            }
+
+            $docCargo = T_doc_cargo::where('id', $id)->firstOrFail();
+            $docCargo->status = 'OPEN';
+            $docCargo->user_id = Auth::id();
+            $docCargo->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Doc Cargo berhasil di-unapprove',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
