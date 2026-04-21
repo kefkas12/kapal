@@ -99,7 +99,7 @@ class T_master_cableController extends Controller
                 $q->where('t_master_cable.no_voyage_gab', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.no_voyage', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.jenis_voyage', 'like', "%{$search}%")
-                    ->orWhere('t_master_cable.captain', 'like', "%{$search}%")
+                    ->orWhere('t_master_cable.master', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.atd_port', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.ata_port', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.status', 'like', "%{$search}%");
@@ -149,7 +149,7 @@ class T_master_cableController extends Controller
             });
         }
 
-        $allowedSort = ['id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'captain', 'atd_port', 'ata_port', 'status', 'created_at'];
+        $allowedSort = ['id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'master', 'atd_port', 'ata_port', 'status', 'created_at'];
         $sortBy = $request->input('sort_by', 'id');
         if (!in_array($sortBy, $allowedSort, true)) {
             $sortBy = 'id';
@@ -217,7 +217,7 @@ class T_master_cableController extends Controller
             ->get();
 
         $lastCable = null;
-        $captains = [];
+        $masters = [];
         $atdPorts = [];
         $ataPorts = [];
         $kontrak = null;
@@ -230,12 +230,12 @@ class T_master_cableController extends Controller
                 ->first();
             $nextVoyage = $this->buildNextVoyageMeta((int) $idVessel, $request->boolean('flag_l', false));
 
-            $captains = T_master_cable::where('id_vessel', $idVessel)
-                ->whereNotNull('captain')
-                ->select('captain')
+            $masters = T_master_cable::where('id_vessel', $idVessel)
+                ->whereNotNull('master')
+                ->select('master')
                 ->distinct()
-                ->orderBy('captain')
-                ->pluck('captain');
+                ->orderBy('master')
+                ->pluck('master');
 
             $atdPorts = T_master_cable::where('id_vessel', $idVessel)
                 ->whereNotNull('atd_port')
@@ -277,7 +277,7 @@ class T_master_cableController extends Controller
             'data' => [
                 'vessels' => $vessels,
                 'last_cable' => $lastCable,
-                'captains' => $captains,
+                'masters' => $masters,
                 'atd_ports' => $atdPorts,
                 'ata_ports' => $ataPorts,
                 'kontrak' => $kontrak,
@@ -342,7 +342,7 @@ class T_master_cableController extends Controller
             $t_master_cable->no_voyage_gab = $nextVoyage['no_voyage_gab'];
             $t_master_cable->no_voyage = $nextVoyage['no_voyage'];
             $t_master_cable->jenis_voyage = $nextVoyage['jenis_voyage'];
-            $t_master_cable->captain = $request->input('captain');
+            $t_master_cable->master = $request->input('master');
             $t_master_cable->atd_port = $request->input('atd_port');
             $t_master_cable->atd_time = $request->input('atd_time');
             $t_master_cable->atd_rob = $request->input('atd_rob');
@@ -361,6 +361,7 @@ class T_master_cableController extends Controller
             $t_master_cable->bunker_price = $request->input('bunker_price');
             $t_master_cable->est_claim_bunker = $request->input('est_claim_bunker');
             $t_master_cable->status = 'OPEN';
+            $t_master_cable->keterangan = $request->input('keterangan');
             $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
 
@@ -434,7 +435,7 @@ class T_master_cableController extends Controller
             $t_master_cable->no_voyage_gab = $request->input('no_voyage_gab');
             $t_master_cable->no_voyage = $request->input('no_voyage');
             $t_master_cable->jenis_voyage = $request->input('jenis_voyage');
-            $t_master_cable->captain = $request->input('captain');
+            $t_master_cable->master = $request->input('master');
             $t_master_cable->atd_port = $request->input('atd_port');
             $t_master_cable->atd_time = $request->input('atd_time');
             $t_master_cable->atd_rob = $request->input('atd_rob');
@@ -453,6 +454,7 @@ class T_master_cableController extends Controller
             $t_master_cable->bunker_price = $request->input('bunker_price');
             $t_master_cable->est_claim_bunker = $request->input('est_claim_bunker');
             $t_master_cable->status = 'OPEN';
+            $t_master_cable->keterangan = $request->input('keterangan');
             $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
 

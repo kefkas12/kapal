@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 15, 2026 at 03:59 AM
+-- Generation Time: Apr 21, 2026 at 12:37 AM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -93,7 +93,9 @@ INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_detail_awal
 (43, NULL, 16, NULL, NULL, NULL, 'uploads/cable/Invoice Nasi Bakar Nony 11 Maret 2026 - Wisma76.pdf', '2026-04-14 10:51:19', '2026-04-14 10:51:19'),
 (45, NULL, 16, NULL, NULL, NULL, 'uploads/cable/AKSFOOD ID (1).pdf', '2026-04-14 10:58:32', '2026-04-14 10:58:32'),
 (46, NULL, NULL, NULL, NULL, 3, 'uploads/doc_cargo/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-14 11:43:31', '2026-04-14 11:43:31'),
-(47, NULL, NULL, NULL, NULL, 3, 'uploads/doc_cargo/DPP+Onsite+2026.pdf', '2026-04-14 11:45:10', '2026-04-14 11:45:10');
+(47, NULL, NULL, NULL, NULL, 3, 'uploads/doc_cargo/DPP+Onsite+2026.pdf', '2026-04-14 11:45:10', '2026-04-14 11:45:10'),
+(53, NULL, NULL, 46, NULL, NULL, 'uploads/klaim_detail/AKSFOOD ID (1).pdf', '2026-04-14 21:54:33', '2026-04-14 21:54:33'),
+(55, NULL, NULL, NULL, 46, NULL, 'uploads/klaim_detail/DPP+Onsite+2026 (1).pdf', '2026-04-14 22:21:13', '2026-04-14 22:21:13');
 
 -- --------------------------------------------------------
 
@@ -407,7 +409,7 @@ CREATE TABLE `personal_access_tokens` (
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
 (45, 'App\\Models\\User', 2, 'api-token', '5698bc8755b57f5b8888270c8f43135e14e807a64c077cb6561e1eb5f154806b', '[\"*\"]', '2026-04-13 01:12:09', NULL, '2026-04-13 00:56:18', '2026-04-13 01:12:09'),
 (48, 'App\\Models\\User', 1, 'api-token', '93f8a0097bf106be92baab11cc3e3091b20d5da2083b77627f9fbe4891e68ec2', '[\"*\"]', '2026-04-14 08:45:35', NULL, '2026-04-14 05:04:24', '2026-04-14 08:45:35'),
-(50, 'App\\Models\\User', 3, 'api-token', 'ea46e12893d7625f5ba471e546eb87b7b87c3c1802d4a87b8c2b667bede6ff87', '[\"*\"]', '2026-04-14 20:58:07', NULL, '2026-04-14 10:24:50', '2026-04-14 20:58:07');
+(53, 'App\\Models\\User', 3, 'api-token', '066003fed0ed89195a176f300db5df13598a371d3bc266ebfb5df43014785e34', '[\"*\"]', '2026-04-20 17:32:58', NULL, '2026-04-20 17:32:58', '2026-04-20 17:32:58');
 
 -- --------------------------------------------------------
 
@@ -644,10 +646,10 @@ CREATE TABLE `t_klaim_detail_nilai` (
 --
 
 INSERT INTO `t_klaim_detail_nilai` (`id`, `id_klaim_detail`, `sub_jenis`, `currency`, `kurs`, `val_potensi`, `val_klaim_awal`, `val_klaim_akhir`, `val_klaim_akhir_idr`, `no_tagihan_klaim`, `no_tagihan_dipotong`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(21, 46, 'SS', NULL, NULL, '-114.583333', NULL, NULL, NULL, NULL, NULL, 'OPEN', 3, '2026-04-14 11:09:45', '2026-04-14 11:09:45'),
-(22, 46, 'OB', NULL, NULL, '5179828.5', NULL, NULL, NULL, NULL, NULL, 'OPEN', 3, '2026-04-14 11:09:45', '2026-04-14 11:09:45'),
-(23, 47, 'SP', NULL, NULL, '85.026537', NULL, NULL, NULL, NULL, NULL, 'OPEN', 3, '2026-04-14 12:18:48', '2026-04-14 12:18:48'),
-(24, 47, 'OB', NULL, NULL, '10606.21023', NULL, NULL, NULL, NULL, NULL, 'OPEN', 3, '2026-04-14 12:18:48', '2026-04-14 12:18:48'),
+(21, 46, 'SS', 'USD', '16900', '-114.583333', '200', '180', '3042000', '5', '3', 'OPEN', 3, '2026-04-14 11:09:45', '2026-04-14 22:49:14'),
+(22, 46, 'OB', 'IDR', '1', '5179828.5', '8000000', '7500000', '7500000', '4', '6', 'OPEN', 3, '2026-04-14 11:09:45', '2026-04-14 22:49:14'),
+(23, 47, 'SP', NULL, NULL, '85.026537', NULL, NULL, NULL, '1', '1', 'OPEN', 3, '2026-04-14 12:18:48', '2026-04-14 12:18:48'),
+(24, 47, 'OB', NULL, NULL, '10606.21023', NULL, NULL, NULL, '2', '2', 'OPEN', 3, '2026-04-14 12:18:48', '2026-04-14 12:18:48'),
 (25, 48, 'TL', NULL, NULL, '-1579025.707896', NULL, NULL, NULL, NULL, NULL, 'OPEN', 3, '2026-04-14 12:19:17', '2026-04-14 12:19:17');
 
 -- --------------------------------------------------------
@@ -662,7 +664,7 @@ CREATE TABLE `t_master_cable` (
   `no_voyage_gab` varchar(100) NOT NULL,
   `no_voyage` varchar(10) NOT NULL,
   `jenis_voyage` varchar(30) NOT NULL,
-  `captain` varchar(100) DEFAULT NULL,
+  `master` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `atd_port` varchar(100) DEFAULT NULL,
   `atd_time` varchar(100) DEFAULT NULL,
   `atd_rob` varchar(100) DEFAULT NULL,
@@ -690,7 +692,7 @@ CREATE TABLE `t_master_cable` (
 -- Dumping data for table `t_master_cable`
 --
 
-INSERT INTO `t_master_cable` (`id`, `id_vessel`, `no_voyage_gab`, `no_voyage`, `jenis_voyage`, `captain`, `atd_port`, `atd_time`, `atd_rob`, `ata_port`, `ata_time`, `ata_rob`, `distance`, `speed`, `est_sail_day`, `act_sail_day`, `charter_rate_day`, `est_claim_speed`, `std_bunker_cons`, `act_bunker_cons`, `excess_bunker`, `bunker_price`, `est_claim_bunker`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+INSERT INTO `t_master_cable` (`id`, `id_vessel`, `no_voyage_gab`, `no_voyage`, `jenis_voyage`, `master`, `atd_port`, `atd_time`, `atd_rob`, `ata_port`, `ata_time`, `ata_rob`, `distance`, `speed`, `est_sail_day`, `act_sail_day`, `charter_rate_day`, `est_claim_speed`, `std_bunker_cons`, `act_bunker_cons`, `excess_bunker`, `bunker_price`, `est_claim_bunker`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
 (16, 34, '26001/L', '26001', 'L', 'STEVEN', 'JAMBI', '2025-06-03 09:00:00', '28.807', 'PANJANG', '2025-06-08 07:30:00', '18.154', '480', '4', '5', '4.9375', '1833.333333', '-114.583333', '10.2', '10.653', '0.453', '13500', '5179828.5', 'APPROVE', 3, '2026-04-14 10:51:19', '2026-04-14 11:03:43');
 
 -- --------------------------------------------------------
@@ -749,7 +751,12 @@ ALTER TABLE `failed_jobs`
 -- Indexes for table `file_upload`
 --
 ALTER TABLE `file_upload`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_kontrak` (`id_kontrak`),
+  ADD KEY `id_cable` (`id_cable`),
+  ADD KEY `id_klaim_detail_awal` (`id_klaim_detail_awal`),
+  ADD KEY `id_klaim_detail_akhir` (`id_klaim_detail_akhir`),
+  ADD KEY `id_doc_cargo` (`id_doc_cargo`);
 
 --
 -- Indexes for table `jobs`
@@ -788,19 +795,23 @@ ALTER TABLE `model_has_roles`
 -- Indexes for table `m_grade`
 --
 ALTER TABLE `m_grade`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `m_kontrak`
 --
 ALTER TABLE `m_kontrak`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_vessel` (`id_vessel`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `m_vessel`
 --
 ALTER TABLE `m_vessel`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `oauth_access_tokens`
@@ -893,39 +904,53 @@ ALTER TABLE `settings`
 -- Indexes for table `t_doc_cargo`
 --
 ALTER TABLE `t_doc_cargo`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_cable` (`id_cable`),
+  ADD KEY `id_grade` (`id_grade`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `t_doc_cargo_detail`
 --
 ALTER TABLE `t_doc_cargo_detail`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_doc_cargo` (`id_doc_cargo`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_vessel` (`id_vessel`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `t_klaim_detail`
 --
 ALTER TABLE `t_klaim_detail`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_klaim` (`id_klaim`),
+  ADD KEY `id_cable` (`id_cable`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `t_klaim_detail_nilai`
 --
 ALTER TABLE `t_klaim_detail_nilai`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `t_klaim_detail_nilai_no_tagihan_klaim_unique` (`no_tagihan_klaim`),
-  ADD UNIQUE KEY `t_klaim_detail_nilai_no_tagihan_dipotong_unique` (`no_tagihan_dipotong`);
+  ADD UNIQUE KEY `no_tagihan_klaim` (`no_tagihan_klaim`,`no_tagihan_dipotong`),
+  ADD KEY `id_klaim_detail` (`id_klaim_detail`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `sub_jenis` (`sub_jenis`);
 
 --
 -- Indexes for table `t_master_cable`
 --
 ALTER TABLE `t_master_cable`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_vessel` (`id_vessel`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `users`
@@ -948,7 +973,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `file_upload`
 --
 ALTER TABLE `file_upload`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -990,7 +1015,7 @@ ALTER TABLE `permissions`
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
 
 --
 -- AUTO_INCREMENT for table `roles`
