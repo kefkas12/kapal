@@ -515,6 +515,37 @@ class T_master_cableController extends Controller
         }
     }
 
+    public function unapprove(Request $request)
+    {
+        $id = $request->route('id');
+
+        try {
+            DB::beginTransaction();
+            $user = Auth::user();
+            if (!$user || !$user->hasRole('approval')) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya role approval yang boleh melakukan unapprove.'
+                ], 403);
+            }
+
+            $t_master_cable = T_master_cable::where('id', $id)->firstOrFail();
+            $t_master_cable->status = 'OPEN';
+            $t_master_cable->user_id = Auth::id();
+            $t_master_cable->save();
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cable berhasil di-unapprove'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
     public function delete(Request $request)
     {
         $id = $request->route('id');

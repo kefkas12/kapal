@@ -152,6 +152,17 @@ class M_vesselController extends Controller
         try {
             DB::beginTransaction();
             $m_vessel = M_vessel::where('id', $id)->firstOrFail();
+
+            $hasKontrak = M_kontrak::where('id_vessel', $id)->exists();
+            if ($hasKontrak) {
+                DB::rollBack();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vessel tidak bisa dihapus karena masih memiliki kontrak.'
+                ], 422);
+            }
+
             $m_vessel->delete();
             DB::commit();
 

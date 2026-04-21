@@ -39,7 +39,8 @@ class M_kontrakController extends Controller
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('no_kontrak', 'like', "%{$search}%")
+                $q->where('no_surat_pemenang', 'like', "%{$search}%")
+                    ->orWhere('no_kontrak', 'like', "%{$search}%")
                     ->orWhere('tgl_awal_kontrak', 'like', "%{$search}%")
                     ->orWhere('tgl_akhir_kontrak', 'like', "%{$search}%")
                     ->orWhere('charter_rate', 'like', "%{$search}%")
@@ -62,7 +63,7 @@ class M_kontrakController extends Controller
             $query->where('id_vessel', $idVessel);
         }
 
-        $allowedSort = ['id', 'no_kontrak', 'tgl_awal_kontrak', 'tgl_akhir_kontrak', 'charter_rate', 'speed', 'me_ballast', 'me_laden', 'pumping_rate', 'discharge', 'status', 'created_at'];
+        $allowedSort = ['id', 'no_surat_pemenang', 'no_kontrak', 'tgl_awal_kontrak', 'tgl_akhir_kontrak', 'charter_rate', 'speed', 'me_ballast', 'me_laden', 'pumping_rate', 'discharge', 'status', 'created_at'];
         $sortBy = $request->input('sort_by', 'id');
         if (!in_array($sortBy, $allowedSort, true)) {
             $sortBy = 'id';
@@ -121,6 +122,7 @@ class M_kontrakController extends Controller
             DB::beginTransaction();
             $request->validate([
                 'id_vessel' => 'required|exists:m_vessel,id',
+                'no_surat_pemenang' => 'required',
                 'no_kontrak' => 'required|string|unique:m_kontrak,no_kontrak',
                 'tgl_awal_kontrak' => 'nullable|date',
                 'tgl_akhir_kontrak' => 'nullable|date|after:tgl_awal_kontrak',
@@ -129,6 +131,7 @@ class M_kontrakController extends Controller
             ], [
                 'id_vessel.required' => 'Vessel wajib diisi.',
                 'id_vessel.exists' => 'Vessel tidak valid.',
+                'no_surat_pemenang.required' => 'No Surat Pemenang wajib diisi.',
                 'no_kontrak.required' => 'No Kontrak wajib diisi.',
                 'no_kontrak.unique' => 'No Kontrak sudah digunakan.',
                 'tgl_akhir_kontrak.after' => 'Tgl akhir kontrak harus lebih besar dari tgl awal kontrak.',
@@ -154,6 +157,7 @@ class M_kontrakController extends Controller
 
             $m_kontrak = new M_kontrak();
             $m_kontrak->id_vessel = $request->input('id_vessel');
+            $m_kontrak->no_surat_pemenang = $request->input('no_surat_pemenang');
             $m_kontrak->no_kontrak = $request->input('no_kontrak');
             $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
             $m_kontrak->tgl_akhir_kontrak = $request->input('tgl_akhir_kontrak');
@@ -205,10 +209,12 @@ class M_kontrakController extends Controller
         try {
             DB::beginTransaction();
             $request->validate([
+                'no_surat_pemenang' => 'required',
                 'no_kontrak' => 'required|string|unique:m_kontrak,no_kontrak,' . $id,
                 'tgl_awal_kontrak' => 'nullable|date',
                 'tgl_akhir_kontrak' => 'nullable|date|after:tgl_awal_kontrak',
             ], [
+                'no_surat_pemenang.required' => 'No Surat Pemenang wajib diisi.',
                 'no_kontrak.required' => 'No Kontrak wajib diisi.',
                 'no_kontrak.unique' => 'No Kontrak sudah digunakan.',
                 'tgl_akhir_kontrak.after' => 'Tgl akhir kontrak harus lebih besar dari tgl awal kontrak.',
@@ -222,6 +228,7 @@ class M_kontrakController extends Controller
             }
 
             $m_kontrak = M_kontrak::where('id', $id)->firstOrFail();
+            $m_kontrak->no_surat_pemenang = $request->input('no_surat_pemenang');
             $m_kontrak->no_kontrak = $request->input('no_kontrak');
             $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
             $m_kontrak->tgl_akhir_kontrak = $request->input('tgl_akhir_kontrak');
