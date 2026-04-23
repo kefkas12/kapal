@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 21, 2026 at 01:36 AM
+-- Generation Time: Apr 23, 2026 at 06:36 PM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -90,14 +90,12 @@ INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_detail_awal
 (31, 16, NULL, NULL, NULL, NULL, 'uploads/kontrak/vessel_export_20260412.csv', '2026-04-11 23:42:27', '2026-04-11 23:42:27'),
 (41, NULL, 15, NULL, NULL, NULL, 'uploads/cable/PbeM9KY2ZQIHwi362x7RSRiwgsaXnpFLKLGnbUAk.pdf', '2026-04-14 08:45:27', '2026-04-14 08:45:27'),
 (42, 23, NULL, NULL, NULL, NULL, 'uploads/kontrak/ChatGPT Image Apr 12, 2026, 01_22_06 AM.png', '2026-04-14 10:29:22', '2026-04-14 10:29:22'),
-(43, NULL, 16, NULL, NULL, NULL, 'uploads/cable/Invoice Nasi Bakar Nony 11 Maret 2026 - Wisma76.pdf', '2026-04-14 10:51:19', '2026-04-14 10:51:19'),
-(45, NULL, 16, NULL, NULL, NULL, 'uploads/cable/AKSFOOD ID (1).pdf', '2026-04-14 10:58:32', '2026-04-14 10:58:32'),
 (46, NULL, NULL, NULL, NULL, 3, 'uploads/doc_cargo/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-14 11:43:31', '2026-04-14 11:43:31'),
 (47, NULL, NULL, NULL, NULL, 3, 'uploads/doc_cargo/DPP+Onsite+2026.pdf', '2026-04-14 11:45:10', '2026-04-14 11:45:10'),
 (53, NULL, NULL, 46, NULL, NULL, 'uploads/klaim_detail/AKSFOOD ID (1).pdf', '2026-04-14 21:54:33', '2026-04-14 21:54:33'),
 (55, NULL, NULL, NULL, 46, NULL, 'uploads/klaim_detail/DPP+Onsite+2026 (1).pdf', '2026-04-14 22:21:13', '2026-04-14 22:21:13'),
-(56, NULL, 17, NULL, NULL, NULL, 'uploads/cable/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-20 17:43:23', '2026-04-20 17:43:23'),
-(57, 24, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-20 18:35:54', '2026-04-20 18:35:54');
+(57, 24, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-20 18:35:54', '2026-04-20 18:35:54'),
+(58, NULL, 18, NULL, NULL, NULL, 'uploads/cable/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-20 19:07:07', '2026-04-20 19:07:07');
 
 -- --------------------------------------------------------
 
@@ -216,7 +214,8 @@ CREATE TABLE `m_grade` (
 --
 
 INSERT INTO `m_grade` (`id`, `grade`, `price_bbl`, `user_id`, `created_at`, `updated_at`) VALUES
-(2, 'PERTALITE', '81.602', 3, '2026-04-11 23:36:44', '2026-04-14 11:17:01');
+(2, 'PERTALITE', '81.602', 3, '2026-04-11 23:36:44', '2026-04-14 11:17:01'),
+(3, 'PERTAMAX', '120', 2, '2026-04-20 19:24:58', '2026-04-20 19:25:05');
 
 -- --------------------------------------------------------
 
@@ -235,6 +234,7 @@ CREATE TABLE `m_kontrak` (
   `speed` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `me_ballast` varchar(100) DEFAULT NULL,
   `me_laden` varchar(100) DEFAULT NULL,
+  `toleransi_transport_loss` varchar(100) DEFAULT NULL,
   `pumping_rate` varchar(100) DEFAULT NULL,
   `discharge` varchar(100) DEFAULT NULL,
   `status` varchar(20) NOT NULL,
@@ -247,10 +247,10 @@ CREATE TABLE `m_kontrak` (
 -- Dumping data for table `m_kontrak`
 --
 
-INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_surat_pemenang`, `no_kontrak`, `tgl_awal_kontrak`, `tgl_akhir_kontrak`, `charter_rate`, `speed`, `me_ballast`, `me_laden`, `pumping_rate`, `discharge`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(16, 34, '004/TCP/1/2024', '004/TCP/1/2024', '2024-01-04 00:00:00', '2025-01-04 00:00:00', '55000', '4', '10.2', '1.8', '150', '0.02', 'NON ACTIVE', 2, '2026-04-03 09:02:34', '2026-04-20 18:35:54'),
-(23, 36, NULL, '050/TCP/VI/2025', '2025-06-27 00:00:00', '2027-06-27 00:00:00', '5200.00', '10', '5.52', '5.64', '200', '2.28', 'ACTIVE', 3, '2026-04-14 10:29:22', '2026-04-14 10:29:22'),
-(24, 34, '004/TCP/1/2026', '004/TCP/1/2026', '2026-01-04 00:00:00', '2027-01-04 00:00:00', '55000', '4', '10.2', '1.8', '150', '0.02', 'ACTIVE', 2, '2026-04-20 18:35:54', '2026-04-20 18:35:54');
+INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_surat_pemenang`, `no_kontrak`, `tgl_awal_kontrak`, `tgl_akhir_kontrak`, `charter_rate`, `speed`, `me_ballast`, `me_laden`, `toleransi_transport_loss`, `pumping_rate`, `discharge`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(16, 34, '004/TCP/1/2024', '004/TCP/1/2024', '2024-01-04 00:00:00', '2025-01-04 00:00:00', '55000', '4', '10.2', '1.8', NULL, '150', '0.02', 'NON ACTIVE', 2, '2026-04-03 09:02:34', '2026-04-20 18:35:54'),
+(23, 36, NULL, '050/TCP/VI/2025', '2025-06-27 00:00:00', '2027-06-27 00:00:00', '5200.00', '10', '5.52', '5.64', NULL, '200', '2.28', 'ACTIVE', 3, '2026-04-14 10:29:22', '2026-04-14 10:29:22'),
+(24, 34, '004/TCP/1/2026', '004/TCP/1/2026', '2026-01-04 00:00:00', '2027-01-04 00:00:00', '55000', '4', '10.2', '1.8', NULL, '150', '0.02', 'ACTIVE', 2, '2026-04-20 18:35:54', '2026-04-20 18:35:54');
 
 -- --------------------------------------------------------
 
@@ -412,8 +412,8 @@ CREATE TABLE `personal_access_tokens` (
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
 (48, 'App\\Models\\User', 1, 'api-token', '93f8a0097bf106be92baab11cc3e3091b20d5da2083b77627f9fbe4891e68ec2', '[\"*\"]', '2026-04-14 08:45:35', NULL, '2026-04-14 05:04:24', '2026-04-14 08:45:35'),
-(54, 'App\\Models\\User', 3, 'api-token', '0bec5289ebc325bbc3e1b98a992ec5b78daeb2f0eb29fe0455b0d23b095f52bd', '[\"*\"]', '2026-04-20 18:18:28', NULL, '2026-04-20 17:59:47', '2026-04-20 18:18:28'),
-(55, 'App\\Models\\User', 2, 'api-token', '5de0cb0989a808ad0e63ddb0f28908888f8e37c622f07f0b872238c758df341a', '[\"*\"]', '2026-04-20 18:36:32', NULL, '2026-04-20 18:18:43', '2026-04-20 18:36:32');
+(55, 'App\\Models\\User', 2, 'api-token', '5de0cb0989a808ad0e63ddb0f28908888f8e37c622f07f0b872238c758df341a', '[\"*\"]', '2026-04-23 11:30:13', NULL, '2026-04-20 18:18:43', '2026-04-23 11:30:13'),
+(56, 'App\\Models\\User', 3, 'api-token', '9f90f306d735143346bdd89af0eba4963bd35eb357db8033392fb9fb981c5490', '[\"*\"]', '2026-04-23 11:36:17', NULL, '2026-04-23 11:32:04', '2026-04-23 11:36:17');
 
 -- --------------------------------------------------------
 
@@ -493,7 +493,8 @@ CREATE TABLE `settings` (
 
 INSERT INTO `settings` (`id`, `nama`, `value`, `status`, `created_at`, `updated_at`) VALUES
 (1, 'variable est_claim_bunker', '0.847', 'ACTIVE', NULL, NULL),
-(2, 'variable est_claim_transport', '-0.07', 'ACTIVE', NULL, NULL);
+(2, 'variable est_claim_transport', '-0.07', 'ACTIVE', NULL, NULL),
+(3, 'variable toleransi_transport_loss', '0.07', 'ACTIVE', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -535,7 +536,7 @@ CREATE TABLE `t_doc_cargo` (
 --
 
 INSERT INTO `t_doc_cargo` (`id`, `id_cable`, `id_grade`, `no_voyage_gab`, `grade`, `price_bbl`, `bill_of_lading`, `r1`, `ratio_r1`, `r2`, `ratio_r2`, `r3`, `ratio_r3`, `r4`, `ratio_r4`, `act_receipt`, `est_discharge`, `act_discharge`, `overdue_discharge`, `est_claim_pumping`, `est_claim_bunker`, `est_claim_transport`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(3, 16, 2, '26001/L', 'PERTALITE', '81.602', '6164.489', '81.167', '1.32', '3.209', '0.05', '-80.227', '-1.3', '4.149', '0.07', '523.04', '0.145289', '0.191667', '0.046378', '85.026537', '10606.21023', '-1579025.707896', 'APPROVE', 3, '2026-04-14 11:43:31', '2026-04-14 11:51:04');
+(3, 18, 2, 'AL2F8/26001/L', 'PERTALITE', '81.602', '6164.489', '81.167', '1.32', '3.209', '0.05', '-80.227', '-1.3', '4.149', '0.07', '523.04', '0.145289', '0.191667', '0.046378', '85.026537', '9.427742', '-1579025.707896', 'APPROVE', 2, '2026-04-14 11:43:31', '2026-04-20 19:30:33');
 
 -- --------------------------------------------------------
 
@@ -561,8 +562,8 @@ CREATE TABLE `t_doc_cargo_detail` (
 --
 
 INSERT INTO `t_doc_cargo_detail` (`id`, `id_doc_cargo`, `no_voyage_gab`, `no_urut`, `start_time`, `stop_time`, `discharge_time`, `user_id`, `created_at`, `updated_at`) VALUES
-(11, 3, '26001/L', '01', '2026-03-07 09:24:00', '2026-03-07 10:00:00', '0.025', 3, '2026-04-14 11:45:10', '2026-04-14 11:45:10'),
-(12, 3, '26001/L', '02', '2026-03-07 11:30:00', '2026-03-07 15:30:00', '0.166667', 3, '2026-04-14 11:45:10', '2026-04-14 11:45:10');
+(13, 3, 'AL2F8/26001/L', '01', '2026-03-07 09:24:00', '2026-03-07 10:00:00', '0.025', 2, '2026-04-20 19:24:16', '2026-04-20 19:24:16'),
+(14, 3, 'AL2F8/26001/L', '02', '2026-03-07 11:30:00', '2026-03-07 15:30:00', '0.166667', 2, '2026-04-20 19:24:16', '2026-04-20 19:24:16');
 
 -- --------------------------------------------------------
 
@@ -617,9 +618,9 @@ CREATE TABLE `t_klaim_detail` (
 --
 
 INSERT INTO `t_klaim_detail` (`id`, `id_klaim`, `id_cable`, `no_urut`, `no_voyage_gab`, `no_kontrak`, `keterangan`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(46, 41, 16, '01', '26001/L', '004/TCP/1/2024', NULL, 'OPEN', 3, '2026-04-14 11:09:45', '2026-04-14 11:09:45'),
-(47, 42, 16, '01', '26001/L', '004/TCP/1/2024', NULL, 'OPEN', 3, '2026-04-14 12:18:48', '2026-04-14 12:18:48'),
-(48, 43, 16, '01', '26001/L', '004/TCP/1/2024', NULL, 'OPEN', 3, '2026-04-14 12:19:17', '2026-04-14 12:19:17');
+(46, 41, 18, '01', 'AL2F8/26001/L', '004/TCP/1/2024', NULL, 'OPEN', 3, '2026-04-14 11:09:45', '2026-04-14 11:09:45'),
+(47, 42, 18, '01', 'AL2F8/26001/L', '004/TCP/1/2024', NULL, 'OPEN', 3, '2026-04-14 12:18:48', '2026-04-14 12:18:48'),
+(48, 43, 18, '01', '26001/L', '004/TCP/1/2024', NULL, 'OPEN', 3, '2026-04-14 12:19:17', '2026-04-14 12:19:17');
 
 -- --------------------------------------------------------
 
@@ -698,8 +699,115 @@ CREATE TABLE `t_master_cable` (
 --
 
 INSERT INTO `t_master_cable` (`id`, `id_vessel`, `no_voyage_gab`, `no_voyage`, `jenis_voyage`, `master`, `atd_port`, `atd_time`, `atd_rob`, `ata_port`, `ata_time`, `ata_rob`, `distance`, `speed`, `est_sail_day`, `act_sail_day`, `charter_rate_day`, `est_claim_speed`, `std_bunker_cons`, `act_bunker_cons`, `excess_bunker`, `bunker_price`, `est_claim_bunker`, `status`, `keterangan`, `user_id`, `created_at`, `updated_at`) VALUES
-(16, 34, '26001/L', '26001', 'L', 'STEVEN', 'JAMBI', '2025-06-03 09:00:00', '28.807', 'PANJANG', '2025-06-08 07:30:00', '18.154', '480', '4', '5', '4.9375', '1833.333333', '-114.583333', '10.2', '10.653', '0.453', '13500', '5179828.5', 'APPROVE', 'tes', 3, '2026-04-14 10:51:19', '2026-04-14 11:03:43'),
-(17, 34, '26001/D1', '26001', 'D1', 'STEVEN', 'PANJANG', '2026-04-21 07:45:00', '1', 'PANJANG', '2026-04-22 07:45:00', '1', '480', '4', '5', '1', '1833.333333', '-7333.333332', '1.8', '0', '-1.8', '1', '-1524.6', 'OPEN', 'tes1', 2, '2026-04-20 17:43:23', '2026-04-20 18:23:18');
+(18, 34, 'AL2F8/26001/L', '26001', 'L', 'STEVEN', 'PANJANG', '2026-04-22 09:06:00', '12', 'JAMBI', '2026-04-28 09:06:00', '13', '1', '4', '0.010417', '6', '1833.333333', '10980.902165', '10.2', '-1', '-11.2', '12', '-113836.8', 'APPROVE', NULL, 2, '2026-04-20 19:07:07', '2026-04-20 19:16:36');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `t_off_hire`
+--
+
+CREATE TABLE `t_off_hire` (
+  `id` int NOT NULL,
+  `id_cable` int NOT NULL,
+  `id_grade` int NOT NULL,
+  `no_voyage_gab` varchar(100) DEFAULT NULL,
+  `grade` varchar(100) DEFAULT NULL,
+  `price_bbl` varchar(100) DEFAULT NULL,
+  `bill_of_lading` varchar(100) DEFAULT NULL,
+  `r1` varchar(100) DEFAULT NULL,
+  `ratio_r1` varchar(100) DEFAULT NULL,
+  `r2` varchar(100) DEFAULT NULL,
+  `ratio_r2` varchar(100) DEFAULT NULL,
+  `r3` varchar(100) DEFAULT NULL,
+  `ratio_r3` varchar(100) DEFAULT NULL,
+  `r4` varchar(100) DEFAULT NULL,
+  `ratio_r4` varchar(100) DEFAULT NULL,
+  `act_receipt` varchar(100) DEFAULT NULL,
+  `est_discharge` varchar(100) DEFAULT NULL,
+  `act_discharge` varchar(100) DEFAULT NULL,
+  `overdue_discharge` varchar(100) DEFAULT NULL,
+  `est_claim_pumping` varchar(100) DEFAULT NULL,
+  `est_claim_bunker` varchar(100) DEFAULT NULL,
+  `est_claim_transport` varchar(100) DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `user_id` int DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `t_off_hire_detail`
+--
+
+CREATE TABLE `t_off_hire_detail` (
+  `id` int NOT NULL,
+  `id_doc_cargo` int NOT NULL,
+  `no_voyage_gab` varchar(100) DEFAULT NULL,
+  `no_urut` varchar(100) DEFAULT NULL,
+  `start_time` varchar(100) DEFAULT NULL,
+  `stop_time` varchar(100) DEFAULT NULL,
+  `discharge_time` varchar(100) DEFAULT NULL,
+  `user_id` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `t_redelivery_delivery`
+--
+
+CREATE TABLE `t_redelivery_delivery` (
+  `id` int NOT NULL,
+  `id_cable` int NOT NULL,
+  `id_grade` int NOT NULL,
+  `no_voyage_gab` varchar(100) DEFAULT NULL,
+  `grade` varchar(100) DEFAULT NULL,
+  `price_bbl` varchar(100) DEFAULT NULL,
+  `bill_of_lading` varchar(100) DEFAULT NULL,
+  `r1` varchar(100) DEFAULT NULL,
+  `ratio_r1` varchar(100) DEFAULT NULL,
+  `r2` varchar(100) DEFAULT NULL,
+  `ratio_r2` varchar(100) DEFAULT NULL,
+  `r3` varchar(100) DEFAULT NULL,
+  `ratio_r3` varchar(100) DEFAULT NULL,
+  `r4` varchar(100) DEFAULT NULL,
+  `ratio_r4` varchar(100) DEFAULT NULL,
+  `act_receipt` varchar(100) DEFAULT NULL,
+  `est_discharge` varchar(100) DEFAULT NULL,
+  `act_discharge` varchar(100) DEFAULT NULL,
+  `overdue_discharge` varchar(100) DEFAULT NULL,
+  `est_claim_pumping` varchar(100) DEFAULT NULL,
+  `est_claim_bunker` varchar(100) DEFAULT NULL,
+  `est_claim_transport` varchar(100) DEFAULT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `user_id` int DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `t_redelivery_delivery_detail`
+--
+
+CREATE TABLE `t_redelivery_delivery_detail` (
+  `id` int NOT NULL,
+  `id_doc_cargo` int NOT NULL,
+  `no_voyage_gab` varchar(100) DEFAULT NULL,
+  `no_urut` varchar(100) DEFAULT NULL,
+  `start_time` varchar(100) DEFAULT NULL,
+  `stop_time` varchar(100) DEFAULT NULL,
+  `discharge_time` varchar(100) DEFAULT NULL,
+  `user_id` int NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -959,6 +1067,40 @@ ALTER TABLE `t_master_cable`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indexes for table `t_off_hire`
+--
+ALTER TABLE `t_off_hire`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_cable` (`id_cable`),
+  ADD KEY `id_grade` (`id_grade`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `t_off_hire_detail`
+--
+ALTER TABLE `t_off_hire_detail`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_doc_cargo` (`id_doc_cargo`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `t_redelivery_delivery`
+--
+ALTER TABLE `t_redelivery_delivery`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_cable` (`id_cable`),
+  ADD KEY `id_grade` (`id_grade`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `t_redelivery_delivery_detail`
+--
+ALTER TABLE `t_redelivery_delivery_detail`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_doc_cargo` (`id_doc_cargo`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
@@ -979,7 +1121,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `file_upload`
 --
 ALTER TABLE `file_upload`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -997,7 +1139,7 @@ ALTER TABLE `migrations`
 -- AUTO_INCREMENT for table `m_grade`
 --
 ALTER TABLE `m_grade`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `m_kontrak`
@@ -1021,7 +1163,7 @@ ALTER TABLE `permissions`
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -1045,7 +1187,7 @@ ALTER TABLE `t_doc_cargo`
 -- AUTO_INCREMENT for table `t_doc_cargo_detail`
 --
 ALTER TABLE `t_doc_cargo_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `t_klaim`
@@ -1069,7 +1211,31 @@ ALTER TABLE `t_klaim_detail_nilai`
 -- AUTO_INCREMENT for table `t_master_cable`
 --
 ALTER TABLE `t_master_cable`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+
+--
+-- AUTO_INCREMENT for table `t_off_hire`
+--
+ALTER TABLE `t_off_hire`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `t_off_hire_detail`
+--
+ALTER TABLE `t_off_hire_detail`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `t_redelivery_delivery`
+--
+ALTER TABLE `t_redelivery_delivery`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `t_redelivery_delivery_detail`
+--
+ALTER TABLE `t_redelivery_delivery_detail`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `users`

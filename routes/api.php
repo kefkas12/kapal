@@ -52,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::controller(M_kontrakController::class)->prefix('kontrak')->group(function () {
         Route::get('/', 'index');
         Route::get('/search', 'search');
+        Route::get('/refs', 'refs');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');

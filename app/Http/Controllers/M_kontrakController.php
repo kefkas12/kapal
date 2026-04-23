@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\M_kontrak;
 use App\Models\File_upload;
+use App\Models\Settings;
 use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -114,6 +115,25 @@ class M_kontrakController extends Controller
                 'detail' => $data,
                 'files' => $files,
             ]
+        ]);
+    }
+
+    public function refs()
+    {
+        $toleransiTransportLoss = Settings::where('nama', 'variable toleransi_transport_loss')
+            ->where('status', 'ACTIVE')
+            ->where('id', 3)
+            ->orderByDesc('id')
+            ->value('value');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Referensi kontrak berhasil diambil',
+            'data' => [
+                'settings' => [
+                    'toleransi_transport_loss' => $toleransiTransportLoss,
+                ],
+            ],
         ]);
     }
 
