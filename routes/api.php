@@ -9,6 +9,7 @@ use App\Http\Controllers\T_klaimController;
 use App\Http\Controllers\T_master_cableController;
 use App\Http\Controllers\T_doc_cargoController;
 use App\Http\Controllers\T_doc_cargo_detailController;
+use App\Http\Controllers\T_off_hireController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -103,6 +104,25 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::controller(T_doc_cargoController::class)->prefix('doc_cargo')->group(function () {
+        Route::get('/', 'index');
+        Route::get('/search', 'search');
+        Route::get('/details/{id}', 'details');
+        Route::post('/', 'create');
+        Route::put('/{id}', 'edit');
+        Route::post('/{id}/approve', 'approve');
+        Route::post('/{id}/unapprove', 'unapprove');
+        Route::delete('/{id}', 'delete');
+    });
+
+    Route::controller(T_off_hire_detailController::class)->prefix('off_hire_detail')->group(function () {
+        Route::get('/', 'index');
+        Route::get('/details/{id}', 'details');
+        Route::post('/', 'create');
+        Route::put('/{id}', 'edit');
+        Route::delete('/{id}', 'delete');
+    });
+
+    Route::controller(T_off_hireController::class)->prefix('off_hire')->group(function () {
         Route::get('/', 'index');
         Route::get('/search', 'search');
         Route::get('/details/{id}', 'details');

@@ -141,14 +141,14 @@ class T_klaim_detailController extends Controller
 
             if ($noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
                 throw ValidationException::withMessages([
-                    'no_tagihan_klaim' => 'No Tagihan Klaim dan No Tagihan Dipotong tidak boleh sama.',
-                    'no_tagihan_dipotong' => 'No Tagihan Klaim dan No Tagihan Dipotong tidak boleh sama.',
+                    'no_tagihan_klaim' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL tidak boleh sama.',
+                    'no_tagihan_dipotong' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL tidak boleh sama.',
                 ]);
             }
 
             foreach ([
-                ['field' => 'no_tagihan_klaim', 'label' => 'No Tagihan Klaim', 'value' => $noTagihanKlaim],
-                ['field' => 'no_tagihan_dipotong', 'label' => 'No Tagihan Dipotong', 'value' => $noTagihanDipotong],
+                ['field' => 'no_tagihan_klaim', 'label' => 'Nomor Invoice dari Pertamina', 'value' => $noTagihanKlaim],
+                ['field' => 'no_tagihan_dipotong', 'label' => 'Nomor Invoice dari PT OSL', 'value' => $noTagihanDipotong],
             ] as $tagihan) {
                 $value = $tagihan['value'];
                 if ($value === '') {
@@ -228,14 +228,14 @@ class T_klaim_detailController extends Controller
 
             if ($noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
                 throw ValidationException::withMessages([
-                    'no_tagihan_klaim' => 'No Tagihan Klaim dan No Tagihan Dipotong tidak boleh sama.',
-                    'no_tagihan_dipotong' => 'No Tagihan Klaim dan No Tagihan Dipotong tidak boleh sama.',
+                    'no_tagihan_klaim' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL tidak boleh sama.',
+                    'no_tagihan_dipotong' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL tidak boleh sama.',
                 ]);
             }
 
             foreach ([
-                ['field' => 'no_tagihan_klaim', 'label' => 'No Tagihan Klaim', 'value' => $noTagihanKlaim],
-                ['field' => 'no_tagihan_dipotong', 'label' => 'No Tagihan Dipotong', 'value' => $noTagihanDipotong],
+                ['field' => 'no_tagihan_klaim', 'label' => 'Nomor Invoice dari Pertamina', 'value' => $noTagihanKlaim],
+                ['field' => 'no_tagihan_dipotong', 'label' => 'Nomor Invoice dari PT OSL', 'value' => $noTagihanDipotong],
             ] as $tagihan) {
                 $value = $tagihan['value'];
                 if ($value === '') {
@@ -612,7 +612,7 @@ class T_klaim_detailController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'No Tagihan Klaim dan No Tagihan Dipotong berhasil diubah.'
+                    'message' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL berhasil diubah.'
                 ]);
             }
             $t_klaim_detail->id_klaim = $request->input('id_klaim');
