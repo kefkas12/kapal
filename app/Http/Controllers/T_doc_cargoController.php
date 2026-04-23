@@ -119,9 +119,9 @@ class T_doc_cargoController extends Controller
             $grade = M_grade::where('id', $idGrade)->first();
         }
 
-        $priceBbl = $grade?->price_bbl;
+        $priceBbl = $request->input('price_bbl');
         if ($priceBbl === null || $priceBbl === '') {
-            $priceBbl = $request->input('price_bbl');
+            $priceBbl = $grade?->price_bbl;
         }
 
         $payload = [
