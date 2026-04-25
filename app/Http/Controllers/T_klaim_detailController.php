@@ -12,6 +12,7 @@ use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -84,6 +85,37 @@ class T_klaim_detailController extends Controller
         return $query->orderByDesc('id')->first();
     }
 
+    private function findLatestOffHireByKlaimContext($idCable, $noVoyageGab)
+    {
+        $query = DB::table('t_off_hire');
+
+        if (!empty($idCable)) {
+            $query->where('id_cable', $idCable);
+        } elseif (!empty($noVoyageGab)) {
+            $query->where('no_voyage_gab', $noVoyageGab);
+        } else {
+            return null;
+        }
+
+        return $query->orderByDesc('id')->first();
+    }
+
+    private function findLatestRedeliveryDeliveryByKlaimContext($idCable, $noVoyageGab)
+    {
+        $query = DB::table('t_redelivery_delivery');
+        $hasIdCable = Schema::hasColumn('t_redelivery_delivery', 'id_cable');
+
+        if (!empty($idCable) && $hasIdCable) {
+            $query->where('id_cable', $idCable);
+        } elseif (!empty($noVoyageGab)) {
+            $query->where('no_voyage_gab', $noVoyageGab);
+        } else {
+            return null;
+        }
+
+        return $query->orderByDesc('id')->first();
+    }
+
     private function noTagihanExistsInDatabase(string $value, ?int $excludeId = null): bool
     {
         $value = trim($value);
@@ -116,6 +148,8 @@ class T_klaim_detailController extends Controller
         }
 
         $docCargo = $this->findDocCargoByKlaimContext($idCable, $noVoyageGab);
+        $offHire = $this->findLatestOffHireByKlaimContext($idCable, $noVoyageGab);
+        $redeliveryDelivery = $this->findLatestRedeliveryDeliveryByKlaimContext($idCable, $noVoyageGab);
 
         if (empty($nilaiItems)) {
             $nilaiItems = array_map(fn ($subJenis) => [
@@ -166,6 +200,12 @@ class T_klaim_detailController extends Controller
                 $valPotensi = $docCargo->est_claim_pumping;
             } elseif ($subJenis === 'TL' && $docCargo) {
                 $valPotensi = $docCargo->est_claim_transport ?? $docCargo->est_transport_loss;
+            } elseif ($subJenis === 'OH' && $offHire) {
+                $valPotensi = $offHire->est_oh;
+            } elseif ($subJenis === 'BOH' && $offHire) {
+                $valPotensi = $offHire->est_boh;
+            } elseif ($subJenis === 'BOD' && $redeliveryDelivery) {
+                $valPotensi = $redeliveryDelivery->est_bod;
             }
             $row->val_potensi = $valPotensi;
             $row->val_klaim_awal = $item['val_klaim_awal'] ?? $request->input('val_klaim_awal');
