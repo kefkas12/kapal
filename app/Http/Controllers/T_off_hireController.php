@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\File_upload;
-use App\Models\M_grade;
 use App\Models\T_off_hire;
 use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
@@ -16,23 +15,6 @@ use Illuminate\Validation\ValidationException;
 
 class T_off_hireController extends Controller
 {
-    private function ensureGradeNotUsedOnCable(int $idCable, int $idGrade, ?int $excludeDocCargoId = null): void
-    {
-        $query = T_off_hire::query()
-            ->where('id_cable', $idCable)
-            ->where('id_grade', $idGrade);
-
-        if (!is_null($excludeDocCargoId)) {
-            $query->where('id', '!=', $excludeDocCargoId);
-        }
-
-        if ($query->exists()) {
-            throw ValidationException::withMessages([
-                'id_grade' => 'Grade untuk No Voyage ini sudah pernah digunakan. Pilih grade lain.',
-            ]);
-        }
-    }
-
     private function docCargoColumns(): array
     {
         return Schema::getColumnListing('t_off_hire');
@@ -114,31 +96,10 @@ class T_off_hireController extends Controller
             $cable = T_master_cable::where('id', $idCable)->first();
         }
 
-        $grade = null;
-        if ($idGrade) {
-            $grade = M_grade::where('id', $idGrade)->first();
-        }
-
-        $priceBbl = $grade?->price_bbl;
-        if ($priceBbl === null || $priceBbl === '') {
-            $priceBbl = $request->input('price_bbl');
-        }
-
         $payload = [
             'id_cable' => $idCable,
-            'id_grade' => $idGrade,
             'no_voyage_gab' => $cable?->no_voyage_gab,
-            'grade' => $grade?->grade,
-            'price_bbl' => $priceBbl,
-            'bill_of_lading' => $request->input('bill_of_lading'),
-            'r1' => $request->input('r1'),
-            'ratio_r1' => $request->input('ratio_r1'),
-            'r2' => $request->input('r2'),
-            'ratio_r2' => $request->input('ratio_r2'),
-            'r3' => $request->input('r3'),
-            'ratio_r3' => $request->input('ratio_r3'),
-            'r4' => $request->input('r4'),
-            'ratio_r4' => $request->input('ratio_r4'),
+            'bunker_price' => $request->input('bunker_price'),
             'act_receipt' => $request->input('act_receipt'),
             'est_discharge' => $request->input('est_discharge'),
             'act_discharge' => $request->input('act_discharge'),
@@ -214,12 +175,9 @@ class T_off_hireController extends Controller
 
         $query = DB::table('t_off_hire')
             ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_off_hire.id_cable')
-            ->leftJoin('m_grade', 'm_grade.id', '=', 't_off_hire.id_grade')
             ->select(
                 't_off_hire.*',
-                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display'),
-                DB::raw('COALESCE(t_off_hire.grade, m_grade.grade) as grade_display'),
-                DB::raw('COALESCE(t_off_hire.price_bbl, m_grade.price_bbl) as price_bbl_display')
+                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
             );
 
         $search = trim((string) $request->input('search', ''));
@@ -227,9 +185,7 @@ class T_off_hireController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('t_off_hire.no_voyage_gab', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.no_voyage_gab', 'like', "%{$search}%")
-                    ->orWhere('t_off_hire.grade', 'like', "%{$search}%")
-                    ->orWhere('m_grade.grade', 'like', "%{$search}%")
-                    ->orWhere('t_off_hire.bill_of_lading', 'like', "%{$search}%")
+                    ->orWhere('t_off_hire.bunker_price', 'like', "%{$search}%")
                     ->orWhere('t_off_hire.status', 'like', "%{$search}%");
             });
         }
@@ -247,7 +203,7 @@ class T_off_hireController extends Controller
         $allowedSort = [
             'id' => 't_off_hire.id',
             'no_voyage_gab' => 't_off_hire.no_voyage_gab',
-            'bill_of_lading' => 't_off_hire.bill_of_lading',
+            'bunker_price' => 't_off_hire.bunker_price',
             'status' => 't_off_hire.status',
             'created_at' => 't_off_hire.created_at',
         ];
@@ -285,13 +241,10 @@ class T_off_hireController extends Controller
 
         $data = DB::table('t_off_hire')
             ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_off_hire.id_cable')
-            ->leftJoin('m_grade', 'm_grade.id', '=', 't_off_hire.id_grade')
             ->where('t_off_hire.id', $id)
             ->select(
                 't_off_hire.*',
-                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display'),
-                DB::raw('COALESCE(t_off_hire.grade, m_grade.grade) as grade_display'),
-                DB::raw('COALESCE(t_off_hire.price_bbl, m_grade.price_bbl) as price_bbl_display')
+                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
             )
             ->first();
 
@@ -330,10 +283,6 @@ class T_off_hireController extends Controller
 
             $payload = $this->sanitizeDocCargoPayload($request);
             $idCable = (int) ($payload['id_cable'] ?? 0);
-            $idGrade = (int) ($payload['id_grade'] ?? 0);
-            if ($idCable > 0 && $idGrade > 0) {
-                $this->ensureGradeNotUsedOnCable($idCable, $idGrade);
-            }
             $payload['created_at'] = now();
 
             $docCargoId = DB::table('t_off_hire')->insertGetId($payload);
@@ -392,10 +341,6 @@ class T_off_hireController extends Controller
             }
             $payload = $this->sanitizeDocCargoPayload($request);
             $idCable = (int) ($payload['id_cable'] ?? 0);
-            $idGrade = (int) ($payload['id_grade'] ?? 0);
-            if ($idCable > 0 && $idGrade > 0) {
-                $this->ensureGradeNotUsedOnCable($idCable, $idGrade, (int) $existing->id);
-            }
 
             DB::table('t_off_hire')->where('id', $existing->id)->update($payload);
 

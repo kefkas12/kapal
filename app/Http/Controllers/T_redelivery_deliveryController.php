@@ -16,23 +16,6 @@ use Illuminate\Validation\ValidationException;
 
 class T_redelivery_deliveryController extends Controller
 {
-    private function ensureGradeNotUsedOnCable(int $idCable, int $idGrade, ?int $excludeDocCargoId = null): void
-    {
-        $query = T_redelivery_delivery::query()
-            ->where('id_cable', $idCable)
-            ->where('id_grade', $idGrade);
-
-        if (!is_null($excludeDocCargoId)) {
-            $query->where('id', '!=', $excludeDocCargoId);
-        }
-
-        if ($query->exists()) {
-            throw ValidationException::withMessages([
-                'id_grade' => 'Grade untuk No Voyage ini sudah pernah digunakan. Pilih grade lain.',
-            ]);
-        }
-    }
-
     private function docCargoColumns(): array
     {
         return Schema::getColumnListing('t_redelivery_delivery');
@@ -330,10 +313,6 @@ class T_redelivery_deliveryController extends Controller
 
             $payload = $this->sanitizeDocCargoPayload($request);
             $idCable = (int) ($payload['id_cable'] ?? 0);
-            $idGrade = (int) ($payload['id_grade'] ?? 0);
-            if ($idCable > 0 && $idGrade > 0) {
-                $this->ensureGradeNotUsedOnCable($idCable, $idGrade);
-            }
             $payload['created_at'] = now();
 
             $docCargoId = DB::table('t_redelivery_delivery')->insertGetId($payload);
@@ -392,10 +371,6 @@ class T_redelivery_deliveryController extends Controller
             }
             $payload = $this->sanitizeDocCargoPayload($request);
             $idCable = (int) ($payload['id_cable'] ?? 0);
-            $idGrade = (int) ($payload['id_grade'] ?? 0);
-            if ($idCable > 0 && $idGrade > 0) {
-                $this->ensureGradeNotUsedOnCable($idCable, $idGrade, (int) $existing->id);
-            }
 
             DB::table('t_redelivery_delivery')->where('id', $existing->id)->update($payload);
 
