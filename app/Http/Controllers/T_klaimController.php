@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\T_klaim;
 use App\Models\T_klaim_detail;
+use App\Models\T_klaim_detail_nilai;
 use App\Models\File_upload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -186,9 +187,24 @@ class T_klaimController extends Controller
 
             $t_klaim = T_klaim::where('id', $id)->firstOrFail();
 
-            $details = T_klaim_detail::where('id_klaim', $id)->get();
-            foreach ($details as $detail) {
-                $detail->delete();
+            $detailIds = T_klaim_detail::where('id_klaim', $id)->pluck('id')->all();
+            if (!empty($detailIds)) {
+                $files = File_upload::whereIn('id_klaim_detail_awal', $detailIds)
+                    ->orWhereIn('id_klaim_detail_akhir', $detailIds)
+                    ->get();
+
+                foreach ($files as $file) {
+                    if ($file->nama_file) {
+                        $disk = Storage::disk('public');
+                        if ($disk->exists($file->nama_file)) {
+                            $disk->delete($file->nama_file);
+                        }
+                    }
+                    $file->delete();
+                }
+
+                T_klaim_detail_nilai::whereIn('id_klaim_detail', $detailIds)->delete();
+                T_klaim_detail::whereIn('id', $detailIds)->delete();
             }
 
             $t_klaim->delete();

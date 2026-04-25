@@ -17,6 +17,32 @@ use Illuminate\Validation\ValidationException;
 
 class T_klaim_detailController extends Controller
 {
+    private function resolveDefaultCurrency(?string $jenisKlaim, string $subJenis, $fallback = null): ?string
+    {
+        $sub = strtoupper((string) $subJenis);
+        if (in_array($sub, ['SP', 'SS', 'TL', 'OH'], true)) return 'USD';
+        if (in_array($sub, ['OB', 'BOH', 'BOD'], true)) return 'IDR';
+
+        $value = trim((string) ($fallback ?? ''));
+        return $value !== '' ? strtoupper($value) : null;
+    }
+
+    private function resolveDefaultKurs(?string $jenisKlaim, string $subJenis, $currency, $fallback = null): ?string
+    {
+        $normalizedCurrency = strtoupper(trim((string) ($currency ?? '')));
+
+        if ($normalizedCurrency === 'IDR') {
+            return '1';
+        }
+
+        $value = trim((string) ($fallback ?? ''));
+        if ($value !== '') {
+            return $value;
+        }
+
+        return null;
+    }
+
     private function getSubJenisByJenisKlaim(?string $jenisKlaim): array
     {
         $jenis = strtoupper((string) $jenisKlaim);
@@ -115,8 +141,18 @@ class T_klaim_detailController extends Controller
             $row = $existingRows->get($subJenis) ?? new T_klaim_detail_nilai();
             $row->id_klaim_detail = $klaimDetailId;
             $row->sub_jenis = $subJenis;
-            $row->currency = $item['currency'] ?? $request->input('currency') ?? $klaim?->currency;
-            $row->kurs = $item['kurs'] ?? $request->input('kurs');
+            $resolvedCurrency = $this->resolveDefaultCurrency(
+                $klaim?->jenis_klaim,
+                $subJenis,
+                $item['currency'] ?? $request->input('currency') ?? $klaim?->currency
+            );
+            $row->currency = $resolvedCurrency;
+            $row->kurs = $this->resolveDefaultKurs(
+                $klaim?->jenis_klaim,
+                $subJenis,
+                $resolvedCurrency,
+                $item['kurs'] ?? $request->input('kurs')
+            );
             $valPotensi = $item['val_potensi'] ?? $request->input('val_potensi');
             if ($subJenis === 'SS' && $cable) {
                 $valPotensi = $cable->est_claim_speed;

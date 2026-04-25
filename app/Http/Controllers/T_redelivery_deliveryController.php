@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\File_upload;
-use App\Models\M_grade;
+use App\Models\Settings;
 use App\Models\T_redelivery_delivery;
 use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
@@ -16,14 +16,9 @@ use Illuminate\Validation\ValidationException;
 
 class T_redelivery_deliveryController extends Controller
 {
-    private function docCargoColumns(): array
+    private function redeliveryDeliveryColumns(): array
     {
         return Schema::getColumnListing('t_redelivery_delivery');
-    }
-
-    private function docCargoDetailColumns(): array
-    {
-        return Schema::getColumnListing('t_redelivery_delivery_detail');
     }
 
     private function toNumber($value): float
@@ -87,101 +82,169 @@ class T_redelivery_deliveryController extends Controller
         return number_format($days, 6, '.', '');
     }
 
-    private function sanitizeDocCargoPayload(Request $request): array
+    private function sanitizeRedeliveryDeliveryPayload(Request $request): array
     {
         $idCable = $request->input('id_cable');
-        $idGrade = $request->input('id_grade');
 
         $cable = null;
         if ($idCable) {
             $cable = T_master_cable::where('id', $idCable)->first();
         }
 
-        $grade = null;
-        if ($idGrade) {
-            $grade = M_grade::where('id', $idGrade)->first();
+        $kontrak = null;
+        if ($cable?->id_vessel) {
+            $kontrak = DB::table('m_kontrak')
+                ->where('id_vessel', $cable->id_vessel)
+                ->where('status', 'ACTIVE')
+                ->orderByDesc('id')
+                ->first();
         }
 
-        $priceBbl = $grade?->price_bbl;
-        if ($priceBbl === null || $priceBbl === '') {
-            $priceBbl = $request->input('price_bbl');
-        }
+        $bunkerRedelivery = $this->toNumber($request->input('bunker_redelivery'));
+        $bunkerDelivery = $this->toNumber($request->input('bunker_delivery'));
+        $estClaimBunkerFactor = $this->getEstClaimBunkerFactor();
+        $estBod = ($bunkerDelivery - $bunkerRedelivery) * $bunkerRedelivery * 1000 * $estClaimBunkerFactor;
 
         $payload = [
             'id_cable' => $idCable,
-            'id_grade' => $idGrade,
-            'no_voyage_gab' => $cable?->no_voyage_gab,
-            'grade' => $grade?->grade,
-            'price_bbl' => $priceBbl,
-            'bill_of_lading' => $request->input('bill_of_lading'),
-            'r1' => $request->input('r1'),
-            'ratio_r1' => $request->input('ratio_r1'),
-            'r2' => $request->input('r2'),
-            'ratio_r2' => $request->input('ratio_r2'),
-            'r3' => $request->input('r3'),
-            'ratio_r3' => $request->input('ratio_r3'),
-            'r4' => $request->input('r4'),
-            'ratio_r4' => $request->input('ratio_r4'),
-            'act_receipt' => $request->input('act_receipt'),
-            'est_discharge' => $request->input('est_discharge'),
-            'act_discharge' => $request->input('act_discharge'),
-            'overdue_discharge' => $request->input('overdue_discharge'),
-            'est_claim_pumping' => $request->input('est_claim_pumping'),
-            'est_claim_bunker' => $request->input('est_claim_bunker'),
-            'est_claim_transport' => $request->input('est_claim_transport'),
+            'id_kontrak_redelivery' => $request->input('id_kontrak_redelivery') ?: ($kontrak?->id ?? null),
+            'id_kontrak_delivery' => $request->input('id_kontrak_delivery') ?: ($kontrak?->id ?? null),
+            'no_kontrak_redelivery' => $request->input('no_kontrak_redelivery') ?: ($kontrak?->no_kontrak ?? null),
+            'no_kontrak_delivery' => $request->input('no_kontrak_delivery') ?: ($kontrak?->no_kontrak ?? null),
+            'no_voyage_gab' => $request->input('no_voyage_gab') ?: ($cable?->no_voyage_gab ?? null),
+            'bunker_price' => $request->input('bunker_price'),
+            'est_bod' => $this->numberToStorage($estBod),
+            'date_time_redelivery' => $request->input('date_time_redelivery'),
+            'tempat_redelivery' => $request->input('tempat_redelivery'),
+            'bunker_redelivery' => $request->input('bunker_redelivery'),
+            'date_time_delivery' => $request->input('date_time_delivery'),
+            'tempat_delivery' => $request->input('tempat_delivery'),
+            'bunker_delivery' => $request->input('bunker_delivery'),
             'status' => 'OPEN',
             'user_id' => Auth::id(),
             'updated_at' => now(),
         ];
 
-        $allowedColumns = array_flip($this->docCargoColumns());
+        $allowedColumns = array_flip($this->redeliveryDeliveryColumns());
         return array_intersect_key($payload, $allowedColumns);
     }
 
-    private function parseDetailItems(Request $request): array
+    private function getEstClaimBunkerFactor(): float
     {
-        $raw = $request->input('detail_items');
-        if (is_array($raw)) {
-            return $raw;
+        $value = Settings::query()
+            ->where('nama', 'variable est_claim_bunker')
+            ->where('status', 'ACTIVE')
+            ->orderByDesc('id')
+            ->value('value');
+
+        $factor = $this->toNumber($value);
+        if (!is_finite($factor) || $factor <= 0) {
+            return 0.847;
         }
-        if (is_string($raw) && trim($raw) !== '') {
-            $decoded = json_decode($raw, true);
-            return is_array($decoded) ? $decoded : [];
-        }
-        return [];
+
+        return $factor;
     }
 
-    private function syncDetailRows(int $docCargoId, ?string $noVoyageGab, Request $request): void
+    private function numberToStorage(float $value): string
     {
-        $detailColumns = array_flip($this->docCargoDetailColumns());
+        if (!is_finite($value)) {
+            return '0';
+        }
 
-        DB::table('t_redelivery_delivery_detail')->where('id_redelivery_delivery', $docCargoId)->delete();
+        return rtrim(rtrim(number_format($value, 6, '.', ''), '0'), '.');
+    }
 
-        $detailItems = $this->parseDetailItems($request);
-        $noUrut = 1;
-        foreach ($detailItems as $item) {
-            $startTimeRaw = $item['start_time'] ?? null;
-            $stopTimeRaw = $item['stop_time'] ?? null;
-            $dischargeTime = $item['discharge_time'] ?? $this->calcDischargeTime($startTimeRaw, $stopTimeRaw);
+    private function computeEstBodValue($bunkerRedeliveryRaw, $bunkerDeliveryRaw): string
+    {
+        $bunkerRedelivery = $this->toNumber($bunkerRedeliveryRaw);
+        $bunkerDelivery = $this->toNumber($bunkerDeliveryRaw);
+        $estClaimBunkerFactor = $this->getEstClaimBunkerFactor();
+        $estBod = ($bunkerDelivery - $bunkerRedelivery) * $bunkerRedelivery * 1000 * $estClaimBunkerFactor;
+        return $this->numberToStorage($estBod);
+    }
 
-            $row = [
-                'id_redelivery_delivery' => $docCargoId,
-                'no_voyage_gab' => $noVoyageGab,
-                'no_urut' => $item['no_urut'] ?? str_pad((string) $noUrut, 2, '0', STR_PAD_LEFT),
-                'start_time' => $startTimeRaw,
-                'stop_time' => $stopTimeRaw,
-                'discharge_time' => $dischargeTime,
-                'user_id' => Auth::id(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+    private function hasRedeliveryDeliveryCableColumn(): bool
+    {
+        return Schema::hasColumn('t_redelivery_delivery', 'id_cable');
+    }
 
-            $filtered = array_intersect_key($row, $detailColumns);
-            if (!empty($filtered)) {
-                DB::table('t_redelivery_delivery_detail')->insert($filtered);
+    private function redeliveryFileColumn(): string
+    {
+        if (Schema::hasColumn('file_upload', 'id_redelivery')) {
+            return 'id_redelivery';
+        }
+        return 'id_redelivery_delivery';
+    }
+
+    private function deliveryFileColumn(): string
+    {
+        if (Schema::hasColumn('file_upload', 'id_delivery')) {
+            return 'id_delivery';
+        }
+        return 'id_redelivery_delivery';
+    }
+
+    private function normalizedIncomingFiles(Request $request, string $key): array
+    {
+        return array_values(array_filter((array) $request->file($key, [])));
+    }
+
+    private function assertPdfFiles(array $files): void
+    {
+        foreach ($files as $file) {
+            $ext = strtolower((string) $file?->getClientOriginalExtension());
+            if ($ext !== 'pdf') {
+                throw ValidationException::withMessages([
+                    'files' => 'File cable hanya boleh PDF.',
+                ]);
             }
+        }
+    }
 
-            $noUrut += 1;
+    private function persistFiles(array $files, string $column, int $id, string $directory): void
+    {
+        foreach ($files as $file) {
+            if (!$file) {
+                continue;
+            }
+            $path = FileUploadHelper::storeWithOriginalName($file, $directory);
+            $upload = new File_upload();
+            $upload->{$column} = $id;
+            $upload->nama_file = $path;
+            $upload->save();
+        }
+    }
+
+    private function assertNumericField(Request $request, string $field, string $label): void
+    {
+        $raw = trim((string) $request->input($field, ''));
+        if ($raw === '') {
+            throw ValidationException::withMessages([
+                $field => $label . ' wajib diisi.',
+            ]);
+        }
+        $normalized = str_replace(',', '.', $raw);
+        if (!is_numeric($normalized)) {
+            throw ValidationException::withMessages([
+                $field => $label . ' harus berupa angka.',
+            ]);
+        }
+    }
+
+    private function assertKontrakSelection(Request $request): void
+    {
+        $idKontrakRedelivery = trim((string) $request->input('id_kontrak_redelivery', ''));
+        $idKontrakDelivery = trim((string) $request->input('id_kontrak_delivery', ''));
+        if ($idKontrakRedelivery === '' || $idKontrakDelivery === '') {
+            throw ValidationException::withMessages([
+                'id_kontrak_redelivery' => 'Kontrak Redelivery wajib diisi.',
+                'id_kontrak_delivery' => 'Kontrak Delivery wajib diisi.',
+            ]);
+        }
+        if ((int) $idKontrakRedelivery === (int) $idKontrakDelivery) {
+            throw ValidationException::withMessages([
+                'id_kontrak_delivery' => 'Kontrak Redelivery dan Delivery tidak boleh sama.',
+            ]);
         }
     }
 
@@ -195,30 +258,35 @@ class T_redelivery_deliveryController extends Controller
             $perPage = 100;
         }
 
-        $query = DB::table('t_redelivery_delivery')
-            ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_redelivery_delivery.id_cable')
-            ->leftJoin('m_grade', 'm_grade.id', '=', 't_redelivery_delivery.id_grade')
-            ->select(
+        $hasIdCable = $this->hasRedeliveryDeliveryCableColumn();
+        $query = DB::table('t_redelivery_delivery');
+        if ($hasIdCable) {
+            $query->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_redelivery_delivery.id_cable')
+                ->select(
+                    't_redelivery_delivery.*',
+                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
+                );
+        } else {
+            $query->select(
                 't_redelivery_delivery.*',
-                DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display'),
-                DB::raw('COALESCE(t_redelivery_delivery.grade, m_grade.grade) as grade_display'),
-                DB::raw('COALESCE(t_redelivery_delivery.price_bbl, m_grade.price_bbl) as price_bbl_display')
+                DB::raw('t_redelivery_delivery.no_voyage_gab as no_voyage_gab_display')
             );
+        }
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('t_redelivery_delivery.no_voyage_gab', 'like', "%{$search}%")
-                    ->orWhere('t_master_cable.no_voyage_gab', 'like', "%{$search}%")
-                    ->orWhere('t_redelivery_delivery.grade', 'like', "%{$search}%")
-                    ->orWhere('m_grade.grade', 'like', "%{$search}%")
-                    ->orWhere('t_redelivery_delivery.bill_of_lading', 'like', "%{$search}%")
+                    ->orWhere('t_redelivery_delivery.bunker_price', 'like', "%{$search}%")
                     ->orWhere('t_redelivery_delivery.status', 'like', "%{$search}%");
+                if ($hasIdCable) {
+                    $q->orWhere('t_master_cable.no_voyage_gab', 'like', "%{$search}%");
+                }
             });
         }
 
         $idCable = $request->input('id_cable');
-        if (!is_null($idCable) && $idCable !== '') {
+        if ($hasIdCable && !is_null($idCable) && $idCable !== '') {
             $query->where('t_redelivery_delivery.id_cable', $idCable);
         }
 
@@ -230,7 +298,7 @@ class T_redelivery_deliveryController extends Controller
         $allowedSort = [
             'id' => 't_redelivery_delivery.id',
             'no_voyage_gab' => 't_redelivery_delivery.no_voyage_gab',
-            'bill_of_lading' => 't_redelivery_delivery.bill_of_lading',
+            'bunker_price' => 't_redelivery_delivery.bunker_price',
             'status' => 't_redelivery_delivery.status',
             'created_at' => 't_redelivery_delivery.created_at',
         ];
@@ -266,34 +334,45 @@ class T_redelivery_deliveryController extends Controller
     {
         $id = $request->route('id');
 
-        $data = DB::table('t_redelivery_delivery')
-            ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_redelivery_delivery.id_cable')
-            ->leftJoin('m_grade', 'm_grade.id', '=', 't_redelivery_delivery.id_grade')
-            ->where('t_redelivery_delivery.id', $id)
-            ->select(
-                't_redelivery_delivery.*',
-                DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display'),
-                DB::raw('COALESCE(t_redelivery_delivery.grade, m_grade.grade) as grade_display'),
-                DB::raw('COALESCE(t_redelivery_delivery.price_bbl, m_grade.price_bbl) as price_bbl_display')
-            )
-            ->first();
+        $hasIdCable = $this->hasRedeliveryDeliveryCableColumn();
+        $detailQuery = DB::table('t_redelivery_delivery')->where('t_redelivery_delivery.id', $id);
+        if ($hasIdCable) {
+            $detailQuery
+                ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_redelivery_delivery.id_cable')
+                ->select(
+                    't_redelivery_delivery.*',
+                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
+                );
+        } else {
+            $detailQuery
+                ->select(
+                    't_redelivery_delivery.*',
+                    DB::raw('t_redelivery_delivery.no_voyage_gab as no_voyage_gab_display')
+                );
+        }
+        $data = $detailQuery->first();
+        if ($data && (trim((string) ($data->est_bod ?? '')) === '')) {
+            $data->est_bod = $this->computeEstBodValue($data->bunker_redelivery ?? null, $data->bunker_delivery ?? null);
+        }
 
-        $detailItems = DB::table('t_redelivery_delivery_detail')
-            ->where('id_redelivery_delivery', $id)
+        $redeliveryColumn = $this->redeliveryFileColumn();
+        $deliveryColumn = $this->deliveryFileColumn();
+        $filesRedelivery = File_upload::where($redeliveryColumn, $id)
             ->orderBy('id', 'asc')
             ->get();
-
-        $files = File_upload::where('id_redelivery_delivery', $id)
+        $filesDelivery = File_upload::where($deliveryColumn, $id)
             ->orderBy('id', 'asc')
             ->get();
+        $files = $filesRedelivery->concat($filesDelivery)->unique('id')->values();
 
         return response()->json([
             'success' => true,
             'message' => 'Data details T_redelivery_delivery berhasil diambil',
             'data' => [
                 'detail' => $data,
-                'detail_items' => $detailItems,
-                'files' => $files,
+                'files' => $files->values(),
+                'files_redelivery' => $filesRedelivery->values(),
+                'files_delivery' => $filesDelivery->values(),
             ],
         ]);
     }
@@ -302,37 +381,30 @@ class T_redelivery_deliveryController extends Controller
     {
         try {
             DB::beginTransaction();
-            $request->validate([
-                'files' => 'required|array|min:1',
-                'files.*' => 'file|max:51200',
-            ], [
-                'files.required' => 'File upload wajib diisi.',
-                'files.min' => 'Minimal 1 file harus diupload.',
-                'files.*.mimes' => 'File cable hanya boleh PDF.',
-            ]);
+            $filesRedelivery = $this->normalizedIncomingFiles($request, 'files_redelivery');
+            $filesDelivery = $this->normalizedIncomingFiles($request, 'files_delivery');
+            $legacyFiles = $this->normalizedIncomingFiles($request, 'files');
+            if (!empty($legacyFiles) && empty($filesRedelivery) && empty($filesDelivery)) {
+                $filesRedelivery = $legacyFiles;
+                $filesDelivery = $legacyFiles;
+            }
+            if (empty($filesRedelivery) || empty($filesDelivery)) {
+                throw ValidationException::withMessages([
+                    'files' => 'File upload wajib diisi.',
+                ]);
+            }
+            $this->assertKontrakSelection($request);
+            $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
+            $this->assertNumericField($request, 'bunker_delivery', 'Bunker Delivery (MT)');
+            $this->assertPdfFiles(array_merge($filesRedelivery, $filesDelivery));
 
-            $payload = $this->sanitizeDocCargoPayload($request);
-            $idCable = (int) ($payload['id_cable'] ?? 0);
+            $payload = $this->sanitizeRedeliveryDeliveryPayload($request);
             $payload['created_at'] = now();
 
-            $docCargoId = DB::table('t_redelivery_delivery')->insertGetId($payload);
+            $redeliveryDeliveryId = DB::table('t_redelivery_delivery')->insertGetId($payload);
 
-            $noVoyageGab = $payload['no_voyage_gab'] ?? null;
-            $this->syncDetailRows($docCargoId, $noVoyageGab, $request);
-
-            $files = $request->file('files', []);
-            if ($files) {
-                foreach ($files as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/redelivery_delivery');
-                    $upload = new File_upload();
-                    $upload->id_redelivery_delivery = $docCargoId;
-                    $upload->nama_file = $path;
-                    $upload->save();
-                }
-            }
+            $this->persistFiles($filesRedelivery, $this->redeliveryFileColumn(), $redeliveryDeliveryId, 'uploads/redelivery');
+            $this->persistFiles($filesDelivery, $this->deliveryFileColumn(), $redeliveryDeliveryId, 'uploads/delivery');
 
             DB::commit();
 
@@ -340,7 +412,7 @@ class T_redelivery_deliveryController extends Controller
                 'success' => true,
                 'message' => 'Data T_redelivery_delivery berhasil ditambah',
                 'data' => [
-                    'id' => $docCargoId,
+                    'id' => $redeliveryDeliveryId,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -355,41 +427,39 @@ class T_redelivery_deliveryController extends Controller
 
         try {
             DB::beginTransaction();
-            $incomingFiles = array_filter((array) $request->file('files', []));
-            $hasExistingFiles = File_upload::where('id_redelivery_delivery', $id)->exists();
-            if (empty($incomingFiles) && !$hasExistingFiles) {
+            $incomingFilesRedelivery = $this->normalizedIncomingFiles($request, 'files_redelivery');
+            $incomingFilesDelivery = $this->normalizedIncomingFiles($request, 'files_delivery');
+            $legacyFiles = $this->normalizedIncomingFiles($request, 'files');
+            if (!empty($legacyFiles) && empty($incomingFilesRedelivery) && empty($incomingFilesDelivery)) {
+                $incomingFilesRedelivery = $legacyFiles;
+                $incomingFilesDelivery = $legacyFiles;
+            }
+            $redeliveryColumn = $this->redeliveryFileColumn();
+            $deliveryColumn = $this->deliveryFileColumn();
+            $hasExistingFilesRedelivery = File_upload::where($redeliveryColumn, $id)->exists();
+            $hasExistingFilesDelivery = File_upload::where($deliveryColumn, $id)->exists();
+            if ((empty($incomingFilesRedelivery) && !$hasExistingFilesRedelivery) || (empty($incomingFilesDelivery) && !$hasExistingFilesDelivery)) {
                 throw ValidationException::withMessages([
                     'files' => 'File upload wajib diisi.',
                 ]);
             }
+            $this->assertKontrakSelection($request);
+            $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
+            $this->assertNumericField($request, 'bunker_delivery', 'Bunker Delivery (MT)');
+            $this->assertPdfFiles(array_merge($incomingFilesRedelivery, $incomingFilesDelivery));
 
             $existing = T_redelivery_delivery::where('id', $id)->firstOrFail();
             if (strtoupper((string) $existing->status) === 'APPROVE') {
                 throw ValidationException::withMessages([
-                    'status' => 'Doc Cargo yang sudah APPROVE tidak bisa diubah.',
+                    'status' => 'Redelivery Delivery yang sudah APPROVE tidak bisa diubah.',
                 ]);
             }
-            $payload = $this->sanitizeDocCargoPayload($request);
-            $idCable = (int) ($payload['id_cable'] ?? 0);
+            $payload = $this->sanitizeRedeliveryDeliveryPayload($request);
 
             DB::table('t_redelivery_delivery')->where('id', $existing->id)->update($payload);
 
-            $noVoyageGab = $payload['no_voyage_gab'] ?? $existing->no_voyage_gab ?? null;
-            $this->syncDetailRows((int) $existing->id, $noVoyageGab, $request);
-
-            $files = $request->file('files', []);
-            if ($files) {
-                foreach ($files as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/redelivery_delivery');
-                    $upload = new File_upload();
-                    $upload->id_redelivery_delivery = $existing->id;
-                    $upload->nama_file = $path;
-                    $upload->save();
-                }
-            }
+            $this->persistFiles($incomingFilesRedelivery, $redeliveryColumn, $existing->id, 'uploads/redelivery');
+            $this->persistFiles($incomingFilesDelivery, $deliveryColumn, $existing->id, 'uploads/delivery');
 
             DB::commit();
 
@@ -418,16 +488,16 @@ class T_redelivery_deliveryController extends Controller
                 ], 403);
             }
 
-            $docCargo = T_redelivery_delivery::where('id', $id)->firstOrFail();
-            $docCargo->status = 'APPROVE';
-            $docCargo->user_id = Auth::id();
-            $docCargo->save();
+            $redeliveryDelivery = T_redelivery_delivery::where('id', $id)->firstOrFail();
+            $redeliveryDelivery->status = 'APPROVE';
+            $redeliveryDelivery->user_id = Auth::id();
+            $redeliveryDelivery->save();
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Doc Cargo berhasil di-approve',
+                'message' => 'Redelivery Delivery berhasil di-approve',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -450,16 +520,16 @@ class T_redelivery_deliveryController extends Controller
                 ], 403);
             }
 
-            $docCargo = T_redelivery_delivery::where('id', $id)->firstOrFail();
-            $docCargo->status = 'OPEN';
-            $docCargo->user_id = Auth::id();
-            $docCargo->save();
+            $redeliveryDelivery = T_redelivery_delivery::where('id', $id)->firstOrFail();
+            $redeliveryDelivery->status = 'OPEN';
+            $redeliveryDelivery->user_id = Auth::id();
+            $redeliveryDelivery->save();
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Doc Cargo berhasil di-unapprove',
+                'message' => 'Redelivery Delivery berhasil di-unapprove',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -476,11 +546,15 @@ class T_redelivery_deliveryController extends Controller
             $t_redelivery_delivery = T_redelivery_delivery::where('id', $id)->firstOrFail();
             if (strtoupper((string) $t_redelivery_delivery->status) === 'APPROVE') {
                 throw ValidationException::withMessages([
-                    'status' => 'Doc Cargo yang sudah APPROVE tidak bisa dihapus.',
+                    'status' => 'Redelivery Delivery yang sudah APPROVE tidak bisa dihapus.',
                 ]);
             }
 
-            $files = File_upload::where('id_redelivery_delivery', $id)->get();
+            $redeliveryColumn = $this->redeliveryFileColumn();
+            $deliveryColumn = $this->deliveryFileColumn();
+            $files = File_upload::where($redeliveryColumn, $id)
+                ->orWhere($deliveryColumn, $id)
+                ->get();
             foreach ($files as $file) {
                 if ($file->nama_file) {
                     $disk = Storage::disk('public');
@@ -491,7 +565,6 @@ class T_redelivery_deliveryController extends Controller
                 $file->delete();
             }
 
-            DB::table('t_redelivery_delivery_detail')->where('id_redelivery_delivery', $id)->delete();
             $t_redelivery_delivery->delete();
             DB::commit();
 

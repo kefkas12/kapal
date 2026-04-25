@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\File_upload;
+use App\Models\Settings;
 use App\Models\T_off_hire;
 use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
@@ -15,14 +16,9 @@ use Illuminate\Validation\ValidationException;
 
 class T_off_hireController extends Controller
 {
-    private function docCargoColumns(): array
+    private function offHireColumns(): array
     {
         return Schema::getColumnListing('t_off_hire');
-    }
-
-    private function docCargoDetailColumns(): array
-    {
-        return Schema::getColumnListing('t_off_hire_detail');
     }
 
     private function toNumber($value): float
@@ -86,80 +82,153 @@ class T_off_hireController extends Controller
         return number_format($days, 6, '.', '');
     }
 
-    private function sanitizeDocCargoPayload(Request $request): array
+    private function sanitizeOffHirePayload(Request $request): array
     {
         $idCable = $request->input('id_cable');
-        $idGrade = $request->input('id_grade');
 
         $cable = null;
         if ($idCable) {
             $cable = T_master_cable::where('id', $idCable)->first();
         }
 
+        $kontrak = null;
+        if ($cable?->id_vessel) {
+            $kontrak = DB::table('m_kontrak')
+                ->where('id_vessel', $cable->id_vessel)
+                ->where('status', 'ACTIVE')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        $dateTimeOffHire = $request->input('date_time_off_hire');
+        $dateTimeOnHire = $request->input('date_time_on_hire');
+        $offHireTs = strtotime((string) $dateTimeOffHire);
+        $onHireTs = strtotime((string) $dateTimeOnHire);
+        $selisihHari = 0.0;
+        if ($offHireTs !== false && $onHireTs !== false) {
+            $selisihHari = ($onHireTs - $offHireTs) / 86400;
+        }
+
+        $charterRate = $this->toNumber($kontrak?->charter_rate);
+        $bunkerOffHire = $this->toNumber($request->input('bunker_off_hire'));
+        $bunkerOnHire = $this->toNumber($request->input('bunker_on_hire'));
+        $bunkerPrice = $this->toNumber($request->input('bunker_price'));
+        $estClaimBunkerFactor = $this->getEstClaimBunkerFactor();
+        $estOh = $selisihHari * $charterRate;
+        $estBoh = ($bunkerOnHire - $bunkerOffHire) * $bunkerPrice * 1000 * $estClaimBunkerFactor;
+
         $payload = [
             'id_cable' => $idCable,
+            'no_kontrak' => $request->input('no_kontrak') ?: ($kontrak?->no_kontrak ?? null),
             'no_voyage_gab' => $cable?->no_voyage_gab,
             'bunker_price' => $request->input('bunker_price'),
-            'act_receipt' => $request->input('act_receipt'),
-            'est_discharge' => $request->input('est_discharge'),
-            'act_discharge' => $request->input('act_discharge'),
-            'overdue_discharge' => $request->input('overdue_discharge'),
-            'est_claim_pumping' => $request->input('est_claim_pumping'),
-            'est_claim_bunker' => $request->input('est_claim_bunker'),
-            'est_claim_transport' => $request->input('est_claim_transport'),
+            'est_oh' => $this->numberToStorage($estOh),
+            'est_boh' => $this->numberToStorage($estBoh),
+            'date_time_off_hire' => $request->input('date_time_off_hire'),
+            'tempat_off_hire' => $request->input('tempat_off_hire'),
+            'bunker_off_hire' => $request->input('bunker_off_hire'),
+            'date_time_on_hire' => $request->input('date_time_on_hire'),
+            'tempat_on_hire' => $request->input('tempat_on_hire'),
+            'bunker_on_hire' => $request->input('bunker_on_hire'),
             'status' => 'OPEN',
             'user_id' => Auth::id(),
             'updated_at' => now(),
         ];
 
-        $allowedColumns = array_flip($this->docCargoColumns());
+        $allowedColumns = array_flip($this->offHireColumns());
         return array_intersect_key($payload, $allowedColumns);
     }
 
-    private function parseDetailItems(Request $request): array
+    private function getEstClaimBunkerFactor(): float
     {
-        $raw = $request->input('detail_items');
-        if (is_array($raw)) {
-            return $raw;
+        $value = Settings::query()
+            ->where('nama', 'variable est_claim_bunker')
+            ->where('status', 'ACTIVE')
+            ->orderByDesc('id')
+            ->value('value');
+
+        $factor = $this->toNumber($value);
+        if (!is_finite($factor) || $factor <= 0) {
+            return 0.847;
         }
-        if (is_string($raw) && trim($raw) !== '') {
-            $decoded = json_decode($raw, true);
-            return is_array($decoded) ? $decoded : [];
-        }
-        return [];
+
+        return $factor;
     }
 
-    private function syncDetailRows(int $docCargoId, ?string $noVoyageGab, Request $request): void
+    private function numberToStorage(float $value): string
     {
-        $detailColumns = array_flip($this->docCargoDetailColumns());
+        if (!is_finite($value)) {
+            return '0';
+        }
 
-        DB::table('t_off_hire_detail')->where('id_off_hire', $docCargoId)->delete();
+        return rtrim(rtrim(number_format($value, 6, '.', ''), '0'), '.');
+    }
 
-        $detailItems = $this->parseDetailItems($request);
-        $noUrut = 1;
-        foreach ($detailItems as $item) {
-            $startTimeRaw = $item['start_time'] ?? null;
-            $stopTimeRaw = $item['stop_time'] ?? null;
-            $dischargeTime = $item['discharge_time'] ?? $this->calcDischargeTime($startTimeRaw, $stopTimeRaw);
+    private function assertOnHireAfterOffHire(Request $request): void
+    {
+        $offRaw = trim((string) $request->input('date_time_off_hire', ''));
+        $onRaw = trim((string) $request->input('date_time_on_hire', ''));
+        if ($offRaw === '' || $onRaw === '') {
+            return;
+        }
 
-            $row = [
-                'id_off_hire' => $docCargoId,
-                'no_voyage_gab' => $noVoyageGab,
-                'no_urut' => $item['no_urut'] ?? str_pad((string) $noUrut, 2, '0', STR_PAD_LEFT),
-                'start_time' => $startTimeRaw,
-                'stop_time' => $stopTimeRaw,
-                'discharge_time' => $dischargeTime,
-                'user_id' => Auth::id(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+        $offTs = strtotime($offRaw);
+        $onTs = strtotime($onRaw);
+        if ($offTs === false || $onTs === false) {
+            return;
+        }
 
-            $filtered = array_intersect_key($row, $detailColumns);
-            if (!empty($filtered)) {
-                DB::table('t_off_hire_detail')->insert($filtered);
+        if ($onTs <= $offTs) {
+            throw ValidationException::withMessages([
+                'date_time_on_hire' => 'Tanggal/Waktu On Hire harus lebih besar dari Off Hire.',
+            ]);
+        }
+    }
+
+    private function normalizedIncomingFiles(Request $request, string $key): array
+    {
+        return array_values(array_filter((array) $request->file($key, [])));
+    }
+
+    private function assertPdfFiles(array $files): void
+    {
+        foreach ($files as $file) {
+            $ext = strtolower((string) $file?->getClientOriginalExtension());
+            if ($ext !== 'pdf') {
+                throw ValidationException::withMessages([
+                    'files' => 'File cable hanya boleh PDF.',
+                ]);
             }
+        }
+    }
 
-            $noUrut += 1;
+    private function persistFiles(array $files, string $column, int $id, string $directory): void
+    {
+        foreach ($files as $file) {
+            if (!$file) {
+                continue;
+            }
+            $path = FileUploadHelper::storeWithOriginalName($file, $directory);
+            $upload = new File_upload();
+            $upload->{$column} = $id;
+            $upload->nama_file = $path;
+            $upload->save();
+        }
+    }
+
+    private function assertNumericField(Request $request, string $field, string $label): void
+    {
+        $raw = trim((string) $request->input($field, ''));
+        if ($raw === '') {
+            throw ValidationException::withMessages([
+                $field => $label . ' wajib diisi.',
+            ]);
+        }
+        $normalized = str_replace(',', '.', $raw);
+        if (!is_numeric($normalized)) {
+            throw ValidationException::withMessages([
+                $field => $label . ' harus berupa angka.',
+            ]);
         }
     }
 
@@ -177,7 +246,13 @@ class T_off_hireController extends Controller
             ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_off_hire.id_cable')
             ->select(
                 't_off_hire.*',
-                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
+                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display'),
+                't_master_cable.id_vessel',
+                't_master_cable.no_voyage',
+                't_master_cable.atd_port',
+                't_master_cable.ata_port',
+                't_master_cable.atd_time',
+                't_master_cable.ata_time'
             );
 
         $search = trim((string) $request->input('search', ''));
@@ -193,6 +268,30 @@ class T_off_hireController extends Controller
         $idCable = $request->input('id_cable');
         if (!is_null($idCable) && $idCable !== '') {
             $query->where('t_off_hire.id_cable', $idCable);
+        }
+
+        $idVessel = $request->input('id_vessel');
+        if (!is_null($idVessel) && $idVessel !== '') {
+            $query->where('t_master_cable.id_vessel', $idVessel);
+        }
+
+        $availableForKlaim = $request->boolean('available_for_klaim', false);
+        if ($availableForKlaim) {
+            $excludeKlaimId = $request->input('exclude_klaim_id');
+            $jenisKlaim = trim((string) $request->input('jenis_klaim', ''));
+            $query->whereNotExists(function ($sub) use ($excludeKlaimId, $jenisKlaim) {
+                $sub->select(DB::raw(1))
+                    ->from('t_klaim_detail')
+                    ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
+                    ->whereColumn('t_klaim_detail.id_cable', 't_off_hire.id_cable');
+
+                if (!is_null($excludeKlaimId) && $excludeKlaimId !== '') {
+                    $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
+                }
+                if ($jenisKlaim !== '') {
+                    $sub->where('t_klaim.jenis_klaim', $jenisKlaim);
+                }
+            });
         }
 
         $status = $request->input('status');
@@ -248,22 +347,22 @@ class T_off_hireController extends Controller
             )
             ->first();
 
-        $detailItems = DB::table('t_off_hire_detail')
-            ->where('id_off_hire', $id)
+        $filesOffHire = File_upload::where('id_off_hire', $id)
             ->orderBy('id', 'asc')
             ->get();
-
-        $files = File_upload::where('id_off_hire', $id)
+        $filesOnHire = File_upload::where('id_on_hire', $id)
             ->orderBy('id', 'asc')
             ->get();
+        $files = $filesOffHire->concat($filesOnHire)->unique('id')->values();
 
         return response()->json([
             'success' => true,
             'message' => 'Data details T_off_hire berhasil diambil',
             'data' => [
                 'detail' => $data,
-                'detail_items' => $detailItems,
-                'files' => $files,
+                'files' => $files->values(),
+                'files_off_hire' => $filesOffHire->values(),
+                'files_on_hire' => $filesOnHire->values(),
             ],
         ]);
     }
@@ -272,37 +371,30 @@ class T_off_hireController extends Controller
     {
         try {
             DB::beginTransaction();
-            $request->validate([
-                'files' => 'required|array|min:1',
-                'files.*' => 'file|max:51200',
-            ], [
-                'files.required' => 'File upload wajib diisi.',
-                'files.min' => 'Minimal 1 file harus diupload.',
-                'files.*.mimes' => 'File cable hanya boleh PDF.',
-            ]);
+            $filesOffHire = $this->normalizedIncomingFiles($request, 'files_off_hire');
+            $filesOnHire = $this->normalizedIncomingFiles($request, 'files_on_hire');
+            $legacyFiles = $this->normalizedIncomingFiles($request, 'files');
+            if (!empty($legacyFiles) && empty($filesOffHire) && empty($filesOnHire)) {
+                $filesOffHire = $legacyFiles;
+                $filesOnHire = $legacyFiles;
+            }
+            if (empty($filesOffHire) || empty($filesOnHire)) {
+                throw ValidationException::withMessages([
+                    'files' => 'File upload wajib diisi.',
+                ]);
+            }
+            $this->assertNumericField($request, 'bunker_off_hire', 'Bunker Off Hire (MT)');
+            $this->assertNumericField($request, 'bunker_on_hire', 'Bunker On Hire (MT)');
+            $this->assertOnHireAfterOffHire($request);
+            $this->assertPdfFiles(array_merge($filesOffHire, $filesOnHire));
 
-            $payload = $this->sanitizeDocCargoPayload($request);
-            $idCable = (int) ($payload['id_cable'] ?? 0);
+            $payload = $this->sanitizeOffHirePayload($request);
             $payload['created_at'] = now();
 
-            $docCargoId = DB::table('t_off_hire')->insertGetId($payload);
+            $offHireId = DB::table('t_off_hire')->insertGetId($payload);
 
-            $noVoyageGab = $payload['no_voyage_gab'] ?? null;
-            $this->syncDetailRows($docCargoId, $noVoyageGab, $request);
-
-            $files = $request->file('files', []);
-            if ($files) {
-                foreach ($files as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/off_hire');
-                    $upload = new File_upload();
-                    $upload->id_off_hire = $docCargoId;
-                    $upload->nama_file = $path;
-                    $upload->save();
-                }
-            }
+            $this->persistFiles($filesOffHire, 'id_off_hire', $offHireId, 'uploads/off_hire');
+            $this->persistFiles($filesOnHire, 'id_on_hire', $offHireId, 'uploads/on_hire');
 
             DB::commit();
 
@@ -310,7 +402,7 @@ class T_off_hireController extends Controller
                 'success' => true,
                 'message' => 'Data T_off_hire berhasil ditambah',
                 'data' => [
-                    'id' => $docCargoId,
+                    'id' => $offHireId,
                 ],
             ]);
         } catch (\Exception $e) {
@@ -325,41 +417,37 @@ class T_off_hireController extends Controller
 
         try {
             DB::beginTransaction();
-            $incomingFiles = array_filter((array) $request->file('files', []));
-            $hasExistingFiles = File_upload::where('id_off_hire', $id)->exists();
-            if (empty($incomingFiles) && !$hasExistingFiles) {
+            $incomingFilesOffHire = $this->normalizedIncomingFiles($request, 'files_off_hire');
+            $incomingFilesOnHire = $this->normalizedIncomingFiles($request, 'files_on_hire');
+            $legacyFiles = $this->normalizedIncomingFiles($request, 'files');
+            if (!empty($legacyFiles) && empty($incomingFilesOffHire) && empty($incomingFilesOnHire)) {
+                $incomingFilesOffHire = $legacyFiles;
+                $incomingFilesOnHire = $legacyFiles;
+            }
+            $hasExistingFilesOffHire = File_upload::where('id_off_hire', $id)->exists();
+            $hasExistingFilesOnHire = File_upload::where('id_on_hire', $id)->exists();
+            if ((empty($incomingFilesOffHire) && !$hasExistingFilesOffHire) || (empty($incomingFilesOnHire) && !$hasExistingFilesOnHire)) {
                 throw ValidationException::withMessages([
                     'files' => 'File upload wajib diisi.',
                 ]);
             }
+            $this->assertNumericField($request, 'bunker_off_hire', 'Bunker Off Hire (MT)');
+            $this->assertNumericField($request, 'bunker_on_hire', 'Bunker On Hire (MT)');
+            $this->assertOnHireAfterOffHire($request);
+            $this->assertPdfFiles(array_merge($incomingFilesOffHire, $incomingFilesOnHire));
 
             $existing = T_off_hire::where('id', $id)->firstOrFail();
             if (strtoupper((string) $existing->status) === 'APPROVE') {
                 throw ValidationException::withMessages([
-                    'status' => 'Doc Cargo yang sudah APPROVE tidak bisa diubah.',
+                    'status' => 'Off Hire yang sudah APPROVE tidak bisa diubah.',
                 ]);
             }
-            $payload = $this->sanitizeDocCargoPayload($request);
-            $idCable = (int) ($payload['id_cable'] ?? 0);
+            $payload = $this->sanitizeOffHirePayload($request);
 
             DB::table('t_off_hire')->where('id', $existing->id)->update($payload);
 
-            $noVoyageGab = $payload['no_voyage_gab'] ?? $existing->no_voyage_gab ?? null;
-            $this->syncDetailRows((int) $existing->id, $noVoyageGab, $request);
-
-            $files = $request->file('files', []);
-            if ($files) {
-                foreach ($files as $file) {
-                    if (!$file) {
-                        continue;
-                    }
-                    $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/off_hire');
-                    $upload = new File_upload();
-                    $upload->id_off_hire = $existing->id;
-                    $upload->nama_file = $path;
-                    $upload->save();
-                }
-            }
+            $this->persistFiles($incomingFilesOffHire, 'id_off_hire', $existing->id, 'uploads/off_hire');
+            $this->persistFiles($incomingFilesOnHire, 'id_on_hire', $existing->id, 'uploads/on_hire');
 
             DB::commit();
 
@@ -388,16 +476,16 @@ class T_off_hireController extends Controller
                 ], 403);
             }
 
-            $docCargo = T_off_hire::where('id', $id)->firstOrFail();
-            $docCargo->status = 'APPROVE';
-            $docCargo->user_id = Auth::id();
-            $docCargo->save();
+            $offHire = T_off_hire::where('id', $id)->firstOrFail();
+            $offHire->status = 'APPROVE';
+            $offHire->user_id = Auth::id();
+            $offHire->save();
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Doc Cargo berhasil di-approve',
+                'message' => 'Off Hire berhasil di-approve',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -420,16 +508,16 @@ class T_off_hireController extends Controller
                 ], 403);
             }
 
-            $docCargo = T_off_hire::where('id', $id)->firstOrFail();
-            $docCargo->status = 'OPEN';
-            $docCargo->user_id = Auth::id();
-            $docCargo->save();
+            $offHire = T_off_hire::where('id', $id)->firstOrFail();
+            $offHire->status = 'OPEN';
+            $offHire->user_id = Auth::id();
+            $offHire->save();
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Doc Cargo berhasil di-unapprove',
+                'message' => 'Off Hire berhasil di-unapprove',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -446,11 +534,13 @@ class T_off_hireController extends Controller
             $t_off_hire = T_off_hire::where('id', $id)->firstOrFail();
             if (strtoupper((string) $t_off_hire->status) === 'APPROVE') {
                 throw ValidationException::withMessages([
-                    'status' => 'Doc Cargo yang sudah APPROVE tidak bisa dihapus.',
+                    'status' => 'Off Hire yang sudah APPROVE tidak bisa dihapus.',
                 ]);
             }
 
-            $files = File_upload::where('id_off_hire', $id)->get();
+            $files = File_upload::where('id_off_hire', $id)
+                ->orWhere('id_on_hire', $id)
+                ->get();
             foreach ($files as $file) {
                 if ($file->nama_file) {
                     $disk = Storage::disk('public');
@@ -461,7 +551,6 @@ class T_off_hireController extends Controller
                 $file->delete();
             }
 
-            DB::table('t_off_hire_detail')->where('id_off_hire', $id)->delete();
             $t_off_hire->delete();
             DB::commit();
 
