@@ -260,26 +260,51 @@ class T_redelivery_deliveryController extends Controller
 
         $hasIdCable = $this->hasRedeliveryDeliveryCableColumn();
         $query = DB::table('t_redelivery_delivery');
+
         if ($hasIdCable) {
-            $query->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_redelivery_delivery.id_cable')
+            // Primary join by id_cable + fallback join by no_voyage_gab for legacy rows with id_cable null.
+            $query->leftJoin('t_master_cable as cable_by_id', 'cable_by_id.id', '=', 't_redelivery_delivery.id_cable')
+                ->leftJoin('t_master_cable as cable_by_voyage', function ($join) {
+                    $join->on('cable_by_voyage.no_voyage_gab', '=', 't_redelivery_delivery.no_voyage_gab')
+                        ->whereNull('t_redelivery_delivery.id_cable');
+                })
                 ->select(
                     't_redelivery_delivery.*',
-                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
+                    DB::raw('COALESCE(t_redelivery_delivery.id_cable, cable_by_id.id, cable_by_voyage.id) as id_cable_resolved'),
+                    DB::raw('COALESCE(cable_by_id.id_vessel, cable_by_voyage.id_vessel) as id_vessel'),
+                    DB::raw('COALESCE(cable_by_id.no_voyage, cable_by_voyage.no_voyage) as no_voyage'),
+                    DB::raw('COALESCE(cable_by_id.atd_port, cable_by_voyage.atd_port) as atd_port'),
+                    DB::raw('COALESCE(cable_by_id.ata_port, cable_by_voyage.ata_port) as ata_port'),
+                    DB::raw('COALESCE(cable_by_id.atd_time, cable_by_voyage.atd_time) as atd_time'),
+                    DB::raw('COALESCE(cable_by_id.ata_time, cable_by_voyage.ata_time) as ata_time'),
+                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, cable_by_id.no_voyage_gab, cable_by_voyage.no_voyage_gab) as no_voyage_gab_display')
                 );
         } else {
-            $query->select(
-                't_redelivery_delivery.*',
-                DB::raw('t_redelivery_delivery.no_voyage_gab as no_voyage_gab_display')
-            );
+            // Compatibility branch for pre-id_cable schema.
+            $query->leftJoin('t_master_cable', 't_master_cable.no_voyage_gab', '=', 't_redelivery_delivery.no_voyage_gab')
+                ->select(
+                    't_redelivery_delivery.*',
+                    DB::raw('t_master_cable.id as id_cable_resolved'),
+                    't_master_cable.id_vessel',
+                    't_master_cable.no_voyage',
+                    't_master_cable.atd_port',
+                    't_master_cable.ata_port',
+                    't_master_cable.atd_time',
+                    't_master_cable.ata_time',
+                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
+                );
         }
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
+            $query->where(function ($q) use ($search, $hasIdCable) {
                 $q->where('t_redelivery_delivery.no_voyage_gab', 'like', "%{$search}%")
                     ->orWhere('t_redelivery_delivery.bunker_price', 'like', "%{$search}%")
                     ->orWhere('t_redelivery_delivery.status', 'like', "%{$search}%");
                 if ($hasIdCable) {
+                    $q->orWhere('cable_by_id.no_voyage_gab', 'like', "%{$search}%")
+                        ->orWhere('cable_by_voyage.no_voyage_gab', 'like', "%{$search}%");
+                } else {
                     $q->orWhere('t_master_cable.no_voyage_gab', 'like', "%{$search}%");
                 }
             });
@@ -287,7 +312,46 @@ class T_redelivery_deliveryController extends Controller
 
         $idCable = $request->input('id_cable');
         if ($hasIdCable && !is_null($idCable) && $idCable !== '') {
-            $query->where('t_redelivery_delivery.id_cable', $idCable);
+            $query->where(function ($q) use ($idCable) {
+                $q->where('t_redelivery_delivery.id_cable', $idCable)
+                    ->orWhere('cable_by_id.id', $idCable)
+                    ->orWhere('cable_by_voyage.id', $idCable);
+            });
+        } elseif (!is_null($idCable) && $idCable !== '') {
+            $query->where('t_master_cable.id', $idCable);
+        }
+
+        $idVessel = $request->input('id_vessel');
+        if (!is_null($idVessel) && $idVessel !== '') {
+            if ($hasIdCable) {
+                $query->where(function ($q) use ($idVessel) {
+                    $q->where('cable_by_id.id_vessel', $idVessel)
+                        ->orWhere('cable_by_voyage.id_vessel', $idVessel);
+                });
+            } else {
+                $query->where('t_master_cable.id_vessel', $idVessel);
+            }
+        }
+
+        $availableForKlaim = $request->boolean('available_for_klaim', false);
+        if ($availableForKlaim) {
+            $excludeKlaimId = $request->input('exclude_klaim_id');
+            $jenisKlaim = trim((string) $request->input('jenis_klaim', ''));
+            $cableExpr = $hasIdCable ? 'COALESCE(t_redelivery_delivery.id_cable, cable_by_id.id, cable_by_voyage.id)' : 't_master_cable.id';
+
+            $query->whereNotExists(function ($sub) use ($excludeKlaimId, $jenisKlaim, $cableExpr) {
+                $sub->select(DB::raw(1))
+                    ->from('t_klaim_detail')
+                    ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
+                    ->whereRaw('t_klaim_detail.id_cable = ' . $cableExpr);
+
+                if (!is_null($excludeKlaimId) && $excludeKlaimId !== '') {
+                    $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
+                }
+                if ($jenisKlaim !== '') {
+                    $sub->where('t_klaim.jenis_klaim', $jenisKlaim);
+                }
+            });
         }
 
         $status = $request->input('status');
@@ -311,11 +375,17 @@ class T_redelivery_deliveryController extends Controller
         $query->orderBy($allowedSort[$sortBy], $sortDir);
 
         $paginator = $query->paginate($perPage);
+        $items = collect($paginator->items())->map(function ($row) {
+            $resolved = $row->id_cable_resolved ?? $row->id_cable ?? null;
+            $row->id_cable = $resolved !== null ? (int) $resolved : null;
+            unset($row->id_cable_resolved);
+            return $row;
+        })->values()->all();
 
         return response()->json([
             'success' => true,
             'message' => 'Data T_redelivery_delivery berhasil diambil',
-            'data' => $paginator->items(),
+            'data' => $items,
             'meta' => [
                 'current_page' => $paginator->currentPage(),
                 'per_page' => $paginator->perPage(),
@@ -338,19 +408,31 @@ class T_redelivery_deliveryController extends Controller
         $detailQuery = DB::table('t_redelivery_delivery')->where('t_redelivery_delivery.id', $id);
         if ($hasIdCable) {
             $detailQuery
-                ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_redelivery_delivery.id_cable')
+                ->leftJoin('t_master_cable as cable_by_id', 'cable_by_id.id', '=', 't_redelivery_delivery.id_cable')
+                ->leftJoin('t_master_cable as cable_by_voyage', function ($join) {
+                    $join->on('cable_by_voyage.no_voyage_gab', '=', 't_redelivery_delivery.no_voyage_gab')
+                        ->whereNull('t_redelivery_delivery.id_cable');
+                })
                 ->select(
                     't_redelivery_delivery.*',
-                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
+                    DB::raw('COALESCE(t_redelivery_delivery.id_cable, cable_by_id.id, cable_by_voyage.id) as id_cable_resolved'),
+                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, cable_by_id.no_voyage_gab, cable_by_voyage.no_voyage_gab) as no_voyage_gab_display')
                 );
         } else {
             $detailQuery
+                ->leftJoin('t_master_cable', 't_master_cable.no_voyage_gab', '=', 't_redelivery_delivery.no_voyage_gab')
                 ->select(
                     't_redelivery_delivery.*',
-                    DB::raw('t_redelivery_delivery.no_voyage_gab as no_voyage_gab_display')
+                    DB::raw('t_master_cable.id as id_cable_resolved'),
+                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
                 );
         }
         $data = $detailQuery->first();
+        if ($data) {
+            $resolved = $data->id_cable_resolved ?? $data->id_cable ?? null;
+            $data->id_cable = $resolved !== null ? (int) $resolved : null;
+            unset($data->id_cable_resolved);
+        }
         if ($data && (trim((string) ($data->est_bod ?? '')) === '')) {
             $data->est_bod = $this->computeEstBodValue($data->bunker_redelivery ?? null, $data->bunker_delivery ?? null);
         }
@@ -420,7 +502,7 @@ class T_redelivery_deliveryController extends Controller
             throw $e;
         }
     }
-
+    
     public function edit(Request $request)
     {
         $id = $request->route('id');

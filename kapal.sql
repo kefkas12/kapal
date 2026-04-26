@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 25, 2026 at 08:11 PM
+-- Generation Time: Apr 26, 2026 at 06:22 AM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -103,7 +103,9 @@ INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_detail_awal
 (61, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, 'uploads/redelivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 12:17:08', '2026-04-25 12:17:08'),
 (62, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, 'uploads/redelivery/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-25 12:17:08', '2026-04-25 12:17:08'),
 (63, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 'uploads/delivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 12:17:08', '2026-04-25 12:17:08'),
-(64, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 'uploads/delivery/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-25 12:17:08', '2026-04-25 12:17:08');
+(64, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 'uploads/delivery/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-25 12:17:08', '2026-04-25 12:17:08'),
+(65, NULL, NULL, NULL, NULL, NULL, 2, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 13:40:13', '2026-04-25 13:40:13'),
+(66, NULL, NULL, NULL, NULL, NULL, NULL, 2, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 13:40:13', '2026-04-25 13:40:13');
 
 -- --------------------------------------------------------
 
@@ -421,7 +423,7 @@ CREATE TABLE `personal_access_tokens` (
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
 (48, 'App\\Models\\User', 1, 'api-token', '93f8a0097bf106be92baab11cc3e3091b20d5da2083b77627f9fbe4891e68ec2', '[\"*\"]', '2026-04-14 08:45:35', NULL, '2026-04-14 05:04:24', '2026-04-14 08:45:35'),
 (56, 'App\\Models\\User', 3, 'api-token', '9f90f306d735143346bdd89af0eba4963bd35eb357db8033392fb9fb981c5490', '[\"*\"]', '2026-04-23 12:07:56', NULL, '2026-04-23 11:32:04', '2026-04-23 12:07:56'),
-(58, 'App\\Models\\User', 2, 'api-token', '274dbf40b951ec52f22452ab22100bcb2ac35fe53201c9a5930bf07b3c9f0230', '[\"*\"]', '2026-04-25 13:08:35', NULL, '2026-04-25 10:59:35', '2026-04-25 13:08:35');
+(58, 'App\\Models\\User', 2, 'api-token', '274dbf40b951ec52f22452ab22100bcb2ac35fe53201c9a5930bf07b3c9f0230', '[\"*\"]', '2026-04-25 23:21:25', NULL, '2026-04-25 10:59:35', '2026-04-25 23:21:25');
 
 -- --------------------------------------------------------
 
@@ -706,6 +708,13 @@ CREATE TABLE `t_off_hire` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data for table `t_off_hire`
+--
+
+INSERT INTO `t_off_hire` (`id`, `id_cable`, `no_kontrak`, `no_voyage_gab`, `bunker_price`, `est_oh`, `est_boh`, `date_time_off_hire`, `tempat_off_hire`, `bunker_off_hire`, `date_time_on_hire`, `tempat_on_hire`, `bunker_on_hire`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(2, 18, '004/TCP/1/2026', 'AL2F8/26001/L', '10000', '55000', '847000000', '2026-04-26 03:37:00', 'tes', '100', '2026-04-27 03:37:00', 'tes', '200', 'APPROVE', 2, '2026-04-25 13:40:13', '2026-04-25 23:16:55');
+
 -- --------------------------------------------------------
 
 --
@@ -716,6 +725,7 @@ CREATE TABLE `t_redelivery_delivery` (
   `id` int NOT NULL,
   `id_kontrak_redelivery` int NOT NULL,
   `id_kontrak_delivery` int NOT NULL,
+  `id_cable` int NOT NULL,
   `no_kontrak_redelivery` varchar(100) DEFAULT NULL,
   `no_kontrak_delivery` varchar(100) DEFAULT NULL,
   `no_voyage_gab` varchar(100) DEFAULT NULL,
@@ -737,8 +747,8 @@ CREATE TABLE `t_redelivery_delivery` (
 -- Dumping data for table `t_redelivery_delivery`
 --
 
-INSERT INTO `t_redelivery_delivery` (`id`, `id_kontrak_redelivery`, `id_kontrak_delivery`, `no_kontrak_redelivery`, `no_kontrak_delivery`, `no_voyage_gab`, `bunker_price`, `est_bod`, `date_time_redelivery`, `tempat_redelivery`, `bunker_redelivery`, `date_time_delivery`, `tempat_delivery`, `bunker_delivery`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(1, 24, 16, '004/TCP/1/2026', '004/TCP/1/2024', 'AL2F8/26001/L', '12000', NULL, '2026-04-18 02:15:00', 'Palembang', '3400', '2026-04-26 02:15:00', 'Jakarta', '5000', 'APPROVE', 2, '2026-04-25 12:17:07', '2026-04-25 12:22:54');
+INSERT INTO `t_redelivery_delivery` (`id`, `id_kontrak_redelivery`, `id_kontrak_delivery`, `id_cable`, `no_kontrak_redelivery`, `no_kontrak_delivery`, `no_voyage_gab`, `bunker_price`, `est_bod`, `date_time_redelivery`, `tempat_redelivery`, `bunker_redelivery`, `date_time_delivery`, `tempat_delivery`, `bunker_delivery`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(1, 24, 16, 0, '004/TCP/1/2026', '004/TCP/1/2024', 'AL2F8/26001/L', '11000', '46076800', '2026-04-18 02:15:00', 'Palembang', '340', '2026-04-26 01:15:00', 'Jakarta', '500', 'APPROVE', 2, '2026-04-25 12:17:07', '2026-04-25 23:18:59');
 
 -- --------------------------------------------------------
 
@@ -1012,7 +1022,8 @@ ALTER TABLE `t_redelivery_delivery`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `id_kontrak_redelivery` (`id_kontrak_redelivery`) USING BTREE,
-  ADD KEY `id_kontrak_delivery` (`id_kontrak_delivery`) USING BTREE;
+  ADD KEY `id_kontrak_delivery` (`id_kontrak_delivery`) USING BTREE,
+  ADD KEY `id_cable` (`id_cable`);
 
 --
 -- Indexes for table `users`
@@ -1035,7 +1046,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `file_upload`
 --
 ALTER TABLE `file_upload`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -1107,19 +1118,19 @@ ALTER TABLE `t_doc_cargo_detail`
 -- AUTO_INCREMENT for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail`
 --
 ALTER TABLE `t_klaim_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail_nilai`
 --
 ALTER TABLE `t_klaim_detail_nilai`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `t_master_cable`
@@ -1131,7 +1142,7 @@ ALTER TABLE `t_master_cable`
 -- AUTO_INCREMENT for table `t_off_hire`
 --
 ALTER TABLE `t_off_hire`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `t_redelivery_delivery`
