@@ -561,7 +561,8 @@ class T_klaim_detailController extends Controller
 
     public function index(Request $request)
     {
-        $query = T_klaim_detail::query()->select('t_klaim_detail.*');
+        $query = T_klaim_detail::query()->leftJoin('t_master_cable','t_klaim_detail.id_cable','=','t_master_cable.id')
+            ->select('t_klaim_detail.*','t_master_cable.atd_port','t_master_cable.ata_port','t_master_cable.atd_time','t_master_cable.ata_time');
 
         $idKlaim = $request->input('id_klaim');
         if (!is_null($idKlaim) && $idKlaim !== '') {

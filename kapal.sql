@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 26, 2026 at 06:22 AM
+-- Generation Time: Apr 26, 2026 at 10:55 AM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -94,18 +94,22 @@ INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_detail_awal
 (31, 16, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/vessel_export_20260412.csv', '2026-04-11 23:42:27', '2026-04-11 23:42:27'),
 (41, NULL, 15, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/PbeM9KY2ZQIHwi362x7RSRiwgsaXnpFLKLGnbUAk.pdf', '2026-04-14 08:45:27', '2026-04-14 08:45:27'),
 (42, 23, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/ChatGPT Image Apr 12, 2026, 01_22_06 AM.png', '2026-04-14 10:29:22', '2026-04-14 10:29:22'),
-(46, NULL, NULL, NULL, NULL, 3, NULL, NULL, NULL, NULL, 'uploads/doc_cargo/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-14 11:43:31', '2026-04-14 11:43:31'),
-(47, NULL, NULL, NULL, NULL, 3, NULL, NULL, NULL, NULL, 'uploads/doc_cargo/DPP+Onsite+2026.pdf', '2026-04-14 11:45:10', '2026-04-14 11:45:10'),
 (53, NULL, NULL, 46, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/AKSFOOD ID (1).pdf', '2026-04-14 21:54:33', '2026-04-14 21:54:33'),
 (55, NULL, NULL, NULL, 46, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/DPP+Onsite+2026 (1).pdf', '2026-04-14 22:21:13', '2026-04-14 22:21:13'),
 (57, 24, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-20 18:35:54', '2026-04-20 18:35:54'),
 (58, NULL, 18, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-20 19:07:07', '2026-04-20 19:07:07'),
-(61, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, 'uploads/redelivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 12:17:08', '2026-04-25 12:17:08'),
-(62, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, 'uploads/redelivery/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-25 12:17:08', '2026-04-25 12:17:08'),
-(63, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 'uploads/delivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 12:17:08', '2026-04-25 12:17:08'),
-(64, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 'uploads/delivery/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-25 12:17:08', '2026-04-25 12:17:08'),
-(65, NULL, NULL, NULL, NULL, NULL, 2, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 13:40:13', '2026-04-25 13:40:13'),
-(66, NULL, NULL, NULL, NULL, NULL, NULL, 2, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 13:40:13', '2026-04-25 13:40:13');
+(67, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, NULL, 'uploads/redelivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 23:31:32', '2026-04-25 23:31:32'),
+(68, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 2, 'uploads/delivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-25 23:31:32', '2026-04-25 23:31:32'),
+(69, 25, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 02:06:31', '2026-04-26 02:06:31'),
+(70, NULL, 19, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-26 02:26:07', '2026-04-26 02:26:07'),
+(71, NULL, NULL, NULL, NULL, 4, NULL, NULL, NULL, NULL, 'uploads/doc_cargo/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-26 02:41:03', '2026-04-26 02:41:03'),
+(72, NULL, 20, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 02:59:19', '2026-04-26 02:59:19'),
+(73, NULL, NULL, 60, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-26 03:01:18', '2026-04-26 03:01:18'),
+(75, NULL, NULL, 59, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 03:25:36', '2026-04-26 03:25:36'),
+(76, NULL, NULL, NULL, 59, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_2.pdf', '2026-04-26 03:34:01', '2026-04-26 03:34:01'),
+(77, NULL, NULL, NULL, 60, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-26 03:35:14', '2026-04-26 03:35:14'),
+(78, NULL, NULL, NULL, NULL, NULL, 3, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 03:47:54', '2026-04-26 03:47:54'),
+(79, NULL, NULL, NULL, NULL, NULL, NULL, 3, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 03:47:54', '2026-04-26 03:47:54');
 
 -- --------------------------------------------------------
 
@@ -260,7 +264,8 @@ CREATE TABLE `m_kontrak` (
 INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_surat_pemenang`, `no_kontrak`, `tgl_awal_kontrak`, `tgl_akhir_kontrak`, `charter_rate`, `speed`, `me_ballast`, `me_laden`, `toleransi_transport_loss`, `pumping_rate`, `discharge`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
 (16, 34, '004/TCP/1/2024', '004/TCP/1/2024', '2024-01-04 00:00:00', '2025-01-04 00:00:00', '55000', '4', '10.2', '1.8', NULL, '150', '0.02', 'NON ACTIVE', 2, '2026-04-03 09:02:34', '2026-04-20 18:35:54'),
 (23, 36, '1', '050/TCP/VI/2025', '2025-06-27 00:00:00', '2027-06-27 00:00:00', '5200.00', '10', '5.52', '5.64', '0.06', '200', '2.28', 'ACTIVE', 3, '2026-04-14 10:29:22', '2026-04-23 11:45:08'),
-(24, 34, '004/TCP/1/2026', '004/TCP/1/2026', '2026-01-04 00:00:00', '2027-01-04 00:00:00', '55000', '4', '10.2', '1.8', NULL, '150', '0.02', 'ACTIVE', 2, '2026-04-20 18:35:54', '2026-04-20 18:35:54');
+(24, 34, '004/TCP/1/2026', '004/TCP/1/2026', '2026-01-04 00:00:00', '2027-01-04 00:00:00', '55000', '4', '10.2', '1.8', NULL, '150', '0.02', 'ACTIVE', 2, '2026-04-20 18:35:54', '2026-04-20 18:35:54'),
+(25, 40, '1', '1', '2026-04-25 16:03:00', '2027-04-25 16:03:00', '10', '100', '10', '10', '0.07', '10', '10', 'ACTIVE', 3, '2026-04-26 02:06:31', '2026-04-26 02:06:31');
 
 -- --------------------------------------------------------
 
@@ -285,7 +290,8 @@ CREATE TABLE `m_vessel` (
 
 INSERT INTO `m_vessel` (`id`, `kode_vessel`, `nama_vessel`, `jenis_vessel`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
 (34, 'AL2F8', 'ALBATROSS 2/FLAMINGO 8', 'SATGAS', 'ACTIVE', 3, '2026-04-03 06:40:40', '2026-04-12 00:17:11'),
-(36, 'F19', 'FALCON 19', 'SMALL I', 'ACTIVE', 3, '2026-04-14 10:27:30', '2026-04-14 10:27:30');
+(36, 'F19', 'FALCON 19', 'SMALL I', 'ACTIVE', 3, '2026-04-14 10:27:30', '2026-04-14 10:27:30'),
+(40, 'F20', 'FALCON20', 'SATGAS', 'ACTIVE', 3, '2026-04-26 01:40:09', '2026-04-26 01:40:09');
 
 -- --------------------------------------------------------
 
@@ -421,9 +427,9 @@ CREATE TABLE `personal_access_tokens` (
 --
 
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
-(48, 'App\\Models\\User', 1, 'api-token', '93f8a0097bf106be92baab11cc3e3091b20d5da2083b77627f9fbe4891e68ec2', '[\"*\"]', '2026-04-14 08:45:35', NULL, '2026-04-14 05:04:24', '2026-04-14 08:45:35'),
-(56, 'App\\Models\\User', 3, 'api-token', '9f90f306d735143346bdd89af0eba4963bd35eb357db8033392fb9fb981c5490', '[\"*\"]', '2026-04-23 12:07:56', NULL, '2026-04-23 11:32:04', '2026-04-23 12:07:56'),
-(58, 'App\\Models\\User', 2, 'api-token', '274dbf40b951ec52f22452ab22100bcb2ac35fe53201c9a5930bf07b3c9f0230', '[\"*\"]', '2026-04-25 23:21:25', NULL, '2026-04-25 10:59:35', '2026-04-25 23:21:25');
+(60, 'App\\Models\\User', 3, 'api-token', 'd1eb480ab8eff2b79b4ab598c82c6d87b88b06c561d5d94a0b362c8de433f29b', '[\"*\"]', '2026-04-26 02:26:14', NULL, '2026-04-26 01:46:55', '2026-04-26 02:26:14'),
+(62, 'App\\Models\\User', 1, 'api-token', '5774ee2c94ed2dd920e5950c97308e08a7591bbe178022d7fb4ebd461dd24af7', '[\"*\"]', '2026-04-26 02:51:27', NULL, '2026-04-26 02:28:00', '2026-04-26 02:51:27'),
+(63, 'App\\Models\\User', 2, 'api-token', 'a163f0936f7090f66b71cbaad0932a10b283daf07fa94a6402e1873db8cc31e4', '[\"*\"]', '2026-04-26 03:54:40', NULL, '2026-04-26 02:52:26', '2026-04-26 03:54:40');
 
 -- --------------------------------------------------------
 
@@ -546,7 +552,7 @@ CREATE TABLE `t_doc_cargo` (
 --
 
 INSERT INTO `t_doc_cargo` (`id`, `id_cable`, `id_grade`, `no_voyage_gab`, `grade`, `price_bbl`, `bill_of_lading`, `r1`, `ratio_r1`, `r2`, `ratio_r2`, `r3`, `ratio_r3`, `r4`, `ratio_r4`, `act_receipt`, `est_discharge`, `act_discharge`, `overdue_discharge`, `est_claim_pumping`, `est_claim_bunker`, `est_claim_transport`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(3, 18, 2, 'AL2F8/26001/L', 'PERTALITE', '81.605', '6164.489', '81.167', '1.32', '3.209', '0.05', '-80.227', '-1.3', '4.149', '0.07', '523.04', '0.145289', '0.191667', '0.046378', '85.026537', '9.427742', '-1579083.758888', 'OPEN', 2, '2026-04-14 11:43:31', '2026-04-23 12:21:13');
+(4, 18, 2, 'AL2F8/26001/L', 'PERTALITE', '80605', '1000', '10', '10', '-20', '10', '10', '10', '-10', '-10', '1000', '0.277778', '3.000694', '2.722916', '4992.013073', '553.51441', '0', 'APPROVE', 2, '2026-04-26 02:41:03', '2026-04-26 02:52:33');
 
 -- --------------------------------------------------------
 
@@ -572,8 +578,8 @@ CREATE TABLE `t_doc_cargo_detail` (
 --
 
 INSERT INTO `t_doc_cargo_detail` (`id`, `id_doc_cargo`, `no_voyage_gab`, `no_urut`, `start_time`, `stop_time`, `discharge_time`, `user_id`, `created_at`, `updated_at`) VALUES
-(17, 3, 'AL2F8/26001/L', '01', '2026-03-07 09:24:00', '2026-03-07 10:00:00', '0.025', 2, '2026-04-23 12:21:13', '2026-04-23 12:21:13'),
-(18, 3, 'AL2F8/26001/L', '02', '2026-03-07 11:30:00', '2026-03-07 15:30:00', '0.166667', 2, '2026-04-23 12:21:13', '2026-04-23 12:21:13');
+(24, 4, 'AL2F8/26001/L', '01', '2026-04-26 16:45:00', '2026-04-28 16:46:00', '2.000694', 1, '2026-04-26 02:49:09', '2026-04-26 02:49:09'),
+(25, 4, 'AL2F8/26001/L', '02', '2026-04-28 16:46:00', '2026-04-29 16:46:00', '1', 1, '2026-04-26 02:49:09', '2026-04-26 02:49:09');
 
 -- --------------------------------------------------------
 
@@ -594,6 +600,15 @@ CREATE TABLE `t_klaim` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data for table `t_klaim`
+--
+
+INSERT INTO `t_klaim` (`id`, `id_vessel`, `no_klaim_awal`, `tgl_klaim_awal`, `jenis_klaim`, `no_klaim_akhir`, `tgl_klaim_akhir`, `user_id`, `created_at`, `updated_at`) VALUES
+(52, 34, '1', '2026-04-25 13:32:00', 'BOD', NULL, NULL, 2, '2026-04-25 23:32:28', '2026-04-25 23:32:28'),
+(53, 34, '2', '2026-04-26 13:32:00', 'OHBOH', NULL, NULL, 2, '2026-04-25 23:32:56', '2026-04-25 23:32:56'),
+(54, 40, 'no_klaim_1', '2026-04-26 16:54:00', 'SSOB', 'no_klaim_akhir_1', '2026-04-28 17:29:00', 2, '2026-04-26 02:54:50', '2026-04-26 03:30:59');
+
 -- --------------------------------------------------------
 
 --
@@ -613,6 +628,16 @@ CREATE TABLE `t_klaim_detail` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `t_klaim_detail`
+--
+
+INSERT INTO `t_klaim_detail` (`id`, `id_klaim`, `id_cable`, `no_urut`, `no_voyage_gab`, `no_kontrak`, `keterangan`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(57, 52, 18, '01', 'AL2F8/26001/L', '004/TCP/1/2024', NULL, 'OPEN', 2, '2026-04-25 23:32:29', '2026-04-25 23:32:29'),
+(58, 53, 18, '01', 'AL2F8/26001/L', '004/TCP/1/2026', NULL, 'OPEN', 2, '2026-04-25 23:32:57', '2026-04-25 23:32:57'),
+(59, 54, 19, '02', 'F20/26001/L', '001/TES/1/2026', NULL, 'CLOSE', 2, '2026-04-26 02:54:50', '2026-04-26 03:39:50'),
+(60, 54, 20, '01', 'F20/26001/D1', '002/TES/1/2026', NULL, 'CLOSE', 2, '2026-04-26 03:00:24', '2026-04-26 03:39:50');
 
 -- --------------------------------------------------------
 
@@ -637,6 +662,19 @@ CREATE TABLE `t_klaim_detail_nilai` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `t_klaim_detail_nilai`
+--
+
+INSERT INTO `t_klaim_detail_nilai` (`id`, `id_klaim_detail`, `sub_jenis`, `currency`, `kurs`, `val_potensi`, `val_klaim_awal`, `val_klaim_akhir`, `val_klaim_akhir_idr`, `no_tagihan_klaim`, `no_tagihan_dipotong`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(41, 57, 'BOD', 'IDR', '1', '2202200', NULL, NULL, NULL, '', '', 'OPEN', 2, '2026-04-25 23:32:29', '2026-04-25 23:32:29'),
+(42, 58, 'OH', 'USD', NULL, '55000', NULL, NULL, NULL, '', '', 'OPEN', 2, '2026-04-25 23:32:57', '2026-04-25 23:32:57'),
+(43, 58, 'BOH', 'IDR', '1', '847000000', NULL, NULL, NULL, '', '', 'OPEN', 2, '2026-04-25 23:32:57', '2026-04-25 23:32:57'),
+(44, 59, 'SS', 'USD', '17000', '0.98611', '20', '20', '340000', '123', '1225', 'CLOSE', 2, '2026-04-26 02:54:50', '2026-04-26 03:43:36'),
+(45, 59, 'OB', 'IDR', '1', '847000', '1000000', '1000000', '1000000', '124', '1226', 'CLOSE', 2, '2026-04-26 02:54:50', '2026-04-26 03:43:36'),
+(46, 60, 'SS', 'USD', '17100', '0.319444', '1', '2', '34200', '', '', 'CLOSE', 2, '2026-04-26 03:00:24', '2026-04-26 03:39:50'),
+(47, 60, 'OB', 'IDR', '1', '38115000', '40000000', '40000000', '40000000', '', '', 'CLOSE', 2, '2026-04-26 03:00:24', '2026-04-26 03:39:50');
 
 -- --------------------------------------------------------
 
@@ -680,7 +718,9 @@ CREATE TABLE `t_master_cable` (
 --
 
 INSERT INTO `t_master_cable` (`id`, `id_vessel`, `no_voyage_gab`, `no_voyage`, `jenis_voyage`, `master`, `atd_port`, `atd_time`, `atd_rob`, `ata_port`, `ata_time`, `ata_rob`, `distance`, `speed`, `est_sail_day`, `act_sail_day`, `charter_rate_day`, `est_claim_speed`, `std_bunker_cons`, `act_bunker_cons`, `excess_bunker`, `bunker_price`, `est_claim_bunker`, `status`, `keterangan`, `user_id`, `created_at`, `updated_at`) VALUES
-(18, 34, 'AL2F8/26001/L', '26001', 'L', 'STEVEN', 'PANJANG', '2026-04-22 09:06:00', '12', 'JAMBI', '2026-04-28 09:06:00', '13', '1', '4', '0.010417', '6', '1833.333333', '10980.902165', '10.2', '-1', '-11.2', '12', '-113836.8', 'APPROVE', NULL, 2, '2026-04-20 19:07:07', '2026-04-20 19:16:36');
+(18, 34, 'AL2F8/26001/L', '26001', 'L', 'STEVEN', 'PANJANG', '2026-04-22 09:06:00', '12', 'JAMBI', '2026-04-28 09:06:00', '13', '1', '4', '0.010417', '6', '1833.333333', '10980.902165', '10.2', '-1', '-11.2', '12', '-113836.8', 'APPROVE', NULL, 2, '2026-04-20 19:07:07', '2026-04-20 19:16:36'),
+(19, 40, 'F20/26001/L', '26001', 'L', 'TES', 'JAKARTA', '2026-04-19 16:21:00', '10', 'PALEMBANG', '2026-04-22 16:21:00', '-1', '100', '100', '0.041667', '3', '0.333333', '0.98611', '10', '11', '1', '1000', '847000', 'CLOSE', 'tes', 2, '2026-04-26 02:26:07', '2026-04-26 03:39:50'),
+(20, 40, 'F20/26001/D1', '26001', 'D1', 'TES', 'PALEMBANG', '2026-04-26 16:58:00', '300', 'PALEMBANG', '2026-04-27 16:58:00', '200', '100', '100', '0.041667', '1', '0.333333', '0.319444', '10', '100', '90', '500', '38115000', 'CLOSE', 'tes', 2, '2026-04-26 02:59:19', '2026-04-26 03:39:50');
 
 -- --------------------------------------------------------
 
@@ -692,7 +732,7 @@ CREATE TABLE `t_off_hire` (
   `id` int NOT NULL,
   `id_cable` int NOT NULL,
   `no_kontrak` varchar(100) DEFAULT NULL,
-  `no_voyage_gab` varchar(100) DEFAULT NULL,
+  `no_voyage_gab` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `bunker_price` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `est_oh` varchar(100) DEFAULT NULL,
   `est_boh` varchar(100) DEFAULT NULL,
@@ -713,7 +753,7 @@ CREATE TABLE `t_off_hire` (
 --
 
 INSERT INTO `t_off_hire` (`id`, `id_cable`, `no_kontrak`, `no_voyage_gab`, `bunker_price`, `est_oh`, `est_boh`, `date_time_off_hire`, `tempat_off_hire`, `bunker_off_hire`, `date_time_on_hire`, `tempat_on_hire`, `bunker_on_hire`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(2, 18, '004/TCP/1/2026', 'AL2F8/26001/L', '10000', '55000', '847000000', '2026-04-26 03:37:00', 'tes', '100', '2026-04-27 03:37:00', 'tes', '200', 'APPROVE', 2, '2026-04-25 13:40:13', '2026-04-25 23:16:55');
+(3, 18, '004/TCP/1/2026', 'AL2F8/26001/L', '100', '55000', '762300', '2026-04-26 17:46:00', 'Panjang', '10', '2026-04-27 17:46:00', 'Jambi', '19', 'APPROVE', 2, '2026-04-26 03:47:54', '2026-04-26 03:48:09');
 
 -- --------------------------------------------------------
 
@@ -748,7 +788,7 @@ CREATE TABLE `t_redelivery_delivery` (
 --
 
 INSERT INTO `t_redelivery_delivery` (`id`, `id_kontrak_redelivery`, `id_kontrak_delivery`, `id_cable`, `no_kontrak_redelivery`, `no_kontrak_delivery`, `no_voyage_gab`, `bunker_price`, `est_bod`, `date_time_redelivery`, `tempat_redelivery`, `bunker_redelivery`, `date_time_delivery`, `tempat_delivery`, `bunker_delivery`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(1, 24, 16, 0, '004/TCP/1/2026', '004/TCP/1/2024', 'AL2F8/26001/L', '11000', '46076800', '2026-04-18 02:15:00', 'Palembang', '340', '2026-04-26 01:15:00', 'Jakarta', '500', 'APPROVE', 2, '2026-04-25 12:17:07', '2026-04-25 23:18:59');
+(2, 24, 16, 18, '004/TCP/1/2026', '004/TCP/1/2024', 'AL2F8/26001/L', '20', '2202200', '2026-04-26 13:29:00', 'Panjang', '20', '2026-04-27 13:29:00', 'Jambi', '150', 'APPROVE', 2, '2026-04-25 23:31:32', '2026-04-25 23:32:11');
 
 -- --------------------------------------------------------
 
@@ -1046,7 +1086,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `file_upload`
 --
 ALTER TABLE `file_upload`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=80;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -1070,13 +1110,13 @@ ALTER TABLE `m_grade`
 -- AUTO_INCREMENT for table `m_kontrak`
 --
 ALTER TABLE `m_kontrak`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `m_vessel`
 --
 ALTER TABLE `m_vessel`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `permissions`
@@ -1088,7 +1128,7 @@ ALTER TABLE `permissions`
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=64;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -1106,49 +1146,49 @@ ALTER TABLE `settings`
 -- AUTO_INCREMENT for table `t_doc_cargo`
 --
 ALTER TABLE `t_doc_cargo`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `t_doc_cargo_detail`
 --
 ALTER TABLE `t_doc_cargo_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail`
 --
 ALTER TABLE `t_klaim_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail_nilai`
 --
 ALTER TABLE `t_klaim_detail_nilai`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `t_master_cable`
 --
 ALTER TABLE `t_master_cable`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `t_off_hire`
 --
 ALTER TABLE `t_off_hire`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `t_redelivery_delivery`
 --
 ALTER TABLE `t_redelivery_delivery`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
