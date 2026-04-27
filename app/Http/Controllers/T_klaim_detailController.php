@@ -85,13 +85,17 @@ class T_klaim_detailController extends Controller
         return $query->orderByDesc('id')->first();
     }
 
-    private function findLatestOffHireByKlaimContext($idCable, $noVoyageGab)
+    private function findLatestOffHireByKlaimContext($idOffHire, $idCable, $noVoyageGab)
     {
         $query = DB::table('t_off_hire');
+        $hasIdCable = Schema::hasColumn('t_off_hire', 'id_cable');
+        $hasNoVoyageGab = Schema::hasColumn('t_off_hire', 'no_voyage_gab');
 
-        if (!empty($idCable)) {
+        if (!empty($idOffHire)) {
+            $query->where('id', $idOffHire);
+        } elseif (!empty($idCable) && $hasIdCable) {
             $query->where('id_cable', $idCable);
-        } elseif (!empty($noVoyageGab)) {
+        } elseif (!empty($noVoyageGab) && $hasNoVoyageGab) {
             $query->where('no_voyage_gab', $noVoyageGab);
         } else {
             return null;
@@ -100,14 +104,23 @@ class T_klaim_detailController extends Controller
         return $query->orderByDesc('id')->first();
     }
 
-    private function findLatestRedeliveryDeliveryByKlaimContext($idCable, $noVoyageGab)
+    private function findLatestRedeliveryDeliveryByKlaimContext($idRedeliveryDelivery, $idCable, $noVoyageGab)
     {
         $query = DB::table('t_redelivery_delivery');
         $hasIdCable = Schema::hasColumn('t_redelivery_delivery', 'id_cable');
+        $hasNoVoyageGab = Schema::hasColumn('t_redelivery_delivery', 'no_voyage_gab');
 
-        if (!empty($idCable) && $hasIdCable) {
-            $query->where('id_cable', $idCable);
-        } elseif (!empty($noVoyageGab)) {
+        if (!empty($idRedeliveryDelivery)) {
+            $query->where('id', $idRedeliveryDelivery);
+        } elseif (!empty($idCable)) {
+            if ($hasIdCable) {
+                $query->where('id_cable', $idCable);
+            } else {
+                // Skema baru redelivery_delivery tidak punya id_cable/no_voyage_gab.
+                // Gunakan id klaim_detail.id_cable sebagai pointer ke t_redelivery_delivery.id.
+                $query->where('id', $idCable);
+            }
+        } elseif (!empty($noVoyageGab) && $hasNoVoyageGab) {
             $query->where('no_voyage_gab', $noVoyageGab);
         } else {
             return null;
@@ -139,6 +152,8 @@ class T_klaim_detailController extends Controller
         $subJenisDefaults = $this->getSubJenisByJenisKlaim($klaim?->jenis_klaim);
         $nilaiItems = $this->parseNilaiItems($request);
         $idCable = $request->input('id_cable');
+        $idOffHire = $request->input('id_off_hire');
+        $idRedeliveryDelivery = $request->input('id_redelivery_delivery');
         $noVoyageGab = $request->input('no_voyage_gab');
 
         $cable = null;
@@ -148,8 +163,8 @@ class T_klaim_detailController extends Controller
         }
 
         $docCargo = $this->findDocCargoByKlaimContext($idCable, $noVoyageGab);
-        $offHire = $this->findLatestOffHireByKlaimContext($idCable, $noVoyageGab);
-        $redeliveryDelivery = $this->findLatestRedeliveryDeliveryByKlaimContext($idCable, $noVoyageGab);
+        $offHire = $this->findLatestOffHireByKlaimContext($idOffHire, $idCable, $noVoyageGab);
+        $redeliveryDelivery = $this->findLatestRedeliveryDeliveryByKlaimContext($idRedeliveryDelivery, $idCable, $noVoyageGab);
 
         if (empty($nilaiItems)) {
             $nilaiItems = array_map(fn ($subJenis) => [
@@ -642,6 +657,8 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail = new T_klaim_detail();
             $t_klaim_detail->id_klaim = $idKlaim;
             $t_klaim_detail->id_cable = $request->input('id_cable');
+            $t_klaim_detail->id_off_hire = $request->input('id_off_hire');
+            $t_klaim_detail->id_redelivery_delivery = $request->input('id_redelivery_delivery');
             $t_klaim_detail->no_urut = $request->input('no_urut');
             $t_klaim_detail->no_voyage_gab = $request->input('no_voyage_gab');
             $t_klaim_detail->no_kontrak = $request->input('no_kontrak');
@@ -694,6 +711,8 @@ class T_klaim_detailController extends Controller
             }
             $t_klaim_detail->id_klaim = $request->input('id_klaim');
             $t_klaim_detail->id_cable = $request->input('id_cable');
+            $t_klaim_detail->id_off_hire = $request->input('id_off_hire');
+            $t_klaim_detail->id_redelivery_delivery = $request->input('id_redelivery_delivery');
             $t_klaim_detail->no_urut = $request->input('no_urut');
             $t_klaim_detail->no_voyage_gab = $request->input('no_voyage_gab');
             $t_klaim_detail->no_kontrak = $request->input('no_kontrak');

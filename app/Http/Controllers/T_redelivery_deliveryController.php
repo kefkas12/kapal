@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\File_upload;
 use App\Models\Settings;
 use App\Models\T_redelivery_delivery;
-use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -84,17 +83,13 @@ class T_redelivery_deliveryController extends Controller
 
     private function sanitizeRedeliveryDeliveryPayload(Request $request): array
     {
-        $idCable = $request->input('id_cable');
-
-        $cable = null;
-        if ($idCable) {
-            $cable = T_master_cable::where('id', $idCable)->first();
-        }
+        $idVessel = $request->input('id_vessel');
+        $idVessel = $idVessel !== null && $idVessel !== '' ? (int) $idVessel : null;
 
         $kontrak = null;
-        if ($cable?->id_vessel) {
+        if ($idVessel) {
             $kontrak = DB::table('m_kontrak')
-                ->where('id_vessel', $cable->id_vessel)
+                ->where('id_vessel', $idVessel)
                 ->where('status', 'ACTIVE')
                 ->orderByDesc('id')
                 ->first();
@@ -106,13 +101,12 @@ class T_redelivery_deliveryController extends Controller
         $estBod = ($bunkerDelivery - $bunkerRedelivery) * $bunkerRedelivery * 1000 * $estClaimBunkerFactor;
 
         $payload = [
-            'id_cable' => $idCable,
+            'id_vessel' => $idVessel,
             'id_kontrak_redelivery' => $request->input('id_kontrak_redelivery') ?: ($kontrak?->id ?? null),
             'id_kontrak_delivery' => $request->input('id_kontrak_delivery') ?: ($kontrak?->id ?? null),
             'no_sertifikat' => $request->input('no_sertifikat'),
             'no_kontrak_redelivery' => $request->input('no_kontrak_redelivery') ?: ($kontrak?->no_kontrak ?? null),
             'no_kontrak_delivery' => $request->input('no_kontrak_delivery') ?: ($kontrak?->no_kontrak ?? null),
-            'no_voyage_gab' => $request->input('no_voyage_gab') ?: ($cable?->no_voyage_gab ?? null),
             'bunker_price' => $request->input('bunker_price'),
             'est_bod' => $this->numberToStorage($estBod),
             'date_time_redelivery' => $request->input('date_time_redelivery'),
@@ -162,11 +156,6 @@ class T_redelivery_deliveryController extends Controller
         $estClaimBunkerFactor = $this->getEstClaimBunkerFactor();
         $estBod = ($bunkerDelivery - $bunkerRedelivery) * $bunkerRedelivery * 1000 * $estClaimBunkerFactor;
         return $this->numberToStorage($estBod);
-    }
-
-    private function hasRedeliveryDeliveryCableColumn(): bool
-    {
-        return Schema::hasColumn('t_redelivery_delivery', 'id_cable');
     }
 
     private function redeliveryFileColumn(): string
@@ -259,6 +248,122 @@ class T_redelivery_deliveryController extends Controller
         }
     }
 
+    private function parseDateTs($value): ?int
+    {
+        $raw = trim((string) ($value ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+        $ts = strtotime($raw);
+        if ($ts === false) {
+            return null;
+        }
+        return $ts;
+    }
+
+    private function resolveLatestNonActiveBeforeActive(object $activeKontrak): ?object
+    {
+        $activeStartTs = $this->parseDateTs($activeKontrak->tgl_awal_kontrak ?? null);
+        $rows = DB::table('m_kontrak')
+            ->where('id_vessel', $activeKontrak->id_vessel)
+            ->whereRaw('UPPER(COALESCE(status, "")) <> "ACTIVE"')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        $candidates = $rows->filter(function ($row) use ($activeStartTs) {
+            if (is_null($activeStartTs)) {
+                return true;
+            }
+            $endTs = $this->parseDateTs($row->tgl_akhir_kontrak ?? null);
+            if (!is_null($endTs)) {
+                return $endTs <= $activeStartTs;
+            }
+            $startTs = $this->parseDateTs($row->tgl_awal_kontrak ?? null);
+            if (!is_null($startTs)) {
+                return $startTs <= $activeStartTs;
+            }
+            return true;
+        });
+
+        $pool = $candidates->isNotEmpty() ? $candidates : $rows;
+
+        return $pool->sort(function ($a, $b) {
+            $aEnd = $this->parseDateTs($a->tgl_akhir_kontrak ?? null);
+            $bEnd = $this->parseDateTs($b->tgl_akhir_kontrak ?? null);
+            if (!is_null($aEnd) || !is_null($bEnd)) {
+                if (is_null($aEnd)) return 1;
+                if (is_null($bEnd)) return -1;
+                if ($aEnd !== $bEnd) return $bEnd <=> $aEnd;
+            }
+            $aStart = $this->parseDateTs($a->tgl_awal_kontrak ?? null);
+            $bStart = $this->parseDateTs($b->tgl_awal_kontrak ?? null);
+            if (!is_null($aStart) || !is_null($bStart)) {
+                if (is_null($aStart)) return 1;
+                if (is_null($bStart)) return -1;
+                if ($aStart !== $bStart) return $bStart <=> $aStart;
+            }
+            return ((int) ($b->id ?? 0)) <=> ((int) ($a->id ?? 0));
+        })->first();
+    }
+
+    private function assertKontrakBusinessRules(Request $request, ?int $excludeId = null): void
+    {
+        $idVessel = (int) $request->input('id_vessel');
+        $idKontrakDelivery = (int) $request->input('id_kontrak_delivery');
+        $idKontrakRedelivery = (int) $request->input('id_kontrak_redelivery');
+
+        $deliveryKontrak = DB::table('m_kontrak')->where('id', $idKontrakDelivery)->first();
+        if (!$deliveryKontrak) {
+            throw ValidationException::withMessages([
+                'id_kontrak_delivery' => 'Kontrak Delivery tidak ditemukan.',
+            ]);
+        }
+
+        if (strtoupper((string) ($deliveryKontrak->status ?? '')) !== 'ACTIVE') {
+            throw ValidationException::withMessages([
+                'id_kontrak_delivery' => 'Kontrak Delivery harus kontrak ACTIVE.',
+            ]);
+        }
+        if ($idVessel > 0 && (int) ($deliveryKontrak->id_vessel ?? 0) !== $idVessel) {
+            throw ValidationException::withMessages([
+                'id_kontrak_delivery' => 'Kontrak Delivery tidak sesuai dengan vessel yang dipilih.',
+            ]);
+        }
+
+        $deliveryUsageQuery = DB::table('t_redelivery_delivery')
+            ->where('id_kontrak_delivery', $idKontrakDelivery);
+        if (!is_null($excludeId)) {
+            $deliveryUsageQuery->where('id', '!=', $excludeId);
+        }
+        if ($deliveryUsageQuery->exists()) {
+            throw ValidationException::withMessages([
+                'id_kontrak_delivery' => 'Kontrak Delivery aktif ini sudah pernah dipakai.',
+            ]);
+        }
+
+        $expectedRedelivery = $this->resolveLatestNonActiveBeforeActive($deliveryKontrak);
+        if (!$expectedRedelivery) {
+            throw ValidationException::withMessages([
+                'id_kontrak_redelivery' => 'Tidak ditemukan kontrak non ACTIVE sebelum kontrak Delivery aktif.',
+            ]);
+        }
+        if ($idVessel > 0 && (int) ($expectedRedelivery->id_vessel ?? 0) !== $idVessel) {
+            throw ValidationException::withMessages([
+                'id_kontrak_redelivery' => 'Kontrak Redelivery tidak sesuai dengan vessel yang dipilih.',
+            ]);
+        }
+
+        if ((int) ($expectedRedelivery->id ?? 0) !== $idKontrakRedelivery) {
+            throw ValidationException::withMessages([
+                'id_kontrak_redelivery' => 'Kontrak Redelivery harus kontrak non ACTIVE terakhir sebelum kontrak Delivery aktif.',
+            ]);
+        }
+    }
+
     public function index(Request $request)
     {
         $perPage = (int) $request->input('per_page', 10);
@@ -269,101 +374,28 @@ class T_redelivery_deliveryController extends Controller
             $perPage = 100;
         }
 
-        $hasIdCable = $this->hasRedeliveryDeliveryCableColumn();
-        $query = DB::table('t_redelivery_delivery');
-
-        if ($hasIdCable) {
-            // Primary join by id_cable + fallback join by no_voyage_gab for legacy rows with id_cable null.
-            $query->leftJoin('t_master_cable as cable_by_id', 'cable_by_id.id', '=', 't_redelivery_delivery.id_cable')
-                ->leftJoin('t_master_cable as cable_by_voyage', function ($join) {
-                    $join->on('cable_by_voyage.no_voyage_gab', '=', 't_redelivery_delivery.no_voyage_gab')
-                        ->whereNull('t_redelivery_delivery.id_cable');
-                })
-                ->select(
-                    't_redelivery_delivery.*',
-                    DB::raw('COALESCE(t_redelivery_delivery.id_cable, cable_by_id.id, cable_by_voyage.id) as id_cable_resolved'),
-                    DB::raw('COALESCE(cable_by_id.id_vessel, cable_by_voyage.id_vessel) as id_vessel'),
-                    DB::raw('COALESCE(cable_by_id.no_voyage, cable_by_voyage.no_voyage) as no_voyage'),
-                    DB::raw('COALESCE(cable_by_id.atd_port, cable_by_voyage.atd_port) as atd_port'),
-                    DB::raw('COALESCE(cable_by_id.ata_port, cable_by_voyage.ata_port) as ata_port'),
-                    DB::raw('COALESCE(cable_by_id.atd_time, cable_by_voyage.atd_time) as atd_time'),
-                    DB::raw('COALESCE(cable_by_id.ata_time, cable_by_voyage.ata_time) as ata_time'),
-                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, cable_by_id.no_voyage_gab, cable_by_voyage.no_voyage_gab) as no_voyage_gab_display')
-                );
-        } else {
-            // Compatibility branch for pre-id_cable schema.
-            $query->leftJoin('t_master_cable', 't_master_cable.no_voyage_gab', '=', 't_redelivery_delivery.no_voyage_gab')
-                ->select(
-                    't_redelivery_delivery.*',
-                    DB::raw('t_master_cable.id as id_cable_resolved'),
-                    't_master_cable.id_vessel',
-                    't_master_cable.no_voyage',
-                    't_master_cable.atd_port',
-                    't_master_cable.ata_port',
-                    't_master_cable.atd_time',
-                    't_master_cable.ata_time',
-                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
-                );
-        }
+        $query = DB::table('t_redelivery_delivery')
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_redelivery_delivery.id_vessel')
+            ->select(
+                't_redelivery_delivery.*',
+                'm_vessel.kode_vessel',
+                'm_vessel.nama_vessel'
+            );
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
-            $query->where(function ($q) use ($search, $hasIdCable) {
-                $q->where('t_redelivery_delivery.no_voyage_gab', 'like', "%{$search}%")
+            $query->where(function ($q) use ($search) {
+                $q->where('m_vessel.kode_vessel', 'like', "%{$search}%")
+                    ->orWhere('m_vessel.nama_vessel', 'like', "%{$search}%")
                     ->orWhere('t_redelivery_delivery.no_sertifikat', 'like', "%{$search}%")
                     ->orWhere('t_redelivery_delivery.bunker_price', 'like', "%{$search}%")
                     ->orWhere('t_redelivery_delivery.status', 'like', "%{$search}%");
-                if ($hasIdCable) {
-                    $q->orWhere('cable_by_id.no_voyage_gab', 'like', "%{$search}%")
-                        ->orWhere('cable_by_voyage.no_voyage_gab', 'like', "%{$search}%");
-                } else {
-                    $q->orWhere('t_master_cable.no_voyage_gab', 'like', "%{$search}%");
-                }
             });
-        }
-
-        $idCable = $request->input('id_cable');
-        if ($hasIdCable && !is_null($idCable) && $idCable !== '') {
-            $query->where(function ($q) use ($idCable) {
-                $q->where('t_redelivery_delivery.id_cable', $idCable)
-                    ->orWhere('cable_by_id.id', $idCable)
-                    ->orWhere('cable_by_voyage.id', $idCable);
-            });
-        } elseif (!is_null($idCable) && $idCable !== '') {
-            $query->where('t_master_cable.id', $idCable);
         }
 
         $idVessel = $request->input('id_vessel');
         if (!is_null($idVessel) && $idVessel !== '') {
-            if ($hasIdCable) {
-                $query->where(function ($q) use ($idVessel) {
-                    $q->where('cable_by_id.id_vessel', $idVessel)
-                        ->orWhere('cable_by_voyage.id_vessel', $idVessel);
-                });
-            } else {
-                $query->where('t_master_cable.id_vessel', $idVessel);
-            }
-        }
-
-        $availableForKlaim = $request->boolean('available_for_klaim', false);
-        if ($availableForKlaim) {
-            $excludeKlaimId = $request->input('exclude_klaim_id');
-            $jenisKlaim = trim((string) $request->input('jenis_klaim', ''));
-            $cableExpr = $hasIdCable ? 'COALESCE(t_redelivery_delivery.id_cable, cable_by_id.id, cable_by_voyage.id)' : 't_master_cable.id';
-
-            $query->whereNotExists(function ($sub) use ($excludeKlaimId, $jenisKlaim, $cableExpr) {
-                $sub->select(DB::raw(1))
-                    ->from('t_klaim_detail')
-                    ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
-                    ->whereRaw('t_klaim_detail.id_cable = ' . $cableExpr);
-
-                if (!is_null($excludeKlaimId) && $excludeKlaimId !== '') {
-                    $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
-                }
-                if ($jenisKlaim !== '') {
-                    $sub->where('t_klaim.jenis_klaim', $jenisKlaim);
-                }
-            });
+            $query->where('t_redelivery_delivery.id_vessel', $idVessel);
         }
 
         $status = $request->input('status');
@@ -374,7 +406,6 @@ class T_redelivery_deliveryController extends Controller
         $allowedSort = [
             'id' => 't_redelivery_delivery.id',
             'no_sertifikat' => 't_redelivery_delivery.no_sertifikat',
-            'no_voyage_gab' => 't_redelivery_delivery.no_voyage_gab',
             'bunker_price' => 't_redelivery_delivery.bunker_price',
             'status' => 't_redelivery_delivery.status',
             'created_at' => 't_redelivery_delivery.created_at',
@@ -388,12 +419,7 @@ class T_redelivery_deliveryController extends Controller
         $query->orderBy($allowedSort[$sortBy], $sortDir);
 
         $paginator = $query->paginate($perPage);
-        $items = collect($paginator->items())->map(function ($row) {
-            $resolved = $row->id_cable_resolved ?? $row->id_cable ?? null;
-            $row->id_cable = $resolved !== null ? (int) $resolved : null;
-            unset($row->id_cable_resolved);
-            return $row;
-        })->values()->all();
+        $items = collect($paginator->items())->values()->all();
 
         return response()->json([
             'success' => true,
@@ -417,35 +443,15 @@ class T_redelivery_deliveryController extends Controller
     {
         $id = $request->route('id');
 
-        $hasIdCable = $this->hasRedeliveryDeliveryCableColumn();
-        $detailQuery = DB::table('t_redelivery_delivery')->where('t_redelivery_delivery.id', $id);
-        if ($hasIdCable) {
-            $detailQuery
-                ->leftJoin('t_master_cable as cable_by_id', 'cable_by_id.id', '=', 't_redelivery_delivery.id_cable')
-                ->leftJoin('t_master_cable as cable_by_voyage', function ($join) {
-                    $join->on('cable_by_voyage.no_voyage_gab', '=', 't_redelivery_delivery.no_voyage_gab')
-                        ->whereNull('t_redelivery_delivery.id_cable');
-                })
-                ->select(
-                    't_redelivery_delivery.*',
-                    DB::raw('COALESCE(t_redelivery_delivery.id_cable, cable_by_id.id, cable_by_voyage.id) as id_cable_resolved'),
-                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, cable_by_id.no_voyage_gab, cable_by_voyage.no_voyage_gab) as no_voyage_gab_display')
-                );
-        } else {
-            $detailQuery
-                ->leftJoin('t_master_cable', 't_master_cable.no_voyage_gab', '=', 't_redelivery_delivery.no_voyage_gab')
-                ->select(
-                    't_redelivery_delivery.*',
-                    DB::raw('t_master_cable.id as id_cable_resolved'),
-                    DB::raw('COALESCE(t_redelivery_delivery.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
-                );
-        }
+        $detailQuery = DB::table('t_redelivery_delivery')
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_redelivery_delivery.id_vessel')
+            ->where('t_redelivery_delivery.id', $id)
+            ->select(
+                't_redelivery_delivery.*',
+                'm_vessel.kode_vessel',
+                'm_vessel.nama_vessel'
+            );
         $data = $detailQuery->first();
-        if ($data) {
-            $resolved = $data->id_cable_resolved ?? $data->id_cable ?? null;
-            $data->id_cable = $resolved !== null ? (int) $resolved : null;
-            unset($data->id_cable_resolved);
-        }
         if ($data && (trim((string) ($data->est_bod ?? '')) === '')) {
             $data->est_bod = $this->computeEstBodValue($data->bunker_redelivery ?? null, $data->bunker_delivery ?? null);
         }
@@ -489,7 +495,11 @@ class T_redelivery_deliveryController extends Controller
                 ]);
             }
             $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
+            $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
+            $this->assertRequiredField($request, 'date_time_redelivery', 'Tanggal dan Waktu Redelivery');
+            $this->assertRequiredField($request, 'date_time_delivery', 'Tanggal dan Waktu Delivery');
             $this->assertKontrakSelection($request);
+            $this->assertKontrakBusinessRules($request, null);
             $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
             $this->assertNumericField($request, 'bunker_delivery', 'Bunker Delivery (MT)');
             $this->assertPdfFiles(array_merge($filesRedelivery, $filesDelivery));
@@ -540,7 +550,11 @@ class T_redelivery_deliveryController extends Controller
                 ]);
             }
             $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
+            $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
+            $this->assertRequiredField($request, 'date_time_redelivery', 'Tanggal dan Waktu Redelivery');
+            $this->assertRequiredField($request, 'date_time_delivery', 'Tanggal dan Waktu Delivery');
             $this->assertKontrakSelection($request);
+            $this->assertKontrakBusinessRules($request, (int) $id);
             $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
             $this->assertNumericField($request, 'bunker_delivery', 'Bunker Delivery (MT)');
             $this->assertPdfFiles(array_merge($incomingFilesRedelivery, $incomingFilesDelivery));

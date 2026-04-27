@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\File_upload;
 use App\Models\Settings;
 use App\Models\T_off_hire;
-use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -84,17 +83,13 @@ class T_off_hireController extends Controller
 
     private function sanitizeOffHirePayload(Request $request): array
     {
-        $idCable = $request->input('id_cable');
-
-        $cable = null;
-        if ($idCable) {
-            $cable = T_master_cable::where('id', $idCable)->first();
-        }
+        $idVessel = $request->input('id_vessel');
+        $idVessel = $idVessel !== null && $idVessel !== '' ? (int) $idVessel : null;
 
         $kontrak = null;
-        if ($cable?->id_vessel) {
+        if ($idVessel) {
             $kontrak = DB::table('m_kontrak')
-                ->where('id_vessel', $cable->id_vessel)
+                ->where('id_vessel', $idVessel)
                 ->where('status', 'ACTIVE')
                 ->orderByDesc('id')
                 ->first();
@@ -118,10 +113,9 @@ class T_off_hireController extends Controller
         $estBoh = ($bunkerOnHire - $bunkerOffHire) * $bunkerPrice * 1000 * $estClaimBunkerFactor;
 
         $payload = [
-            'id_cable' => $idCable,
+            'id_vessel' => $idVessel,
             'no_sertifikat' => $request->input('no_sertifikat'),
             'no_kontrak' => $request->input('no_kontrak') ?: ($kontrak?->no_kontrak ?? null),
-            'no_voyage_gab' => $cable?->no_voyage_gab,
             'bunker_price' => $request->input('bunker_price'),
             'est_oh' => $this->numberToStorage($estOh),
             'est_boh' => $this->numberToStorage($estBoh),
@@ -253,49 +247,51 @@ class T_off_hireController extends Controller
             $perPage = 100;
         }
 
+        $hasNoVoyageGab = Schema::hasColumn('t_off_hire', 'no_voyage_gab');
+        $hasIdCable = Schema::hasColumn('t_off_hire', 'id_cable');
+
         $query = DB::table('t_off_hire')
-            ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_off_hire.id_cable')
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_off_hire.id_vessel')
             ->select(
                 't_off_hire.*',
-                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display'),
-                't_master_cable.id_vessel',
-                't_master_cable.no_voyage',
-                't_master_cable.atd_port',
-                't_master_cable.ata_port',
-                't_master_cable.atd_time',
-                't_master_cable.ata_time'
+                'm_vessel.kode_vessel',
+                'm_vessel.nama_vessel'
             );
 
         $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('t_off_hire.no_voyage_gab', 'like', "%{$search}%")
-                    ->orWhere('t_master_cable.no_voyage_gab', 'like', "%{$search}%")
+            $query->where(function ($q) use ($search, $hasNoVoyageGab) {
+                $q->where('m_vessel.kode_vessel', 'like', "%{$search}%")
+                    ->orWhere('m_vessel.nama_vessel', 'like', "%{$search}%")
                     ->orWhere('t_off_hire.no_sertifikat', 'like', "%{$search}%")
                     ->orWhere('t_off_hire.bunker_price', 'like', "%{$search}%")
                     ->orWhere('t_off_hire.status', 'like', "%{$search}%");
+                if ($hasNoVoyageGab) {
+                    $q->orWhere('t_off_hire.no_voyage_gab', 'like', "%{$search}%");
+                }
             });
-        }
-
-        $idCable = $request->input('id_cable');
-        if (!is_null($idCable) && $idCable !== '') {
-            $query->where('t_off_hire.id_cable', $idCable);
         }
 
         $idVessel = $request->input('id_vessel');
         if (!is_null($idVessel) && $idVessel !== '') {
-            $query->where('t_master_cable.id_vessel', $idVessel);
+            $query->where('t_off_hire.id_vessel', $idVessel);
         }
 
         $availableForKlaim = $request->boolean('available_for_klaim', false);
         if ($availableForKlaim) {
             $excludeKlaimId = $request->input('exclude_klaim_id');
             $jenisKlaim = trim((string) $request->input('jenis_klaim', ''));
-            $query->whereNotExists(function ($sub) use ($excludeKlaimId, $jenisKlaim) {
+            $query->whereNotExists(function ($sub) use ($excludeKlaimId, $jenisKlaim, $hasIdCable) {
                 $sub->select(DB::raw(1))
                     ->from('t_klaim_detail')
-                    ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
-                    ->whereColumn('t_klaim_detail.id_cable', 't_off_hire.id_cable');
+                    ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim');
+
+                if ($hasIdCable) {
+                    $sub->whereColumn('t_klaim_detail.id_cable', 't_off_hire.id_cable');
+                } else {
+                    // Schema baru off hire tanpa id_cable memakai id_off_hire sebagai pointer di t_klaim_detail.id_cable
+                    $sub->whereColumn('t_klaim_detail.id_cable', 't_off_hire.id');
+                }
 
                 if (!is_null($excludeKlaimId) && $excludeKlaimId !== '') {
                     $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
@@ -314,11 +310,13 @@ class T_off_hireController extends Controller
         $allowedSort = [
             'id' => 't_off_hire.id',
             'no_sertifikat' => 't_off_hire.no_sertifikat',
-            'no_voyage_gab' => 't_off_hire.no_voyage_gab',
             'bunker_price' => 't_off_hire.bunker_price',
             'status' => 't_off_hire.status',
             'created_at' => 't_off_hire.created_at',
         ];
+        if ($hasNoVoyageGab) {
+            $allowedSort['no_voyage_gab'] = 't_off_hire.no_voyage_gab';
+        }
         $sortBy = $request->input('sort_by', 'id');
         if (!array_key_exists($sortBy, $allowedSort)) {
             $sortBy = 'id';
@@ -352,12 +350,10 @@ class T_off_hireController extends Controller
         $id = $request->route('id');
 
         $data = DB::table('t_off_hire')
-            ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_off_hire.id_cable')
-            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_master_cable.id_vessel')
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_off_hire.id_vessel')
             ->where('t_off_hire.id', $id)
             ->select(
                 't_off_hire.*',
-                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display'),
                 DB::raw("CONCAT(COALESCE(m_vessel.kode_vessel, '-'), ' | ', COALESCE(m_vessel.nama_vessel, '-')) as no_vessel_display")
             )
             ->first();
@@ -398,6 +394,7 @@ class T_off_hireController extends Controller
                     'files' => 'File upload wajib diisi.',
                 ]);
             }
+            $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
             $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
             $this->assertNumericField($request, 'bunker_off_hire', 'Bunker Off Hire (MT)');
             $this->assertNumericField($request, 'bunker_on_hire', 'Bunker On Hire (MT)');
@@ -447,6 +444,7 @@ class T_off_hireController extends Controller
                     'files' => 'File upload wajib diisi.',
                 ]);
             }
+            $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
             $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
             $this->assertNumericField($request, 'bunker_off_hire', 'Bunker Off Hire (MT)');
             $this->assertNumericField($request, 'bunker_on_hire', 'Bunker On Hire (MT)');
