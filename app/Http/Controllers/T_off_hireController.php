@@ -119,6 +119,7 @@ class T_off_hireController extends Controller
 
         $payload = [
             'id_cable' => $idCable,
+            'no_sertifikat' => $request->input('no_sertifikat'),
             'no_kontrak' => $request->input('no_kontrak') ?: ($kontrak?->no_kontrak ?? null),
             'no_voyage_gab' => $cable?->no_voyage_gab,
             'bunker_price' => $request->input('bunker_price'),
@@ -232,6 +233,16 @@ class T_off_hireController extends Controller
         }
     }
 
+    private function assertRequiredField(Request $request, string $field, string $label): void
+    {
+        $raw = trim((string) $request->input($field, ''));
+        if ($raw === '') {
+            throw ValidationException::withMessages([
+                $field => $label . ' wajib diisi.',
+            ]);
+        }
+    }
+
     public function index(Request $request)
     {
         $perPage = (int) $request->input('per_page', 10);
@@ -260,6 +271,7 @@ class T_off_hireController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('t_off_hire.no_voyage_gab', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.no_voyage_gab', 'like', "%{$search}%")
+                    ->orWhere('t_off_hire.no_sertifikat', 'like', "%{$search}%")
                     ->orWhere('t_off_hire.bunker_price', 'like', "%{$search}%")
                     ->orWhere('t_off_hire.status', 'like', "%{$search}%");
             });
@@ -301,6 +313,7 @@ class T_off_hireController extends Controller
 
         $allowedSort = [
             'id' => 't_off_hire.id',
+            'no_sertifikat' => 't_off_hire.no_sertifikat',
             'no_voyage_gab' => 't_off_hire.no_voyage_gab',
             'bunker_price' => 't_off_hire.bunker_price',
             'status' => 't_off_hire.status',
@@ -340,10 +353,12 @@ class T_off_hireController extends Controller
 
         $data = DB::table('t_off_hire')
             ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_off_hire.id_cable')
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_master_cable.id_vessel')
             ->where('t_off_hire.id', $id)
             ->select(
                 't_off_hire.*',
-                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display')
+                DB::raw('COALESCE(t_off_hire.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display'),
+                DB::raw("CONCAT(COALESCE(m_vessel.kode_vessel, '-'), ' | ', COALESCE(m_vessel.nama_vessel, '-')) as no_vessel_display")
             )
             ->first();
 
@@ -383,6 +398,7 @@ class T_off_hireController extends Controller
                     'files' => 'File upload wajib diisi.',
                 ]);
             }
+            $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
             $this->assertNumericField($request, 'bunker_off_hire', 'Bunker Off Hire (MT)');
             $this->assertNumericField($request, 'bunker_on_hire', 'Bunker On Hire (MT)');
             $this->assertOnHireAfterOffHire($request);
@@ -431,6 +447,7 @@ class T_off_hireController extends Controller
                     'files' => 'File upload wajib diisi.',
                 ]);
             }
+            $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
             $this->assertNumericField($request, 'bunker_off_hire', 'Bunker Off Hire (MT)');
             $this->assertNumericField($request, 'bunker_on_hire', 'Bunker On Hire (MT)');
             $this->assertOnHireAfterOffHire($request);

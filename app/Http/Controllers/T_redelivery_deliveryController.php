@@ -109,6 +109,7 @@ class T_redelivery_deliveryController extends Controller
             'id_cable' => $idCable,
             'id_kontrak_redelivery' => $request->input('id_kontrak_redelivery') ?: ($kontrak?->id ?? null),
             'id_kontrak_delivery' => $request->input('id_kontrak_delivery') ?: ($kontrak?->id ?? null),
+            'no_sertifikat' => $request->input('no_sertifikat'),
             'no_kontrak_redelivery' => $request->input('no_kontrak_redelivery') ?: ($kontrak?->no_kontrak ?? null),
             'no_kontrak_delivery' => $request->input('no_kontrak_delivery') ?: ($kontrak?->no_kontrak ?? null),
             'no_voyage_gab' => $request->input('no_voyage_gab') ?: ($cable?->no_voyage_gab ?? null),
@@ -231,6 +232,16 @@ class T_redelivery_deliveryController extends Controller
         }
     }
 
+    private function assertRequiredField(Request $request, string $field, string $label): void
+    {
+        $raw = trim((string) $request->input($field, ''));
+        if ($raw === '') {
+            throw ValidationException::withMessages([
+                $field => $label . ' wajib diisi.',
+            ]);
+        }
+    }
+
     private function assertKontrakSelection(Request $request): void
     {
         $idKontrakRedelivery = trim((string) $request->input('id_kontrak_redelivery', ''));
@@ -299,6 +310,7 @@ class T_redelivery_deliveryController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search, $hasIdCable) {
                 $q->where('t_redelivery_delivery.no_voyage_gab', 'like', "%{$search}%")
+                    ->orWhere('t_redelivery_delivery.no_sertifikat', 'like', "%{$search}%")
                     ->orWhere('t_redelivery_delivery.bunker_price', 'like', "%{$search}%")
                     ->orWhere('t_redelivery_delivery.status', 'like', "%{$search}%");
                 if ($hasIdCable) {
@@ -361,6 +373,7 @@ class T_redelivery_deliveryController extends Controller
 
         $allowedSort = [
             'id' => 't_redelivery_delivery.id',
+            'no_sertifikat' => 't_redelivery_delivery.no_sertifikat',
             'no_voyage_gab' => 't_redelivery_delivery.no_voyage_gab',
             'bunker_price' => 't_redelivery_delivery.bunker_price',
             'status' => 't_redelivery_delivery.status',
@@ -475,6 +488,7 @@ class T_redelivery_deliveryController extends Controller
                     'files' => 'File upload wajib diisi.',
                 ]);
             }
+            $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
             $this->assertKontrakSelection($request);
             $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
             $this->assertNumericField($request, 'bunker_delivery', 'Bunker Delivery (MT)');
@@ -525,6 +539,7 @@ class T_redelivery_deliveryController extends Controller
                     'files' => 'File upload wajib diisi.',
                 ]);
             }
+            $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
             $this->assertKontrakSelection($request);
             $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
             $this->assertNumericField($request, 'bunker_delivery', 'Bunker Delivery (MT)');

@@ -36,7 +36,8 @@ class T_klaimController extends Controller
                     ->orWhere('t_klaim.id_vessel', 'like', "%{$search}%")
                     ->orWhere('t_klaim.no_klaim_akhir', 'like', "%{$search}%")
                     ->orWhere('t_klaim.tgl_klaim_akhir', 'like', "%{$search}%")
-                    ->orWhere('m_vessel.nama_vessel', 'like', "%{$search}%");
+                    ->orWhere('m_vessel.nama_vessel', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.status', 'like', "%{$search}%");
             });
         }
 
@@ -60,6 +61,7 @@ class T_klaimController extends Controller
             'no_klaim_akhir' => 't_klaim.no_klaim_akhir',
             'tgl_klaim_akhir' => 't_klaim.tgl_klaim_akhir',
             'created_at' => 't_klaim.created_at',
+            'status' => 't_klaim.status',
         ];
         $sortBy = $request->input('sort_by', 'id');
         if (!array_key_exists($sortBy, $allowedSort)) {
