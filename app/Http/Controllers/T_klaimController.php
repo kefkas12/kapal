@@ -271,4 +271,53 @@ class T_klaimController extends Controller
             throw $e;
         }
     }
+
+    public function unapprove(Request $request)
+    {
+        $id = (int) $request->route('id');
+
+        try {
+            DB::beginTransaction();
+
+            $user = Auth::user();
+            if (!$user || !($user->hasRole('approval') || $user->hasRole('superadmin'))) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan unapprove.'
+                ], 403);
+            }
+
+            $klaim = T_klaim::where('id', $id)->firstOrFail();
+
+            $details = T_klaim_detail::where('id_klaim', $id)->get();
+            foreach ($details as $detail) {
+                $detail->status = 'OPEN';
+                $detail->user_id = Auth::id();
+                $detail->save();
+
+                DB::table('t_klaim_detail_nilai')
+                    ->where('id_klaim_detail', $detail->id)
+                    ->update([
+                        'status' => 'OPEN',
+                        'user_id' => Auth::id(),
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            $klaim->status = 'OPEN';
+            $klaim->user_id = Auth::id();
+            $klaim->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Unapprove Klaim berhasil diproses.'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
 }

@@ -94,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
         Route::post('/{id}/approve', 'approve');
+        Route::post('/{id}/unapprove', 'unapprove');
         Route::post('/{id}/close', 'approve');
         Route::delete('/{id}', 'delete');
     });
