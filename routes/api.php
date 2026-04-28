@@ -93,7 +93,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
-        Route::post('/{id}/close', 'close');
+        Route::post('/{id}/approve', 'approve');
+        Route::post('/{id}/close', 'approve');
         Route::delete('/{id}', 'delete');
     });
 

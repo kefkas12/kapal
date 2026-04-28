@@ -138,14 +138,14 @@ class T_klaimController extends Controller
 
         try {
             DB::beginTransaction();
-            $hasClosedDetail = T_klaim_detail::where('id_klaim', $id)
-                ->where('status', 'CLOSE')
+            $hasApprovedDetail = T_klaim_detail::where('id_klaim', $id)
+                ->where('status', 'APPROVE')
                 ->exists();
-            if ($hasClosedDetail) {
+            if ($hasApprovedDetail) {
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'Klaim yang sudah CLOSE tidak bisa diubah.'
+                    'message' => 'Klaim yang sudah APPROVE tidak bisa diubah.'
                 ], 422);
             }
 
@@ -176,14 +176,14 @@ class T_klaimController extends Controller
 
         try {
             DB::beginTransaction();
-            $hasClosedDetail = T_klaim_detail::where('id_klaim', $id)
-                ->where('status', 'CLOSE')
+            $hasApprovedDetail = T_klaim_detail::where('id_klaim', $id)
+                ->where('status', 'APPROVE')
                 ->exists();
-            if ($hasClosedDetail) {
+            if ($hasApprovedDetail) {
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'Klaim yang sudah CLOSE tidak bisa dihapus.'
+                    'message' => 'Klaim yang sudah APPROVE tidak bisa dihapus.'
                 ], 422);
             }
 
@@ -191,8 +191,9 @@ class T_klaimController extends Controller
 
             $detailIds = T_klaim_detail::where('id_klaim', $id)->pluck('id')->all();
             if (!empty($detailIds)) {
-                $files = File_upload::whereIn('id_klaim_detail_awal', $detailIds)
-                    ->orWhereIn('id_klaim_detail_akhir', $detailIds)
+                $lookupIds = array_values(array_unique(array_merge($detailIds, [(int) $id])));
+                $files = File_upload::whereIn('id_klaim_awal', $lookupIds)
+                    ->orWhereIn('id_klaim_akhir', $lookupIds)
                     ->get();
 
                 foreach ($files as $file) {
@@ -222,7 +223,7 @@ class T_klaimController extends Controller
         }
     }
 
-    public function close(Request $request)
+    public function approve(Request $request)
     {
         $id = (int) $request->route('id');
 
@@ -234,7 +235,7 @@ class T_klaimController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan close.'
+                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.'
                 ], 403);
             }
 
@@ -242,28 +243,20 @@ class T_klaimController extends Controller
 
             $details = T_klaim_detail::where('id_klaim', $id)->get();
             foreach ($details as $detail) {
-                $detail->status = 'CLOSE';
+                $detail->status = 'APPROVE';
                 $detail->user_id = Auth::id();
                 $detail->save();
 
                 DB::table('t_klaim_detail_nilai')
                     ->where('id_klaim_detail', $detail->id)
                     ->update([
-                        'status' => 'CLOSE',
+                        'status' => 'APPROVE',
                         'user_id' => Auth::id(),
                         'updated_at' => now(),
                     ]);
-
-                if (!empty($detail->id_cable)) {
-                    DB::table('t_master_cable')
-                        ->where('id', $detail->id_cable)
-                        ->update([
-                            'status' => 'CLOSE',
-                            'updated_at' => now(),
-                        ]);
-                }
             }
 
+            $klaim->status = 'APPROVE';
             $klaim->user_id = Auth::id();
             $klaim->save();
 
@@ -271,7 +264,7 @@ class T_klaimController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Close Klaim berhasil diproses.'
+                'message' => 'Approve Klaim berhasil diproses.'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

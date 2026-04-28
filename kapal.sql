@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 27, 2026 at 08:03 PM
+-- Generation Time: Apr 28, 2026 at 03:02 PM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -71,8 +71,8 @@ CREATE TABLE `file_upload` (
   `id` int NOT NULL,
   `id_kontrak` int DEFAULT NULL,
   `id_cable` int DEFAULT NULL,
-  `id_klaim_detail_awal` int DEFAULT NULL,
-  `id_klaim_detail_akhir` int DEFAULT NULL,
+  `id_klaim_awal` int DEFAULT NULL,
+  `id_klaim_akhir` int DEFAULT NULL,
   `id_doc_cargo` int DEFAULT NULL,
   `id_off_hire` int DEFAULT NULL,
   `id_on_hire` int DEFAULT NULL,
@@ -87,7 +87,7 @@ CREATE TABLE `file_upload` (
 -- Dumping data for table `file_upload`
 --
 
-INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_detail_awal`, `id_klaim_detail_akhir`, `id_doc_cargo`, `id_off_hire`, `id_on_hire`, `id_redelivery`, `id_delivery`, `nama_file`, `created_at`, `updated_at`) VALUES
+INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_awal`, `id_klaim_akhir`, `id_doc_cargo`, `id_off_hire`, `id_on_hire`, `id_redelivery`, `id_delivery`, `nama_file`, `created_at`, `updated_at`) VALUES
 (28, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, 'uploads/doc_cargo/final osl.txt', '2026-04-11 14:53:31', '2026-04-11 14:53:31'),
 (29, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/vessel_export_20260412.csv', '2026-04-11 23:41:14', '2026-04-11 23:41:14'),
 (30, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/cable_export_20260412.csv', '2026-04-11 23:41:14', '2026-04-11 23:41:14'),
@@ -119,7 +119,9 @@ INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_detail_awal
 (90, NULL, NULL, NULL, NULL, NULL, 6, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-27 12:51:57', '2026-04-27 12:51:57'),
 (91, NULL, NULL, NULL, NULL, NULL, NULL, 6, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-27 12:51:57', '2026-04-27 12:51:57'),
 (92, NULL, NULL, NULL, NULL, NULL, 7, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-27 12:52:48', '2026-04-27 12:52:48'),
-(93, NULL, NULL, NULL, NULL, NULL, NULL, 7, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-27 12:52:48', '2026-04-27 12:52:48');
+(93, NULL, NULL, NULL, NULL, NULL, NULL, 7, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-27 12:52:48', '2026-04-27 12:52:48'),
+(94, NULL, NULL, 70, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-28 07:38:34', '2026-04-28 07:38:34'),
+(95, NULL, NULL, 68, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_5.pdf', '2026-04-28 07:39:13', '2026-04-28 07:39:13');
 
 -- --------------------------------------------------------
 
@@ -441,7 +443,7 @@ CREATE TABLE `personal_access_tokens` (
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
 (62, 'App\\Models\\User', 1, 'api-token', '5774ee2c94ed2dd920e5950c97308e08a7591bbe178022d7fb4ebd461dd24af7', '[\"*\"]', '2026-04-26 02:51:27', NULL, '2026-04-26 02:28:00', '2026-04-26 02:51:27'),
 (64, 'App\\Models\\User', 3, 'api-token', '54774e7f04aed2ac0f93ea4be60bf29e2717106ac3e2b1390272695c612595e6', '[\"*\"]', '2026-04-27 09:52:26', NULL, '2026-04-27 09:04:07', '2026-04-27 09:52:26'),
-(67, 'App\\Models\\User', 2, 'api-token', '6e17653a1e4c6dbb5c188d85cd336677660dedd6b145617587054751694ef35e', '[\"*\"]', '2026-04-27 13:00:13', NULL, '2026-04-27 12:59:36', '2026-04-27 13:00:13');
+(68, 'App\\Models\\User', 2, 'api-token', '9fad20212e84fa1d1861cce38bef7149f85c3f291fa8462401e2788e0f7d13ed', '[\"*\"]', '2026-04-28 07:55:10', NULL, '2026-04-28 07:10:40', '2026-04-28 07:55:10');
 
 -- --------------------------------------------------------
 
@@ -618,7 +620,8 @@ CREATE TABLE `t_klaim` (
 --
 
 INSERT INTO `t_klaim` (`id`, `id_vessel`, `no_klaim_awal`, `tgl_klaim_awal`, `jenis_klaim`, `no_klaim_akhir`, `tgl_klaim_akhir`, `user_id`, `status`, `created_at`, `updated_at`) VALUES
-(60, 34, '125', '2026-04-28 02:59:00', 'OHBOH', NULL, NULL, 2, NULL, '2026-04-27 13:00:11', '2026-04-27 13:00:11');
+(61, 34, '10', '2026-04-28 03:10:00', 'OHBOH', 2, 'OPEN', '2026-04-27 13:11:05', '2026-04-27 13:11:05'),
+(62, 34, '126', '2026-04-29 03:11:00', 'SSOB', 2, 'OPEN', '2026-04-27 13:11:30', '2026-04-27 13:11:30');
 
 -- --------------------------------------------------------
 
@@ -641,6 +644,15 @@ CREATE TABLE `t_klaim_detail` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `t_klaim_detail`
+--
+
+INSERT INTO `t_klaim_detail` (`id`, `id_klaim`, `id_cable`, `id_off_hire`, `id_redelivery_delivery`, `no_urut`, `no_voyage_gab`, `no_kontrak`, `keterangan`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(68, 61, NULL, 6, NULL, '01', '123', '004/TCP/1/2027', 'tes', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-28 07:48:02'),
+(69, 61, NULL, 7, NULL, '02', '124', '004/TCP/1/2027', NULL, 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-27 13:11:06'),
+(70, 62, 18, '01', 'AL2F8/26001/L', '004/TCP/1/2027', NULL, 'OPEN', 2, '2026-04-27 13:11:30', '2026-04-27 13:11:30');
 
 -- --------------------------------------------------------
 
@@ -665,6 +677,18 @@ CREATE TABLE `t_klaim_detail_nilai` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data for table `t_klaim_detail_nilai`
+--
+
+INSERT INTO `t_klaim_detail_nilai` (`id`, `id_klaim_detail`, `sub_jenis`, `currency`, `kurs`, `val_potensi`, `val_klaim_awal`, `val_klaim_akhir`, `val_klaim_akhir_idr`, `no_tagihan_klaim`, `no_tagihan_dipotong`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
+(54, 68, 'OH', 'USD', '16900', '110000', '120000', '', '', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-28 07:47:53'),
+(55, 68, 'BOH', 'IDR', '1', '208362', '250000', '', '', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-28 07:47:53'),
+(56, 69, 'OH', 'USD', NULL, '110000', NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-27 13:11:06'),
+(57, 69, 'BOH', 'IDR', '1', '105028', NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-27 13:11:06'),
+(58, 70, 'SS', 'USD', NULL, '10980.902165', NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:30', '2026-04-27 13:11:30'),
+(59, 70, 'OB', 'IDR', '1', '-113836.8', NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:30', '2026-04-27 13:11:30');
 
 -- --------------------------------------------------------
 
@@ -833,10 +857,13 @@ ALTER TABLE `file_upload`
   ADD PRIMARY KEY (`id`),
   ADD KEY `id_kontrak` (`id_kontrak`),
   ADD KEY `id_cable` (`id_cable`),
-  ADD KEY `id_klaim_detail_awal` (`id_klaim_detail_awal`),
-  ADD KEY `id_klaim_detail_akhir` (`id_klaim_detail_akhir`),
   ADD KEY `id_doc_cargo` (`id_doc_cargo`),
-  ADD KEY `id_off_hire` (`id_off_hire`,`id_on_hire`,`id_redelivery`,`id_delivery`);
+  ADD KEY `id_klaim_awal` (`id_klaim_awal`),
+  ADD KEY `id_klaim_akhir` (`id_klaim_akhir`),
+  ADD KEY `id_off_hire` (`id_off_hire`),
+  ADD KEY `id_on_hire` (`id_on_hire`),
+  ADD KEY `id_redelivery` (`id_redelivery`),
+  ADD KEY `id_delivery` (`id_delivery`);
 
 --
 -- Indexes for table `jobs`
@@ -1072,7 +1099,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `file_upload`
 --
 ALTER TABLE `file_upload`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=94;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=96;
 
 --
 -- AUTO_INCREMENT for table `jobs`
@@ -1114,7 +1141,7 @@ ALTER TABLE `permissions`
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
 
 --
 -- AUTO_INCREMENT for table `roles`
@@ -1144,19 +1171,19 @@ ALTER TABLE `t_doc_cargo_detail`
 -- AUTO_INCREMENT for table `t_klaim`
 --
 ALTER TABLE `t_klaim`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail`
 --
 ALTER TABLE `t_klaim_detail`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=71;
 
 --
 -- AUTO_INCREMENT for table `t_klaim_detail_nilai`
 --
 ALTER TABLE `t_klaim_detail_nilai`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT for table `t_master_cable`

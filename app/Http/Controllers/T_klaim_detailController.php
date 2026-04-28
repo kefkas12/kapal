@@ -282,7 +282,7 @@ class T_klaim_detailController extends Controller
         return $rowsBySubJenis;
     }
 
-    private function syncNoTagihanOnlyForClosed(int $klaimDetailId, Request $request): void
+    private function syncNoTagihanOnlyForApproved(int $klaimDetailId, Request $request): void
     {
         $nilaiItems = $this->parseNilaiItems($request);
         if (empty($nilaiItems)) {
@@ -391,6 +391,8 @@ class T_klaim_detailController extends Controller
     private function storeFilesPerNilai(Request $request, int $klaimDetailId): void
     {
         $files = $this->getIncomingUploadFiles($request);
+        $klaimId = (int) (T_klaim_detail::where('id', $klaimDetailId)->value('id_klaim') ?? 0);
+        $targetId = $klaimId > 0 ? $klaimId : $klaimDetailId;
 
         foreach ($files as $file) {
             if (!$file) {
@@ -399,9 +401,9 @@ class T_klaim_detailController extends Controller
             $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
             $upload = new File_upload();
             $column = $this->resolveFileUploadDetailColumn($klaimDetailId, $request);
-            $upload->id_klaim_detail_awal = null;
-            $upload->id_klaim_detail_akhir = null;
-            $upload->{$column} = $klaimDetailId;
+            $upload->id_klaim_awal = null;
+            $upload->id_klaim_akhir = null;
+            $upload->{$column} = $targetId;
             $upload->nama_file = $path;
             $upload->save();
         }
@@ -411,10 +413,10 @@ class T_klaim_detailController extends Controller
     {
         $requestedType = strtoupper((string) ($request?->input('klaim_detail_type') ?? ''));
         if ($requestedType === 'AWAL') {
-            return 'id_klaim_detail_awal';
+            return 'id_klaim_awal';
         }
         if ($requestedType === 'AKHIR') {
-            return 'id_klaim_detail_akhir';
+            return 'id_klaim_akhir';
         }
 
         $detail = T_klaim_detail::query()
@@ -424,19 +426,21 @@ class T_klaim_detailController extends Controller
             ->first();
 
         $isAwal = $detail && empty($detail->no_klaim_akhir) && empty($detail->tgl_klaim_akhir);
-        return $isAwal ? 'id_klaim_detail_awal' : 'id_klaim_detail_akhir';
+        return $isAwal ? 'id_klaim_awal' : 'id_klaim_akhir';
     }
 
     private function fileUploadQueryByKlaimDetailId(int $klaimDetailId)
     {
+        $klaimId = (int) (T_klaim_detail::where('id', $klaimDetailId)->value('id_klaim') ?? 0);
+        $lookupIds = array_values(array_unique(array_filter([$klaimDetailId, $klaimId])));
         $primaryColumn = $this->resolveFileUploadDetailColumn($klaimDetailId);
-        $secondaryColumn = $primaryColumn === 'id_klaim_detail_awal'
-            ? 'id_klaim_detail_akhir'
-            : 'id_klaim_detail_awal';
+        $secondaryColumn = $primaryColumn === 'id_klaim_awal'
+            ? 'id_klaim_akhir'
+            : 'id_klaim_awal';
 
-        return File_upload::where(function ($q) use ($klaimDetailId, $primaryColumn, $secondaryColumn) {
-            $q->where($primaryColumn, $klaimDetailId)
-                ->orWhere($secondaryColumn, $klaimDetailId);
+        return File_upload::where(function ($q) use ($lookupIds, $primaryColumn, $secondaryColumn) {
+            $q->whereIn($primaryColumn, $lookupIds)
+                ->orWhereIn($secondaryColumn, $lookupIds);
         });
     }
 
@@ -621,12 +625,24 @@ class T_klaim_detailController extends Controller
             $data->no_tagihan_dipotong = $first->no_tagihan_dipotong ?? null;
         }
 
-        $filesAwal = $data?->id
-            ? File_upload::where('id_klaim_detail_awal', (int) $data->id)->orderBy('id', 'asc')->get()
+        $lookupIds = $data
+            ? array_values(array_unique(array_filter([(int) $data->id, (int) $data->id_klaim])))
+            : [];
+
+        $filesAwal = !empty($lookupIds)
+            ? File_upload::whereIn('id_klaim_awal', $lookupIds)->orderBy('id', 'asc')->get()
             : collect();
-        $filesAkhir = $data?->id
-            ? File_upload::where('id_klaim_detail_akhir', (int) $data->id)->orderBy('id', 'asc')->get()
+        $filesAkhir = !empty($lookupIds)
+            ? File_upload::whereIn('id_klaim_akhir', $lookupIds)->orderBy('id', 'asc')->get()
             : collect();
+        $filesAwal = $filesAwal->map(function ($file) use ($data) {
+            $file->id_klaim_detail_awal = (int) $data->id;
+            return $file;
+        })->values();
+        $filesAkhir = $filesAkhir->map(function ($file) use ($data) {
+            $file->id_klaim_detail_akhir = (int) $data->id;
+            return $file;
+        })->values();
         $files = $filesAwal->concat($filesAkhir)->unique('id')->values();
         
         return response()->json([
@@ -673,11 +689,6 @@ class T_klaim_detailController extends Controller
             }
             $this->storeFilesPerNilai($request, (int) $t_klaim_detail->id);
 
-            if ($t_klaim_detail->status === 'CLOSE' && $t_klaim_detail->id_cable) {
-                T_master_cable::where('id', $t_klaim_detail->id_cable)
-                    ->update(['status' => 'CLOSE']);
-            }
-
             DB::commit();
 
             return response()->json([
@@ -698,8 +709,8 @@ class T_klaim_detailController extends Controller
             DB::beginTransaction();
             $this->validateIncomingUploadFilesArePdf($request);
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
-            if (strtoupper((string) $t_klaim_detail->status) === 'CLOSE') {
-                $this->syncNoTagihanOnlyForClosed((int) $t_klaim_detail->id, $request);
+            if (strtoupper((string) $t_klaim_detail->status) === 'APPROVE') {
+                $this->syncNoTagihanOnlyForApproved((int) $t_klaim_detail->id, $request);
                 $t_klaim_detail->user_id = Auth::id();
                 $t_klaim_detail->save();
                 DB::commit();
@@ -723,11 +734,6 @@ class T_klaim_detailController extends Controller
             $this->syncNilaiRows($t_klaim_detail->id, (int) $t_klaim_detail->id_klaim, $request);
             $this->storeFilesPerNilai($request, (int) $t_klaim_detail->id);
 
-            if ($t_klaim_detail->status === 'CLOSE' && $t_klaim_detail->id_cable) {
-                T_master_cable::where('id', $t_klaim_detail->id_cable)
-                    ->update(['status' => 'CLOSE']);
-            }
-
             DB::commit();
 
             return response()->json([
@@ -747,11 +753,11 @@ class T_klaim_detailController extends Controller
         try {
             DB::beginTransaction();
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
-            if (strtoupper((string) $t_klaim_detail->status) === 'CLOSE') {
+            if (strtoupper((string) $t_klaim_detail->status) === 'APPROVE') {
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'Data Close Klaim Detail yang sudah CLOSE tidak bisa dihapus.'
+                    'message' => 'Data Klaim Detail yang sudah APPROVE tidak bisa dihapus.'
                 ], 422);
             }
 
