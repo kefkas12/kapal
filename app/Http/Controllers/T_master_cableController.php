@@ -9,7 +9,6 @@ use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class T_master_cableController extends Controller
@@ -574,9 +573,9 @@ class T_master_cableController extends Controller
             $files = File_upload::where('id_cable', $id)->get();
             foreach ($files as $file) {
                 if ($file->nama_file) {
-                    $disk = Storage::disk('public');
-                    if ($disk->exists($file->nama_file)) {
-                        $disk->delete($file->nama_file);
+                    $path = public_path('storage/' . ltrim((string) $file->nama_file, '/'));
+                    if (file_exists($path)) {
+                        @unlink($path);
                     }
                 }
                 $file->delete();

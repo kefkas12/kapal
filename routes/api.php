@@ -23,12 +23,15 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::controller(\App\Http\Controllers\File_uploadController::class)->prefix('file_upload')->group(function () {
-    Route::get('/view/{id}', 'view');
-    Route::get('/download/{id}', 'download');
-    Route::delete('/{id}', 'delete');
+    Route::get('/view/{id}', 'view')->whereNumber('id');
+    Route::get('/download/{id}', 'download')->whereNumber('id');
+    Route::delete('/{id}', 'delete')->whereNumber('id');
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::controller(\App\Http\Controllers\File_uploadController::class)->prefix('file_upload')->group(function () {
+        Route::get('/pdf-by-section', 'pdfBySection');
+    });
 
     Route::get('/me', function (Request $request) {
         $user = $request->user();

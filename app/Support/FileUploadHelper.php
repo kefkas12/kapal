@@ -3,14 +3,11 @@
 namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 class FileUploadHelper
 {
     public static function storeWithOriginalName(UploadedFile $file, string $directory, string $disk = 'public'): string
     {
-        $diskInstance = Storage::disk($disk);
-
         $originalName = trim((string) $file->getClientOriginalName());
         $extension = $file->getClientOriginalExtension();
 
@@ -25,12 +22,18 @@ class FileUploadHelper
         $dotExt = $extension !== '' ? '.' . $extension : '';
         $candidate = $baseName . $dotExt;
         $counter = 1;
+        $normalizedDir = trim($directory, '/');
+        $targetDir = public_path('storage/' . $normalizedDir);
+        if (!is_dir($targetDir)) {
+            @mkdir($targetDir, 0775, true);
+        }
 
-        while ($diskInstance->exists(trim($directory, '/') . '/' . $candidate)) {
+        while (file_exists($targetDir . DIRECTORY_SEPARATOR . $candidate)) {
             $candidate = $baseName . '_' . $counter . $dotExt;
             $counter++;
         }
 
-        return $file->storeAs($directory, $candidate, $disk);
+        $file->move($targetDir, $candidate);
+        return $normalizedDir . '/' . $candidate;
     }
 }

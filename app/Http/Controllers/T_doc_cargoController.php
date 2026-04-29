@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class T_doc_cargoController extends Controller
@@ -508,9 +507,9 @@ class T_doc_cargoController extends Controller
             $files = File_upload::where('id_doc_cargo', $id)->get();
             foreach ($files as $file) {
                 if ($file->nama_file) {
-                    $disk = Storage::disk('public');
-                    if ($disk->exists($file->nama_file)) {
-                        $disk->delete($file->nama_file);
+                    $path = public_path('storage/' . ltrim((string) $file->nama_file, '/'));
+                    if (file_exists($path)) {
+                        @unlink($path);
                     }
                 }
                 $file->delete();
