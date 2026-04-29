@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Carbon;
 
 class T_klaim_detailController extends Controller
 {
@@ -770,6 +771,148 @@ class T_klaim_detailController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Data T_klaim_detail berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function closeList(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+        $page = max(1, (int) $request->input('page', 1));
+        $perPage = max(1, min(200, (int) $request->input('per_page', 10)));
+        $sortBy = (string) $request->input('sort_by', 'nama_kapal');
+        $sortDir = strtolower((string) $request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $sortMap = [
+            'id' => 't_klaim_detail.id',
+            'nama_kapal' => 'm_vessel.nama_vessel',
+            'no_invoice' => 'nilai.no_tagihan_dipotong',
+            'no_surat' => 'nilai.no_tagihan_klaim',
+            'keterangan_potongan' => 't_klaim_detail.keterangan',
+            'currency' => 'nilai.currency',
+            'nominal' => 'nilai.val_klaim_akhir',
+            'tgl_invoice' => 't_klaim_detail.updated_at',
+        ];
+        $sortColumn = $sortMap[$sortBy] ?? $sortMap['nama_kapal'];
+
+        $query = DB::table('t_klaim_detail')
+            ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_klaim.id_vessel')
+            ->join('t_klaim_detail_nilai as nilai', 'nilai.id_klaim_detail', '=', 't_klaim_detail.id')
+            ->whereRaw('UPPER(COALESCE(t_klaim_detail.status, "")) = ?', ['APPROVE'])
+            ->whereRaw('UPPER(COALESCE(nilai.status, "")) = ?', ['APPROVE'])
+            ->select([
+                't_klaim_detail.id as id_klaim_detail',
+                't_klaim.id as id_klaim',
+                'm_vessel.nama_vessel as nama_kapal',
+                'nilai.no_tagihan_dipotong as no_invoice',
+                't_klaim_detail.keterangan as keterangan_potongan',
+                'nilai.no_tagihan_klaim as no_surat',
+                'nilai.val_klaim_akhir as nominal',
+                'nilai.currency as currency',
+                't_klaim_detail.updated_at as tgl_invoice',
+            ]);
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('m_vessel.nama_vessel', 'like', "%{$search}%")
+                    ->orWhere('nilai.no_tagihan_dipotong', 'like', "%{$search}%")
+                    ->orWhere('nilai.no_tagihan_klaim', 'like', "%{$search}%")
+                    ->orWhere('t_klaim_detail.keterangan', 'like', "%{$search}%");
+            });
+        }
+
+        $paginator = $query
+            ->orderBy($sortColumn, $sortDir)
+            ->orderBy('t_klaim_detail.id', 'asc')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $rows = collect($paginator->items())->map(function ($row) {
+            $row->tgl_invoice_display = $row->tgl_invoice
+                ? Carbon::parse($row->tgl_invoice)->format('Y-m-d')
+                : null;
+            return $row;
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data close list t_klaim_detail berhasil diambil',
+            'data' => $rows,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
+    public function closeBulk(Request $request)
+    {
+        $ids = collect($request->input('ids', []))
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            throw ValidationException::withMessages([
+                'ids' => 'Pilih minimal 1 data klaim detail untuk di-close.'
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+            $updatedDetails = T_klaim_detail::query()
+                ->whereIn('id', $ids->all())
+                ->whereRaw('UPPER(COALESCE(status, "")) = ?', ['APPROVE'])
+                ->update([
+                    'status' => 'CLOSE',
+                    'user_id' => Auth::id(),
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('t_klaim_detail_nilai')
+                ->whereIn('id_klaim_detail', $ids->all())
+                ->whereRaw('UPPER(COALESCE(status, "")) = ?', ['APPROVE'])
+                ->update([
+                    'status' => 'CLOSE',
+                    'user_id' => Auth::id(),
+                    'updated_at' => now(),
+                ]);
+
+            $klaimIds = T_klaim_detail::query()
+                ->whereIn('id', $ids->all())
+                ->pluck('id_klaim')
+                ->filter()
+                ->unique()
+                ->values();
+
+            foreach ($klaimIds as $klaimId) {
+                $hasRemainingApprove = T_klaim_detail::query()
+                    ->where('id_klaim', $klaimId)
+                    ->whereRaw('UPPER(COALESCE(status, "")) = ?', ['APPROVE'])
+                    ->exists();
+
+                if (!$hasRemainingApprove) {
+                    T_klaim::query()
+                        ->where('id', (int) $klaimId)
+                        ->update([
+                            'status' => 'CLOSE',
+                            'user_id' => Auth::id(),
+                            'updated_at' => now(),
+                        ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil close {$updatedDetails} klaim detail."
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

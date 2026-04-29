@@ -81,8 +81,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(T_klaim_detailController::class)->prefix('klaim_detail')->group(function () {
         Route::get('/', 'index');
+        Route::get('/close-list', 'closeList');
         Route::get('/details/{id}', 'details');
         Route::post('/', 'create');
+        Route::post('/close-bulk', 'closeBulk');
         Route::put('/{id}', 'edit');
         Route::delete('/{id}', 'delete');
     });
