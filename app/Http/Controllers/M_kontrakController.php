@@ -18,7 +18,10 @@ class M_kontrakController extends Controller
     {
         $fetchAll = $request->boolean('all', false);
         if ($fetchAll) {
-            $data = M_kontrak::get();
+            $data = M_kontrak::query()
+                ->leftJoin('m_vessel', 'm_vessel.id', '=', 'm_kontrak.id_vessel')
+                ->select('m_kontrak.*', 'm_vessel.kode_vessel', 'm_vessel.nama_vessel')
+                ->get();
 
             return response()->json([
                 'success' => true,

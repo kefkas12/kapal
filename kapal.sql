@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 28, 2026 at 03:02 PM
+-- Generation Time: Apr 29, 2026 at 01:22 AM
 -- Server version: 8.0.45-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -73,6 +73,8 @@ CREATE TABLE `file_upload` (
   `id_cable` int DEFAULT NULL,
   `id_klaim_awal` int DEFAULT NULL,
   `id_klaim_akhir` int DEFAULT NULL,
+  `id_klaim_detail_awal` int DEFAULT NULL,
+  `id_klaim_detail_akhir` int DEFAULT NULL,
   `id_doc_cargo` int DEFAULT NULL,
   `id_off_hire` int DEFAULT NULL,
   `id_on_hire` int DEFAULT NULL,
@@ -87,41 +89,45 @@ CREATE TABLE `file_upload` (
 -- Dumping data for table `file_upload`
 --
 
-INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_awal`, `id_klaim_akhir`, `id_doc_cargo`, `id_off_hire`, `id_on_hire`, `id_redelivery`, `id_delivery`, `nama_file`, `created_at`, `updated_at`) VALUES
-(28, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, 'uploads/doc_cargo/final osl.txt', '2026-04-11 14:53:31', '2026-04-11 14:53:31'),
-(29, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/vessel_export_20260412.csv', '2026-04-11 23:41:14', '2026-04-11 23:41:14'),
-(30, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/cable_export_20260412.csv', '2026-04-11 23:41:14', '2026-04-11 23:41:14'),
-(31, 16, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/vessel_export_20260412.csv', '2026-04-11 23:42:27', '2026-04-11 23:42:27'),
-(41, NULL, 15, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/PbeM9KY2ZQIHwi362x7RSRiwgsaXnpFLKLGnbUAk.pdf', '2026-04-14 08:45:27', '2026-04-14 08:45:27'),
-(42, 23, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/ChatGPT Image Apr 12, 2026, 01_22_06 AM.png', '2026-04-14 10:29:22', '2026-04-14 10:29:22'),
-(53, NULL, NULL, 46, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/AKSFOOD ID (1).pdf', '2026-04-14 21:54:33', '2026-04-14 21:54:33'),
-(55, NULL, NULL, NULL, 46, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/DPP+Onsite+2026 (1).pdf', '2026-04-14 22:21:13', '2026-04-14 22:21:13'),
-(57, 24, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-20 18:35:54', '2026-04-20 18:35:54'),
-(58, NULL, 18, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-20 19:07:07', '2026-04-20 19:07:07'),
-(69, 25, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 02:06:31', '2026-04-26 02:06:31'),
-(70, NULL, 19, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-26 02:26:07', '2026-04-26 02:26:07'),
-(71, NULL, NULL, NULL, NULL, 4, NULL, NULL, NULL, NULL, 'uploads/doc_cargo/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-26 02:41:03', '2026-04-26 02:41:03'),
-(72, NULL, 20, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 02:59:19', '2026-04-26 02:59:19'),
-(73, NULL, NULL, 60, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-26 03:01:18', '2026-04-26 03:01:18'),
-(75, NULL, NULL, 59, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 03:25:36', '2026-04-26 03:25:36'),
-(76, NULL, NULL, NULL, 59, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_2.pdf', '2026-04-26 03:34:01', '2026-04-26 03:34:01'),
-(77, NULL, NULL, NULL, 60, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-26 03:35:14', '2026-04-26 03:35:14'),
-(78, NULL, NULL, NULL, NULL, NULL, 3, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 03:47:54', '2026-04-26 03:47:54'),
-(79, NULL, NULL, NULL, NULL, NULL, NULL, 3, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 03:47:54', '2026-04-26 03:47:54'),
-(80, 26, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_2.pdf', '2026-04-26 04:10:59', '2026-04-26 04:10:59'),
-(83, NULL, NULL, NULL, NULL, NULL, 4, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-27 10:13:55', '2026-04-27 10:13:55'),
-(84, NULL, NULL, NULL, NULL, NULL, NULL, 4, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-27 10:13:55', '2026-04-27 10:13:55'),
-(85, 27, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-27 11:29:59', '2026-04-27 11:29:59'),
-(86, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 4, NULL, 'uploads/redelivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-27 12:03:51', '2026-04-27 12:03:51'),
-(87, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 4, 'uploads/delivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-27 12:03:51', '2026-04-27 12:03:51'),
-(88, NULL, NULL, NULL, NULL, NULL, 5, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_2.pdf', '2026-04-27 12:25:45', '2026-04-27 12:25:45'),
-(89, NULL, NULL, NULL, NULL, NULL, NULL, 5, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_2.pdf', '2026-04-27 12:25:45', '2026-04-27 12:25:45'),
-(90, NULL, NULL, NULL, NULL, NULL, 6, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-27 12:51:57', '2026-04-27 12:51:57'),
-(91, NULL, NULL, NULL, NULL, NULL, NULL, 6, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-27 12:51:57', '2026-04-27 12:51:57'),
-(92, NULL, NULL, NULL, NULL, NULL, 7, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-27 12:52:48', '2026-04-27 12:52:48'),
-(93, NULL, NULL, NULL, NULL, NULL, NULL, 7, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-27 12:52:48', '2026-04-27 12:52:48'),
-(94, NULL, NULL, 70, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-28 07:38:34', '2026-04-28 07:38:34'),
-(95, NULL, NULL, 68, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_5.pdf', '2026-04-28 07:39:13', '2026-04-28 07:39:13');
+INSERT INTO `file_upload` (`id`, `id_kontrak`, `id_cable`, `id_klaim_awal`, `id_klaim_akhir`, `id_klaim_detail_awal`, `id_klaim_detail_akhir`, `id_doc_cargo`, `id_off_hire`, `id_on_hire`, `id_redelivery`, `id_delivery`, `nama_file`, `created_at`, `updated_at`) VALUES
+(28, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL, 'uploads/doc_cargo/final osl.txt', '2026-04-11 14:53:31', '2026-04-11 14:53:31'),
+(29, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/vessel_export_20260412.csv', '2026-04-11 23:41:14', '2026-04-11 23:41:14'),
+(30, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/cable_export_20260412.csv', '2026-04-11 23:41:14', '2026-04-11 23:41:14'),
+(31, 16, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/vessel_export_20260412.csv', '2026-04-11 23:42:27', '2026-04-11 23:42:27'),
+(41, NULL, 15, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/PbeM9KY2ZQIHwi362x7RSRiwgsaXnpFLKLGnbUAk.pdf', '2026-04-14 08:45:27', '2026-04-14 08:45:27'),
+(42, 23, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/ChatGPT Image Apr 12, 2026, 01_22_06 AM.png', '2026-04-14 10:29:22', '2026-04-14 10:29:22'),
+(53, NULL, NULL, NULL, NULL, 46, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/AKSFOOD ID (1).pdf', '2026-04-14 21:54:33', '2026-04-14 21:54:33'),
+(55, NULL, NULL, NULL, NULL, NULL, 46, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/DPP+Onsite+2026 (1).pdf', '2026-04-14 22:21:13', '2026-04-14 22:21:13'),
+(57, 24, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-20 18:35:54', '2026-04-20 18:35:54'),
+(58, NULL, 18, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/Invoice Nasi Bakar Nony - up Ibu Tari.pdf', '2026-04-20 19:07:07', '2026-04-20 19:07:07'),
+(69, 25, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 02:06:31', '2026-04-26 02:06:31'),
+(70, NULL, 19, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-26 02:26:07', '2026-04-26 02:26:07'),
+(71, NULL, NULL, NULL, NULL, NULL, NULL, 4, NULL, NULL, NULL, NULL, 'uploads/doc_cargo/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-26 02:41:03', '2026-04-26 02:41:03'),
+(72, NULL, 20, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/cable/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 02:59:19', '2026-04-26 02:59:19'),
+(73, NULL, NULL, NULL, NULL, 60, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-26 03:01:18', '2026-04-26 03:01:18'),
+(75, NULL, NULL, NULL, NULL, 59, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 03:25:36', '2026-04-26 03:25:36'),
+(76, NULL, NULL, NULL, NULL, NULL, 59, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_2.pdf', '2026-04-26 03:34:01', '2026-04-26 03:34:01'),
+(77, NULL, NULL, NULL, NULL, NULL, 60, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-26 03:35:14', '2026-04-26 03:35:14'),
+(78, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 3, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 03:47:54', '2026-04-26 03:47:54'),
+(79, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 3, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_1.pdf', '2026-04-26 03:47:54', '2026-04-26 03:47:54'),
+(80, 26, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_2.pdf', '2026-04-26 04:10:59', '2026-04-26 04:10:59'),
+(83, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 4, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-27 10:13:55', '2026-04-27 10:13:55'),
+(84, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 4, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-27 10:13:55', '2026-04-27 10:13:55'),
+(85, 27, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/kontrak/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-27 11:29:59', '2026-04-27 11:29:59'),
+(86, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 4, NULL, 'uploads/redelivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-27 12:03:51', '2026-04-27 12:03:51'),
+(87, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 4, 'uploads/delivery/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB.pdf', '2026-04-27 12:03:51', '2026-04-27 12:03:51'),
+(88, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 5, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_2.pdf', '2026-04-27 12:25:45', '2026-04-27 12:25:45'),
+(89, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 5, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_2.pdf', '2026-04-27 12:25:45', '2026-04-27 12:25:45'),
+(90, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 6, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-27 12:51:57', '2026-04-27 12:51:57'),
+(91, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 6, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_3.pdf', '2026-04-27 12:51:57', '2026-04-27 12:51:57'),
+(92, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 7, NULL, NULL, NULL, 'uploads/off_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-27 12:52:48', '2026-04-27 12:52:48'),
+(93, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 7, NULL, NULL, 'uploads/on_hire/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-27 12:52:48', '2026-04-27 12:52:48'),
+(94, NULL, NULL, NULL, NULL, 70, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_4.pdf', '2026-04-28 07:38:34', '2026-04-28 07:38:34'),
+(95, NULL, NULL, NULL, NULL, 68, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_5.pdf', '2026-04-28 07:39:13', '2026-04-28 07:39:13'),
+(100, NULL, NULL, 61, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_10.pdf', '2026-04-28 08:43:46', '2026-04-28 08:43:46'),
+(101, NULL, NULL, 61, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_11.pdf', '2026-04-28 08:44:14', '2026-04-28 08:44:14'),
+(102, NULL, NULL, NULL, 61, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_12.pdf', '2026-04-28 08:44:38', '2026-04-28 08:44:38'),
+(103, NULL, NULL, NULL, 61, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'uploads/klaim_detail/M_01-DOC002_Ebupot_2126_BPA1_2507ZR3EB_13.pdf', '2026-04-28 08:45:04', '2026-04-28 08:45:04');
 
 -- --------------------------------------------------------
 
@@ -277,7 +283,7 @@ INSERT INTO `m_kontrak` (`id`, `id_vessel`, `no_surat_pemenang`, `no_kontrak`, `
 (16, 34, '004/TCP/1/2024', '004/TCP/1/2024', '2024-01-04 00:00:00', '2025-01-04 00:00:00', '55000', '4', '10.2', '1.8', NULL, '150', '0.02', 'NON ACTIVE', 2, '2026-04-03 09:02:34', '2026-04-26 04:10:59'),
 (23, 36, '1', '050/TCP/VI/2025', '2025-06-27 00:00:00', '2027-06-27 00:00:00', '5200.00', '10', '5.52', '5.64', '0.06', '200', '2.28', 'NON ACTIVE', 3, '2026-04-14 10:29:22', '2026-04-27 11:29:59'),
 (24, 34, '004/TCP/1/2026', '004/TCP/1/2026', '2026-01-04 00:00:00', '2027-01-04 00:00:00', '55000', '4', '10.2', '1.8', NULL, '150', '0.02', 'NON ACTIVE', 2, '2026-04-20 18:35:54', '2026-04-26 04:10:59'),
-(25, 40, '1', '1', '2026-04-25 16:03:00', '2027-04-25 16:03:00', '10', '100', '10', '10', '0.07', '10', '10', 'ACTIVE', 3, '2026-04-26 02:06:31', '2026-04-26 02:06:31'),
+(25, 40, '1', '1', '2025-04-25 16:03:00', '2026-04-25 16:03:00', '10', '100', '10', '10', '0.07', '10', '10', 'ACTIVE', 3, '2026-04-26 02:06:31', '2026-04-26 02:06:31'),
 (26, 34, '004/TCP/1/2026', '004/TCP/1/2027', '2028-01-01 00:08:00', '2029-01-01 00:08:00', '55000', '4', '10.2', '1.8', '0.07', '150', '0.02', 'ACTIVE', 2, '2026-04-26 04:10:59', '2026-04-26 04:10:59'),
 (27, 36, '1', '321321', '2027-06-27 00:01:00', '2028-06-27 00:01:00', '5200.00', '10', '5.52', '5.64', '0.07', '200', '2.28', 'ACTIVE', 2, '2026-04-27 11:29:59', '2026-04-27 11:29:59');
 
@@ -443,7 +449,7 @@ CREATE TABLE `personal_access_tokens` (
 INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
 (62, 'App\\Models\\User', 1, 'api-token', '5774ee2c94ed2dd920e5950c97308e08a7591bbe178022d7fb4ebd461dd24af7', '[\"*\"]', '2026-04-26 02:51:27', NULL, '2026-04-26 02:28:00', '2026-04-26 02:51:27'),
 (64, 'App\\Models\\User', 3, 'api-token', '54774e7f04aed2ac0f93ea4be60bf29e2717106ac3e2b1390272695c612595e6', '[\"*\"]', '2026-04-27 09:52:26', NULL, '2026-04-27 09:04:07', '2026-04-27 09:52:26'),
-(68, 'App\\Models\\User', 2, 'api-token', '9fad20212e84fa1d1861cce38bef7149f85c3f291fa8462401e2788e0f7d13ed', '[\"*\"]', '2026-04-28 07:55:10', NULL, '2026-04-28 07:10:40', '2026-04-28 07:55:10');
+(68, 'App\\Models\\User', 2, 'api-token', '9fad20212e84fa1d1861cce38bef7149f85c3f291fa8462401e2788e0f7d13ed', '[\"*\"]', '2026-04-28 18:22:41', NULL, '2026-04-28 07:10:40', '2026-04-28 18:22:41');
 
 -- --------------------------------------------------------
 
@@ -620,8 +626,8 @@ CREATE TABLE `t_klaim` (
 --
 
 INSERT INTO `t_klaim` (`id`, `id_vessel`, `no_klaim_awal`, `tgl_klaim_awal`, `jenis_klaim`, `no_klaim_akhir`, `tgl_klaim_akhir`, `user_id`, `status`, `created_at`, `updated_at`) VALUES
-(61, 34, '10', '2026-04-28 03:10:00', 'OHBOH', 2, 'OPEN', '2026-04-27 13:11:05', '2026-04-27 13:11:05'),
-(62, 34, '126', '2026-04-29 03:11:00', 'SSOB', 2, 'OPEN', '2026-04-27 13:11:30', '2026-04-27 13:11:30');
+(61, 34, '10', '2026-04-28 03:10:00', 'OHBOH', '10', '2026-04-28 22:46:00', 2, 'APPROVE', '2026-04-27 13:11:05', '2026-04-28 10:19:38'),
+(62, 34, '126', '2026-04-29 03:11:00', 'SSOB', NULL, NULL, 2, 'OPEN', '2026-04-27 13:11:30', '2026-04-27 13:11:30');
 
 -- --------------------------------------------------------
 
@@ -650,9 +656,9 @@ CREATE TABLE `t_klaim_detail` (
 --
 
 INSERT INTO `t_klaim_detail` (`id`, `id_klaim`, `id_cable`, `id_off_hire`, `id_redelivery_delivery`, `no_urut`, `no_voyage_gab`, `no_kontrak`, `keterangan`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(68, 61, NULL, 6, NULL, '01', '123', '004/TCP/1/2027', 'tes', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-28 07:48:02'),
-(69, 61, NULL, 7, NULL, '02', '124', '004/TCP/1/2027', NULL, 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-27 13:11:06'),
-(70, 62, 18, '01', 'AL2F8/26001/L', '004/TCP/1/2027', NULL, 'OPEN', 2, '2026-04-27 13:11:30', '2026-04-27 13:11:30');
+(68, 61, NULL, 6, NULL, '01', '123', '004/TCP/1/2027', 'tes', 'APPROVE', 2, '2026-04-27 13:11:06', '2026-04-28 10:19:38'),
+(69, 61, NULL, 7, NULL, '02', '124', '004/TCP/1/2027', 'tes', 'APPROVE', 2, '2026-04-27 13:11:06', '2026-04-28 10:19:38'),
+(70, 62, 18, NULL, NULL, '01', 'AL2F8/26001/L', '004/TCP/1/2027', NULL, 'OPEN', 2, '2026-04-27 13:11:30', '2026-04-27 13:11:30');
 
 -- --------------------------------------------------------
 
@@ -683,12 +689,12 @@ CREATE TABLE `t_klaim_detail_nilai` (
 --
 
 INSERT INTO `t_klaim_detail_nilai` (`id`, `id_klaim_detail`, `sub_jenis`, `currency`, `kurs`, `val_potensi`, `val_klaim_awal`, `val_klaim_akhir`, `val_klaim_akhir_idr`, `no_tagihan_klaim`, `no_tagihan_dipotong`, `status`, `user_id`, `created_at`, `updated_at`) VALUES
-(54, 68, 'OH', 'USD', '16900', '110000', '120000', '', '', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-28 07:47:53'),
-(55, 68, 'BOH', 'IDR', '1', '208362', '250000', '', '', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-28 07:47:53'),
-(56, 69, 'OH', 'USD', NULL, '110000', NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-27 13:11:06'),
-(57, 69, 'BOH', 'IDR', '1', '105028', NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:06', '2026-04-27 13:11:06'),
-(58, 70, 'SS', 'USD', NULL, '10980.902165', NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:30', '2026-04-27 13:11:30'),
-(59, 70, 'OB', 'IDR', '1', '-113836.8', NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:30', '2026-04-27 13:11:30');
+(54, 68, 'OH', 'USD', '16900', '110000', '120000', '120000', '2028000000', '', '', 'APPROVE', 2, '2026-04-27 13:11:06', '2026-04-28 10:19:38'),
+(55, 68, 'BOH', 'IDR', '1', '208362', '250000', '120000', '120000', '', '', 'APPROVE', 2, '2026-04-27 13:11:06', '2026-04-28 10:19:38'),
+(56, 69, 'OH', 'USD', '16900', '110000', '120000', '120000', '2028000000', '', '', 'APPROVE', 2, '2026-04-27 13:11:06', '2026-04-28 10:19:38'),
+(57, 69, 'BOH', 'IDR', '1', '105028', '110000', '120000', '120000', '', '', 'APPROVE', 2, '2026-04-27 13:11:06', '2026-04-28 10:19:38'),
+(58, 70, 'SS', 'USD', NULL, '10980.902165', NULL, NULL, NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:30', '2026-04-27 13:11:30'),
+(59, 70, 'OB', 'IDR', '1', '-113836.8', NULL, NULL, NULL, '', '', 'OPEN', 2, '2026-04-27 13:11:30', '2026-04-27 13:11:30');
 
 -- --------------------------------------------------------
 
@@ -857,6 +863,8 @@ ALTER TABLE `file_upload`
   ADD PRIMARY KEY (`id`),
   ADD KEY `id_kontrak` (`id_kontrak`),
   ADD KEY `id_cable` (`id_cable`),
+  ADD KEY `id_klaim_detail_awal` (`id_klaim_detail_awal`),
+  ADD KEY `id_klaim_detail_akhir` (`id_klaim_detail_akhir`),
   ADD KEY `id_doc_cargo` (`id_doc_cargo`),
   ADD KEY `id_klaim_awal` (`id_klaim_awal`),
   ADD KEY `id_klaim_akhir` (`id_klaim_akhir`),
@@ -1099,7 +1107,7 @@ ALTER TABLE `failed_jobs`
 -- AUTO_INCREMENT for table `file_upload`
 --
 ALTER TABLE `file_upload`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=96;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=104;
 
 --
 -- AUTO_INCREMENT for table `jobs`
