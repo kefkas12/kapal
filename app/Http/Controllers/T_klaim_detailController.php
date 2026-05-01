@@ -232,6 +232,12 @@ class T_klaim_detailController extends Controller
             $tanggalTagihanDipotong = trim((string) ($item['tanggal_tagihan_dipotong'] ?? $request->input('tanggal_tagihan_dipotong') ?? ''));
             $excludeId = $row->exists ? (int) $row->id : null;
 
+            if ($tanggalTagihanKlaim === '') {
+                throw ValidationException::withMessages([
+                    'tanggal_tagihan_klaim' => 'Tanggal Invoice dari Pertamina wajib diisi.',
+                ]);
+            }
+
             if ($noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
                 throw ValidationException::withMessages([
                     'no_tagihan_klaim' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL tidak boleh sama.',
@@ -322,6 +328,12 @@ class T_klaim_detailController extends Controller
             $tanggalTagihanKlaim = trim((string) ($incoming['tanggal_tagihan_klaim'] ?? ''));
             $tanggalTagihanDipotong = trim((string) ($incoming['tanggal_tagihan_dipotong'] ?? ''));
             $excludeId = (int) $row->id;
+
+            if ($tanggalTagihanKlaim === '') {
+                throw ValidationException::withMessages([
+                    'tanggal_tagihan_klaim' => 'Tanggal Invoice dari Pertamina wajib diisi.',
+                ]);
+            }
 
             if ($noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
                 throw ValidationException::withMessages([
