@@ -367,6 +367,7 @@ class T_master_cableController extends Controller
             $t_master_cable->ata_rob = $request->input('ata_rob');
             $t_master_cable->distance = $request->input('distance');
             $t_master_cable->speed = $request->input('speed');
+            $t_master_cable->act_speed = $request->input('act_speed');
             $t_master_cable->est_sail_day = $request->input('est_sail_day');
             $t_master_cable->act_sail_day = $request->input('act_sail_day');
             $t_master_cable->charter_rate_day = $request->input('charter_rate_day');
@@ -460,6 +461,7 @@ class T_master_cableController extends Controller
             $t_master_cable->ata_rob = $request->input('ata_rob');
             $t_master_cable->distance = $request->input('distance');
             $t_master_cable->speed = $request->input('speed');
+            $t_master_cable->act_speed = $request->input('act_speed');
             $t_master_cable->est_sail_day = $request->input('est_sail_day');
             $t_master_cable->act_sail_day = $request->input('act_sail_day');
             $t_master_cable->charter_rate_day = $request->input('charter_rate_day');

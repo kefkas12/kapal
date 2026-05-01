@@ -228,6 +228,8 @@ class T_klaim_detailController extends Controller
             $row->val_klaim_akhir_idr = $item['val_klaim_akhir_idr'] ?? $request->input('val_klaim_akhir_idr');
             $noTagihanKlaim = trim((string) ($item['no_tagihan_klaim'] ?? $request->input('no_tagihan_klaim') ?? ''));
             $noTagihanDipotong = trim((string) ($item['no_tagihan_dipotong'] ?? $request->input('no_tagihan_dipotong') ?? ''));
+            $tanggalTagihanKlaim = trim((string) ($item['tanggal_tagihan_klaim'] ?? $request->input('tanggal_tagihan_klaim') ?? ''));
+            $tanggalTagihanDipotong = trim((string) ($item['tanggal_tagihan_dipotong'] ?? $request->input('tanggal_tagihan_dipotong') ?? ''));
             $excludeId = $row->exists ? (int) $row->id : null;
 
             if ($noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
@@ -263,6 +265,8 @@ class T_klaim_detailController extends Controller
 
             $row->no_tagihan_klaim = $noTagihanKlaim;
             $row->no_tagihan_dipotong = $noTagihanDipotong;
+            $row->tanggal_tagihan_klaim = $tanggalTagihanKlaim !== '' ? $tanggalTagihanKlaim : null;
+            $row->tanggal_tagihan_dipotong = $tanggalTagihanDipotong !== '' ? $tanggalTagihanDipotong : null;
             $row->status = 'OPEN';
             $row->user_id = Auth::id();
             $row->save();
@@ -315,6 +319,8 @@ class T_klaim_detailController extends Controller
 
             $noTagihanKlaim = trim((string) ($incoming['no_tagihan_klaim'] ?? ''));
             $noTagihanDipotong = trim((string) ($incoming['no_tagihan_dipotong'] ?? ''));
+            $tanggalTagihanKlaim = trim((string) ($incoming['tanggal_tagihan_klaim'] ?? ''));
+            $tanggalTagihanDipotong = trim((string) ($incoming['tanggal_tagihan_dipotong'] ?? ''));
             $excludeId = (int) $row->id;
 
             if ($noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
@@ -350,6 +356,8 @@ class T_klaim_detailController extends Controller
 
             $row->no_tagihan_klaim = $noTagihanKlaim;
             $row->no_tagihan_dipotong = $noTagihanDipotong;
+            $row->tanggal_tagihan_klaim = $tanggalTagihanKlaim !== '' ? $tanggalTagihanKlaim : null;
+            $row->tanggal_tagihan_dipotong = $tanggalTagihanDipotong !== '' ? $tanggalTagihanDipotong : null;
             $row->user_id = Auth::id();
             $row->save();
         }
@@ -503,6 +511,8 @@ class T_klaim_detailController extends Controller
             $detail->val_klaim_akhir_idr = $first->val_klaim_akhir_idr ?? null;
             $detail->no_tagihan_klaim = $first->no_tagihan_klaim ?? null;
             $detail->no_tagihan_dipotong = $first->no_tagihan_dipotong ?? null;
+            $detail->tanggal_tagihan_klaim = $first->tanggal_tagihan_klaim ?? null;
+            $detail->tanggal_tagihan_dipotong = $first->tanggal_tagihan_dipotong ?? null;
         }
 
         return $details;
