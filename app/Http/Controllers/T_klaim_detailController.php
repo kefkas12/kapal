@@ -809,6 +809,7 @@ class T_klaim_detailController extends Controller
 
         $sortMap = [
             'id' => 't_klaim_detail.id',
+            'id_nilai' => 'nilai.id',
             'nama_kapal' => 'm_vessel.nama_vessel',
             'no_invoice' => 'nilai.no_tagihan_dipotong',
             'no_surat' => 'nilai.no_tagihan_klaim',
@@ -816,6 +817,7 @@ class T_klaim_detailController extends Controller
             'currency' => 'nilai.currency',
             'nominal' => 'nilai.val_klaim_akhir',
             'tgl_invoice' => 't_klaim_detail.updated_at',
+            'tgl_invoice_display' => 't_klaim_detail.updated_at',
         ];
         $sortColumn = $sortMap[$sortBy] ?? $sortMap['nama_kapal'];
 
@@ -826,6 +828,7 @@ class T_klaim_detailController extends Controller
             ->whereRaw('UPPER(COALESCE(t_klaim_detail.status, "")) = ?', ['APPROVE'])
             ->whereRaw('UPPER(COALESCE(nilai.status, "")) = ?', ['APPROVE'])
             ->select([
+                'nilai.id as id_nilai',
                 't_klaim_detail.id as id_klaim_detail',
                 't_klaim.id as id_klaim',
                 'm_vessel.nama_vessel as nama_kapal',
