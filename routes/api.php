@@ -31,6 +31,7 @@ Route::controller(\App\Http\Controllers\File_uploadController::class)->prefix('f
 Route::middleware('auth:sanctum')->group(function () {
     Route::controller(\App\Http\Controllers\File_uploadController::class)->prefix('file_upload')->group(function () {
         Route::get('/pdf-by-section', 'pdfBySection');
+        Route::get('/pdf-bulk-download', 'bulkDownload');
     });
 
     Route::get('/me', function (Request $request) {
