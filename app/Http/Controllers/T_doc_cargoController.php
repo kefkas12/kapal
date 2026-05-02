@@ -238,6 +238,12 @@ class T_doc_cargoController extends Controller
             $query->where('t_doc_cargo.id_cable', $idCable);
         }
 
+        $idVessel = $request->input('id_vessel');
+        if (!is_null($idVessel) && $idVessel !== '') {
+            // t_doc_cargo does not store vessel directly; filter through cable relation.
+            $query->where('t_master_cable.id_vessel', $idVessel);
+        }
+
         $status = $request->input('status');
         if (!is_null($status) && $status !== '') {
             $query->where('t_doc_cargo.status', $status);
