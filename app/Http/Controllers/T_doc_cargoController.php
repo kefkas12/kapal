@@ -243,6 +243,38 @@ class T_doc_cargoController extends Controller
             $query->where('t_doc_cargo.status', $status);
         }
 
+        $availableForKlaim = $request->boolean('available_for_klaim', false);
+        if ($availableForKlaim) {
+            $excludeKlaimId = $request->input('exclude_klaim_id');
+            $jenisKlaim = trim((string) $request->input('jenis_klaim', ''));
+            $hasIdDocCargoColumn = Schema::hasColumn('t_klaim_detail', 'id_doc_cargo');
+
+            $query->whereNotExists(function ($sub) use ($excludeKlaimId, $jenisKlaim, $hasIdDocCargoColumn) {
+                $sub->select(DB::raw(1))
+                    ->from('t_klaim_detail')
+                    ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
+                    ->where(function ($joinCond) use ($hasIdDocCargoColumn) {
+                        if ($hasIdDocCargoColumn) {
+                            $joinCond->whereColumn('t_klaim_detail.id_doc_cargo', 't_doc_cargo.id')
+                                ->orWhere(function ($legacy) {
+                                    $legacy->whereNull('t_klaim_detail.id_doc_cargo')
+                                        ->whereColumn('t_klaim_detail.id_cable', 't_doc_cargo.id_cable');
+                                });
+                        } else {
+                            // Legacy schema in kapal.sql: t_klaim_detail does not have id_doc_cargo.
+                            $joinCond->whereColumn('t_klaim_detail.id_cable', 't_doc_cargo.id_cable');
+                        }
+                    });
+
+                if (!is_null($excludeKlaimId) && $excludeKlaimId !== '') {
+                    $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
+                }
+                if ($jenisKlaim !== '') {
+                    $sub->where('t_klaim.jenis_klaim', $jenisKlaim);
+                }
+            });
+        }
+
         $allowedSort = [
             'id' => 't_doc_cargo.id',
             'no_voyage_gab' => 't_doc_cargo.no_voyage_gab',

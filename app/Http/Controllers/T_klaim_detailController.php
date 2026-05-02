@@ -151,6 +151,18 @@ class T_klaim_detailController extends Controller
         $jenisKlaim = strtoupper((string) $klaim?->jenis_klaim);
         $subJenisDefaults = $this->getSubJenisByJenisKlaim($klaim?->jenis_klaim);
         $nilaiItems = $this->parseNilaiItems($request);
+        $hasInvoicePayload =
+            $request->filled('no_tagihan_klaim')
+            || $request->filled('no_tagihan_dipotong')
+            || $request->filled('tanggal_tagihan_klaim')
+            || $request->filled('tanggal_tagihan_dipotong')
+            || collect($nilaiItems)->contains(function ($item) {
+                return trim((string) ($item['no_tagihan_klaim'] ?? '')) !== ''
+                    || trim((string) ($item['no_tagihan_dipotong'] ?? '')) !== ''
+                    || trim((string) ($item['tanggal_tagihan_klaim'] ?? '')) !== ''
+                    || trim((string) ($item['tanggal_tagihan_dipotong'] ?? '')) !== '';
+            });
+        $requireInvoiceFields = !$this->isKlaimAwal($klaim) && $hasInvoicePayload;
         $idCable = $request->input('id_cable');
         $idOffHire = $request->input('id_off_hire');
         $idRedeliveryDelivery = $request->input('id_redelivery_delivery');
@@ -230,25 +242,39 @@ class T_klaim_detailController extends Controller
             $noTagihanDipotong = trim((string) ($item['no_tagihan_dipotong'] ?? $request->input('no_tagihan_dipotong') ?? ''));
             $tanggalTagihanKlaim = trim((string) ($item['tanggal_tagihan_klaim'] ?? $request->input('tanggal_tagihan_klaim') ?? ''));
             $tanggalTagihanDipotong = trim((string) ($item['tanggal_tagihan_dipotong'] ?? $request->input('tanggal_tagihan_dipotong') ?? ''));
+            if ($row->exists) {
+                if ($noTagihanKlaim === '') {
+                    $noTagihanKlaim = trim((string) ($row->no_tagihan_klaim ?? ''));
+                }
+                if ($noTagihanDipotong === '') {
+                    $noTagihanDipotong = trim((string) ($row->no_tagihan_dipotong ?? ''));
+                }
+                if ($tanggalTagihanKlaim === '') {
+                    $tanggalTagihanKlaim = trim((string) ($row->tanggal_tagihan_klaim ?? ''));
+                }
+                if ($tanggalTagihanDipotong === '') {
+                    $tanggalTagihanDipotong = trim((string) ($row->tanggal_tagihan_dipotong ?? ''));
+                }
+            }
             $excludeId = $row->exists ? (int) $row->id : null;
 
-            if ($tanggalTagihanKlaim === '') {
+            if ($requireInvoiceFields && $tanggalTagihanKlaim === '') {
                 throw ValidationException::withMessages([
                     'tanggal_tagihan_klaim' => 'Tanggal Invoice dari Pertamina wajib diisi.',
                 ]);
             }
 
-            if ($noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
+            if ($requireInvoiceFields && $noTagihanKlaim !== '' && $noTagihanDipotong !== '' && $noTagihanKlaim === $noTagihanDipotong) {
                 throw ValidationException::withMessages([
                     'no_tagihan_klaim' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL tidak boleh sama.',
                     'no_tagihan_dipotong' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL tidak boleh sama.',
                 ]);
             }
 
-            foreach ([
+            foreach ($requireInvoiceFields ? [
                 ['field' => 'no_tagihan_klaim', 'label' => 'Nomor Invoice dari Pertamina', 'value' => $noTagihanKlaim],
                 ['field' => 'no_tagihan_dipotong', 'label' => 'Nomor Invoice dari PT OSL', 'value' => $noTagihanDipotong],
-            ] as $tagihan) {
+            ] : [] as $tagihan) {
                 $value = $tagihan['value'];
                 if ($value === '') {
                     continue;
@@ -694,6 +720,9 @@ class T_klaim_detailController extends Controller
 
             $t_klaim_detail = new T_klaim_detail();
             $t_klaim_detail->id_klaim = $idKlaim;
+            if (Schema::hasColumn('t_klaim_detail', 'id_doc_cargo')) {
+                $t_klaim_detail->id_doc_cargo = $request->input('id_doc_cargo');
+            }
             $t_klaim_detail->id_cable = $request->input('id_cable');
             $t_klaim_detail->id_off_hire = $request->input('id_off_hire');
             $t_klaim_detail->id_redelivery_delivery = $request->input('id_redelivery_delivery');
@@ -743,6 +772,9 @@ class T_klaim_detailController extends Controller
                 ]);
             }
             $t_klaim_detail->id_klaim = $request->input('id_klaim');
+            if (Schema::hasColumn('t_klaim_detail', 'id_doc_cargo')) {
+                $t_klaim_detail->id_doc_cargo = $request->input('id_doc_cargo');
+            }
             $t_klaim_detail->id_cable = $request->input('id_cable');
             $t_klaim_detail->id_off_hire = $request->input('id_off_hire');
             $t_klaim_detail->id_redelivery_delivery = $request->input('id_redelivery_delivery');
@@ -827,6 +859,8 @@ class T_klaim_detailController extends Controller
             ->join('t_klaim_detail_nilai as nilai', 'nilai.id_klaim_detail', '=', 't_klaim_detail.id')
             ->whereRaw('UPPER(COALESCE(t_klaim_detail.status, "")) = ?', ['APPROVE'])
             ->whereRaw('UPPER(COALESCE(nilai.status, "")) = ?', ['APPROVE'])
+            ->whereRaw('TRIM(COALESCE(nilai.no_tagihan_klaim, "")) <> ""')
+            ->whereRaw('TRIM(COALESCE(nilai.no_tagihan_dipotong, "")) <> ""')
             ->select([
                 'nilai.id as id_nilai',
                 't_klaim_detail.id as id_klaim_detail',
@@ -893,6 +927,14 @@ class T_klaim_detailController extends Controller
             $updatedDetails = T_klaim_detail::query()
                 ->whereIn('id', $ids->all())
                 ->whereRaw('UPPER(COALESCE(status, "")) = ?', ['APPROVE'])
+                ->whereExists(function ($q) {
+                    $q->select(DB::raw(1))
+                        ->from('t_klaim_detail_nilai as nilai')
+                        ->whereColumn('nilai.id_klaim_detail', 't_klaim_detail.id')
+                        ->whereRaw('UPPER(COALESCE(nilai.status, "")) = ?', ['APPROVE'])
+                        ->whereRaw('TRIM(COALESCE(nilai.no_tagihan_klaim, "")) <> ""')
+                        ->whereRaw('TRIM(COALESCE(nilai.no_tagihan_dipotong, "")) <> ""');
+                })
                 ->update([
                     'status' => 'CLOSE',
                     'user_id' => Auth::id(),
@@ -902,6 +944,8 @@ class T_klaim_detailController extends Controller
             DB::table('t_klaim_detail_nilai')
                 ->whereIn('id_klaim_detail', $ids->all())
                 ->whereRaw('UPPER(COALESCE(status, "")) = ?', ['APPROVE'])
+                ->whereRaw('TRIM(COALESCE(no_tagihan_klaim, "")) <> ""')
+                ->whereRaw('TRIM(COALESCE(no_tagihan_dipotong, "")) <> ""')
                 ->update([
                     'status' => 'CLOSE',
                     'user_id' => Auth::id(),
