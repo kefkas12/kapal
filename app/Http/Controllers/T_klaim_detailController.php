@@ -844,12 +844,15 @@ class T_klaim_detailController extends Controller
             'id_nilai' => 'nilai.id',
             'nama_kapal' => 'm_vessel.nama_vessel',
             'no_invoice' => 'nilai.no_tagihan_dipotong',
+            'no_klaim_akhir' => 't_klaim.no_klaim_akhir',
             'no_surat' => 'nilai.no_tagihan_klaim',
             'keterangan_potongan' => 't_klaim_detail.keterangan',
             'currency' => 'nilai.currency',
             'nominal' => 'nilai.val_klaim_akhir',
             'tgl_invoice' => 't_klaim_detail.updated_at',
             'tgl_invoice_display' => 't_klaim_detail.updated_at',
+            'tgl_inv_pertamina' => 'nilai.tanggal_tagihan_klaim',
+            'tgl_inv_pertamina_display' => 'nilai.tanggal_tagihan_klaim',
         ];
         $sortColumn = $sortMap[$sortBy] ?? $sortMap['nama_kapal'];
 
@@ -859,8 +862,8 @@ class T_klaim_detailController extends Controller
             ->join('t_klaim_detail_nilai as nilai', 'nilai.id_klaim_detail', '=', 't_klaim_detail.id')
             ->whereRaw('UPPER(COALESCE(t_klaim_detail.status, "")) = ?', ['APPROVE'])
             ->whereRaw('UPPER(COALESCE(nilai.status, "")) = ?', ['APPROVE'])
-            ->whereRaw('TRIM(COALESCE(nilai.no_tagihan_klaim, "")) <> ""')
-            ->whereRaw('TRIM(COALESCE(nilai.no_tagihan_dipotong, "")) <> ""')
+            ->whereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_klaim, ""))) NOT IN ("", "-")')
+            ->whereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_dipotong, ""))) NOT IN ("", "-")')
             ->select([
                 'nilai.id as id_nilai',
                 't_klaim_detail.id as id_klaim_detail',
@@ -868,7 +871,9 @@ class T_klaim_detailController extends Controller
                 'm_vessel.nama_vessel as nama_kapal',
                 'nilai.no_tagihan_dipotong as no_invoice',
                 't_klaim_detail.keterangan as keterangan_potongan',
+                't_klaim.no_klaim_akhir as no_klaim_akhir',
                 'nilai.no_tagihan_klaim as no_surat',
+                'nilai.tanggal_tagihan_klaim as tgl_inv_pertamina',
                 'nilai.val_klaim_akhir as nominal',
                 'nilai.currency as currency',
                 't_klaim_detail.updated_at as tgl_invoice',
@@ -879,18 +884,31 @@ class T_klaim_detailController extends Controller
                 $q->where('m_vessel.nama_vessel', 'like', "%{$search}%")
                     ->orWhere('nilai.no_tagihan_dipotong', 'like', "%{$search}%")
                     ->orWhere('nilai.no_tagihan_klaim', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.no_klaim_akhir', 'like', "%{$search}%")
                     ->orWhere('t_klaim_detail.keterangan', 'like', "%{$search}%");
             });
         }
 
+        if ($sortBy === 'currency') {
+            // Force USD first, then the rest (e.g. IDR), while respecting requested direction.
+            $query->orderByRaw(
+                "CASE WHEN UPPER(COALESCE(nilai.currency, '')) = 'USD' THEN 0 ELSE 1 END " . ($sortDir === 'desc' ? 'DESC' : 'ASC')
+            );
+            $query->orderBy('nilai.currency', $sortDir);
+        } else {
+            $query->orderBy($sortColumn, $sortDir);
+        }
+
         $paginator = $query
-            ->orderBy($sortColumn, $sortDir)
             ->orderBy('t_klaim_detail.id', 'asc')
             ->paginate($perPage, ['*'], 'page', $page);
 
         $rows = collect($paginator->items())->map(function ($row) {
             $row->tgl_invoice_display = $row->tgl_invoice
                 ? Carbon::parse($row->tgl_invoice)->format('Y-m-d')
+                : null;
+            $row->tgl_inv_pertamina_display = $row->tgl_inv_pertamina
+                ? Carbon::parse($row->tgl_inv_pertamina)->format('Y-m-d')
                 : null;
             return $row;
         })->values();
@@ -932,8 +950,8 @@ class T_klaim_detailController extends Controller
                         ->from('t_klaim_detail_nilai as nilai')
                         ->whereColumn('nilai.id_klaim_detail', 't_klaim_detail.id')
                         ->whereRaw('UPPER(COALESCE(nilai.status, "")) = ?', ['APPROVE'])
-                        ->whereRaw('TRIM(COALESCE(nilai.no_tagihan_klaim, "")) <> ""')
-                        ->whereRaw('TRIM(COALESCE(nilai.no_tagihan_dipotong, "")) <> ""');
+                        ->whereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_klaim, ""))) NOT IN ("", "-")')
+                        ->whereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_dipotong, ""))) NOT IN ("", "-")');
                 })
                 ->update([
                     'status' => 'CLOSE',
@@ -944,8 +962,8 @@ class T_klaim_detailController extends Controller
             DB::table('t_klaim_detail_nilai')
                 ->whereIn('id_klaim_detail', $ids->all())
                 ->whereRaw('UPPER(COALESCE(status, "")) = ?', ['APPROVE'])
-                ->whereRaw('TRIM(COALESCE(no_tagihan_klaim, "")) <> ""')
-                ->whereRaw('TRIM(COALESCE(no_tagihan_dipotong, "")) <> ""')
+                ->whereRaw('UPPER(TRIM(COALESCE(no_tagihan_klaim, ""))) NOT IN ("", "-")')
+                ->whereRaw('UPPER(TRIM(COALESCE(no_tagihan_dipotong, ""))) NOT IN ("", "-")')
                 ->update([
                     'status' => 'CLOSE',
                     'user_id' => Auth::id(),
