@@ -93,8 +93,8 @@ class M_vesselController extends Controller
                 'nama_vessel' => 'required|string',
                 'jenis_vessel' => 'required|string',
             ], [
-                'kode_vessel.required' => 'Kode vessel wajib diisi.',
-                'kode_vessel.unique' => 'Kode vessel sudah digunakan.',
+                'kode_vessel.required' => 'Kode Vessel wajib diisi.',
+                'kode_vessel.unique' => 'Kode Vessel sudah digunakan.',
                 'nama_vessel.required' => 'Nama vessel wajib diisi.',
                 'jenis_vessel.required' => 'Jenis vessel wajib diisi.',
             ]);
@@ -129,8 +129,8 @@ class M_vesselController extends Controller
                 'nama_vessel' => 'required|string',
                 'jenis_vessel' => 'required|string',
             ], [
-                'kode_vessel.required' => 'Kode vessel wajib diisi.',
-                'kode_vessel.unique' => 'Kode vessel sudah digunakan.',
+                'kode_vessel.required' => 'Kode Vessel wajib diisi.',
+                'kode_vessel.unique' => 'Kode Vessel sudah digunakan.',
                 'nama_vessel.required' => 'Nama vessel wajib diisi.',
                 'jenis_vessel.required' => 'Jenis vessel wajib diisi.',
             ]);

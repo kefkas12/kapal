@@ -495,8 +495,8 @@ class T_redelivery_deliveryController extends Controller
             }
             $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
             $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
-            $this->assertRequiredField($request, 'date_time_redelivery', 'Tanggal dan Waktu Redelivery');
-            $this->assertRequiredField($request, 'date_time_delivery', 'Tanggal dan Waktu Delivery');
+            $this->assertRequiredField($request, 'date_time_redelivery', 'Tgl/Jam Redelivery');
+            $this->assertRequiredField($request, 'date_time_delivery', 'Tgl/Jam Delivery');
             $this->assertKontrakSelection($request);
             $this->assertKontrakBusinessRules($request, null);
             $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
@@ -550,8 +550,8 @@ class T_redelivery_deliveryController extends Controller
             }
             $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
             $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
-            $this->assertRequiredField($request, 'date_time_redelivery', 'Tanggal dan Waktu Redelivery');
-            $this->assertRequiredField($request, 'date_time_delivery', 'Tanggal dan Waktu Delivery');
+            $this->assertRequiredField($request, 'date_time_redelivery', 'Tgl/Jam Redelivery');
+            $this->assertRequiredField($request, 'date_time_delivery', 'Tgl/Jam Delivery');
             $this->assertKontrakSelection($request);
             $this->assertKontrakBusinessRules($request, (int) $id);
             $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
