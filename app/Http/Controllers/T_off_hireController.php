@@ -395,6 +395,16 @@ class T_off_hireController extends Controller
             }
             $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
             $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
+            if (trim((string) $request->input('date_time_off_hire', '')) === '') {
+                throw ValidationException::withMessages([
+                    'date_time_off_hire' => 'Tgl/Jam Off Hire wajib di isi.',
+                ]);
+            }
+            if (trim((string) $request->input('date_time_on_hire', '')) === '') {
+                throw ValidationException::withMessages([
+                    'date_time_on_hire' => 'Tgl/Jam On Hire wajib di isi.',
+                ]);
+            }
             $this->assertNumericField($request, 'bunker_off_hire', 'Bunker Off Hire (MT)');
             $this->assertNumericField($request, 'bunker_on_hire', 'Bunker On Hire (MT)');
             $this->assertOnHireAfterOffHire($request);
@@ -445,6 +455,16 @@ class T_off_hireController extends Controller
             }
             $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
             $this->assertRequiredField($request, 'no_sertifikat', 'No Sertifikat');
+            if (trim((string) $request->input('date_time_off_hire', '')) === '') {
+                throw ValidationException::withMessages([
+                    'date_time_off_hire' => 'Tgl/Jam Off Hire wajib di isi.',
+                ]);
+            }
+            if (trim((string) $request->input('date_time_on_hire', '')) === '') {
+                throw ValidationException::withMessages([
+                    'date_time_on_hire' => 'Tgl/Jam On Hire wajib di isi.',
+                ]);
+            }
             $this->assertNumericField($request, 'bunker_off_hire', 'Bunker Off Hire (MT)');
             $this->assertNumericField($request, 'bunker_on_hire', 'Bunker On Hire (MT)');
             $this->assertOnHireAfterOffHire($request);
