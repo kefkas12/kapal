@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\File_upload;
 use App\Models\M_grade;
+use App\Models\Settings;
 use App\Models\T_doc_cargo;
 use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
@@ -123,6 +124,18 @@ class T_doc_cargoController extends Controller
             $priceBbl = $grade?->price_bbl;
         }
 
+        $transportLossThresholdRaw = Settings::query()
+            ->where('nama', 'variable est_claim_transport')
+            ->value('value');
+        $transportLossThreshold = $this->toNumber($transportLossThresholdRaw);
+        if ($transportLossThresholdRaw === null || $transportLossThresholdRaw === '') {
+            $transportLossThreshold = -0.07;
+        }
+
+        $ratioR2 = $this->toNumber($request->input('ratio_r2'));
+        $estClaimTransportInput = $request->input('est_claim_transport');
+        $estClaimTransport = $ratioR2 < $transportLossThreshold ? $estClaimTransportInput : 0;
+
         $payload = [
             'id_cable' => $idCable,
             'id_grade' => $idGrade,
@@ -144,7 +157,7 @@ class T_doc_cargoController extends Controller
             'overdue_discharge' => $request->input('overdue_discharge'),
             'est_claim_pumping' => $request->input('est_claim_pumping'),
             'est_claim_bunker' => $request->input('est_claim_bunker'),
-            'est_claim_transport' => $request->input('est_claim_transport'),
+            'est_claim_transport' => $estClaimTransport,
             'status' => 'OPEN',
             'user_id' => Auth::id(),
             'updated_at' => now(),
