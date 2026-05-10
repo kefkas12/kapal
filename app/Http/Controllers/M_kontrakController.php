@@ -47,6 +47,7 @@ class M_kontrakController extends Controller
                     ->orWhere('tgl_awal_kontrak', 'like', "%{$search}%")
                     ->orWhere('tgl_akhir_kontrak', 'like', "%{$search}%")
                     ->orWhere('charter_rate', 'like', "%{$search}%")
+                    ->orWhere('period', 'like', "%{$search}%")
                     ->orWhere('speed', 'like', "%{$search}%")
                     ->orWhere('me_ballast', 'like', "%{$search}%")
                     ->orWhere('me_laden', 'like', "%{$search}%")
@@ -67,7 +68,7 @@ class M_kontrakController extends Controller
             $query->where('id_vessel', $idVessel);
         }
 
-        $allowedSort = ['id', 'no_surat_pemenang', 'no_kontrak', 'tgl_awal_kontrak', 'tgl_akhir_kontrak', 'charter_rate', 'speed', 'me_ballast', 'me_laden', 'toleransi_transport_loss', 'pumping_rate', 'discharge', 'status', 'created_at'];
+        $allowedSort = ['id', 'no_surat_pemenang', 'no_kontrak', 'tgl_awal_kontrak', 'tgl_akhir_kontrak', 'charter_rate', 'period', 'speed', 'me_ballast', 'me_laden', 'toleransi_transport_loss', 'pumping_rate', 'discharge', 'status', 'created_at'];
         $sortBy = $request->input('sort_by', 'id');
         if (!in_array($sortBy, $allowedSort, true)) {
             $sortBy = 'id';
@@ -185,6 +186,7 @@ class M_kontrakController extends Controller
             $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
             $m_kontrak->tgl_akhir_kontrak = $request->input('tgl_akhir_kontrak');
             $m_kontrak->charter_rate = $request->input('charter_rate');
+            $m_kontrak->period = $request->input('period');
             $m_kontrak->speed = $request->input('speed');
             $m_kontrak->me_ballast = $request->input('me_ballast');
             $m_kontrak->me_laden = $request->input('me_laden');
@@ -257,6 +259,7 @@ class M_kontrakController extends Controller
             $m_kontrak->tgl_awal_kontrak = $request->input('tgl_awal_kontrak');
             $m_kontrak->tgl_akhir_kontrak = $request->input('tgl_akhir_kontrak');
             $m_kontrak->charter_rate = $request->input('charter_rate');
+            $m_kontrak->period = $request->input('period');
             $m_kontrak->speed = $request->input('speed');
             $m_kontrak->me_ballast = $request->input('me_ballast');
             $m_kontrak->me_laden = $request->input('me_laden');
