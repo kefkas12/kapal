@@ -6,9 +6,11 @@ use App\Models\T_klaim;
 use App\Models\T_klaim_detail;
 use App\Models\T_klaim_detail_nilai;
 use App\Models\File_upload;
+use App\Helpers\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class T_klaimController extends Controller
 {
@@ -48,6 +50,12 @@ class T_klaimController extends Controller
         $jenisKlaim = $request->input('jenis_klaim');
         if (!is_null($jenisKlaim) && $jenisKlaim !== '') {
             $query->where('t_klaim.jenis_klaim', $jenisKlaim);
+        }
+
+        $requireFinalKlaim = $request->boolean('require_final_klaim', false);
+        if ($requireFinalKlaim) {
+            $query->whereRaw('UPPER(TRIM(COALESCE(t_klaim.no_klaim_akhir, ""))) NOT IN ("", "-")')
+                ->whereRaw('TRIM(COALESCE(t_klaim.tgl_klaim_akhir, "")) <> ""');
         }
 
         $allowedSort = [
@@ -95,11 +103,17 @@ class T_klaimController extends Controller
         $id = $request->route('id');
 
         $data = T_klaim::where('id', $id)->first();
+        $filesAwal = File_upload::where('id_klaim_awal', $id)->orderBy('id', 'asc')->get();
+        $filesAkhir = File_upload::where('id_klaim_akhir', $id)->orderBy('id', 'asc')->get();
+        $files = $filesAwal->concat($filesAkhir)->unique('id')->values();
         
         return response()->json([
             'success' => true,
             'message' => 'Data details T_klaim berhasil diambil',
-            'data'    => $data
+            'data'    => $data,
+            'files' => $files,
+            'files_awal' => $filesAwal->values(),
+            'files_akhir' => $filesAkhir->values(),
         ]);
     }
 
@@ -117,6 +131,8 @@ class T_klaimController extends Controller
             $t_klaim->status = 'OPEN';
             $t_klaim->user_id = Auth::id();
             $t_klaim->save();
+            $this->validateIncomingUploadFilesArePdf($request);
+            $this->storeKlaimFiles($request, (int) $t_klaim->id);
             DB::commit();
 
             return response()->json([
@@ -158,6 +174,8 @@ class T_klaimController extends Controller
             $t_klaim->tgl_klaim_akhir = $request->input('tgl_klaim_akhir');
             $t_klaim->user_id = Auth::id();
             $t_klaim->save();
+            $this->validateIncomingUploadFilesArePdf($request);
+            $this->storeKlaimFiles($request, (int) $t_klaim->id);
             DB::commit();
 
             return response()->json([
@@ -318,6 +336,48 @@ class T_klaimController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
+        }
+    }
+
+    private function validateIncomingUploadFilesArePdf(Request $request): void
+    {
+        $files = $request->file('files', []);
+        if (!is_array($files)) {
+            $files = [$files];
+        }
+
+        foreach ($files as $file) {
+            if (!$file) continue;
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            if ($ext !== 'pdf') {
+                throw ValidationException::withMessages([
+                    'files' => 'File upload hanya boleh PDF.'
+                ]);
+            }
+        }
+    }
+
+    private function storeKlaimFiles(Request $request, int $klaimId): void
+    {
+        $incomingFiles = $request->file('files', []);
+        if (!is_array($incomingFiles)) {
+            $incomingFiles = $incomingFiles ? [$incomingFiles] : [];
+        }
+        if (empty($incomingFiles)) return;
+
+        $hasFinalKlaim = trim((string) $request->input('no_klaim_akhir', '')) !== ''
+            && trim((string) $request->input('tgl_klaim_akhir', '')) !== '';
+        $column = $hasFinalKlaim ? 'id_klaim_akhir' : 'id_klaim_awal';
+
+        foreach ($incomingFiles as $file) {
+            if (!$file) continue;
+            $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim');
+            $upload = new File_upload();
+            $upload->id_klaim_awal = null;
+            $upload->id_klaim_akhir = null;
+            $upload->{$column} = $klaimId;
+            $upload->nama_file = $path;
+            $upload->save();
         }
     }
 }

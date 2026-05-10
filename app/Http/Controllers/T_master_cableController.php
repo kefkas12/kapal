@@ -13,6 +13,21 @@ use Illuminate\Validation\ValidationException;
 
 class T_master_cableController extends Controller
 {
+    private function validateCableUploadExtensions(array $files): void
+    {
+        foreach ($files as $file) {
+            if (!$file) {
+                continue;
+            }
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            if (!in_array($ext, ['pdf', 'xls', 'xlsx'], true)) {
+                throw ValidationException::withMessages([
+                    'files' => 'File cable hanya boleh PDF/XLS/XLSX.',
+                ]);
+            }
+        }
+    }
+
     private function parseNoVoyageBase(string $raw): ?string
     {
         $trimmed = trim($raw);
@@ -309,12 +324,12 @@ class T_master_cableController extends Controller
             DB::beginTransaction();
             $request->validate([
                 'files' => 'required|array|min:1',
-                'files.*' => 'file|mimes:pdf|max:51200',
+                'files.*' => 'file|max:51200',
             ], [
                 'files.required' => 'File upload wajib diisi.',
                 'files.min' => 'Minimal 1 file harus diupload.',
-                'files.*.mimes' => 'File cable hanya boleh PDF.',
             ]);
+            $this->validateCableUploadExtensions((array) $request->file('files', []));
 
             $idVessel = $request->input('id_vessel');
             $atdTimeBaru = $request->input('atd_time');
@@ -422,10 +437,9 @@ class T_master_cableController extends Controller
             DB::beginTransaction();
             $request->validate([
                 'files' => 'nullable|array',
-                'files.*' => 'file|mimes:pdf|max:51200',
-            ], [
-                'files.*.mimes' => 'File cable hanya boleh PDF.',
+                'files.*' => 'file|max:51200',
             ]);
+            $this->validateCableUploadExtensions((array) $request->file('files', []));
 
             $incomingFiles = array_filter((array) $request->file('files', []));
             $hasExistingFiles = File_upload::where('id_cable', $id)->exists();

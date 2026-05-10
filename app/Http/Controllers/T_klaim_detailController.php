@@ -711,12 +711,6 @@ class T_klaim_detailController extends Controller
             DB::beginTransaction();
             $this->validateIncomingUploadFilesArePdf($request);
             $idKlaim = (int) $request->input('id_klaim');
-            $klaim = $idKlaim > 0 ? T_klaim::where('id', $idKlaim)->first() : null;
-            $shouldRequireFiles = $idKlaim > 0 && !$this->isKlaimAwal($klaim);
-
-            if ($shouldRequireFiles) {
-                $this->validateRequiredFilesOnCreate($request, $idKlaim);
-            }
 
             $t_klaim_detail = new T_klaim_detail();
             $t_klaim_detail->id_klaim = $idKlaim;
@@ -735,9 +729,6 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->save();
 
             $this->syncNilaiRows($t_klaim_detail->id, (int) $t_klaim_detail->id_klaim, $request);
-            if ($shouldRequireFiles) {
-                $this->validateRequiredFilesOnEdit($request, (int) $t_klaim_detail->id);
-            }
             $this->storeFilesPerNilai($request, (int) $t_klaim_detail->id);
 
             DB::commit();
@@ -862,6 +853,8 @@ class T_klaim_detailController extends Controller
             ->join('t_klaim_detail_nilai as nilai', 'nilai.id_klaim_detail', '=', 't_klaim_detail.id')
             ->whereRaw('UPPER(COALESCE(t_klaim_detail.status, "")) = ?', ['APPROVE'])
             ->whereRaw('UPPER(COALESCE(nilai.status, "")) = ?', ['APPROVE'])
+            ->whereRaw('UPPER(TRIM(COALESCE(t_klaim.no_klaim_akhir, ""))) NOT IN ("", "-")')
+            ->whereRaw('TRIM(COALESCE(t_klaim.tgl_klaim_akhir, "")) <> ""')
             ->whereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_klaim, ""))) NOT IN ("", "-")')
             ->whereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_dipotong, ""))) NOT IN ("", "-")')
             ->select([
