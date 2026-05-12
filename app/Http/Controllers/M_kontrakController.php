@@ -6,6 +6,7 @@ use App\Models\M_kontrak;
 use App\Models\File_upload;
 use App\Models\Settings;
 use App\Support\FileUploadHelper;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -171,7 +172,12 @@ class M_kontrakController extends Controller
                     ->orderByDesc('id')
                     ->first();
 
-                if ($lastKontrak && strtotime($tglAwalBaru) <= strtotime((string) $lastKontrak->tgl_akhir_kontrak)) {
+                if ($lastKontrak) {
+                    $tglAwalBaruDate = Carbon::parse((string) $tglAwalBaru)->startOfDay();
+                    $tglAkhirTerakhirDate = Carbon::parse((string) $lastKontrak->tgl_akhir_kontrak)->startOfDay();
+                }
+
+                if ($lastKontrak && $tglAwalBaruDate->lessThanOrEqualTo($tglAkhirTerakhirDate)) {
                     DB::rollBack();
                     throw ValidationException::withMessages([
                         'tgl_awal_kontrak' => 'Tgl awal kontrak baru harus lebih besar dari tgl akhir kontrak terakhir (' . $lastKontrak->tgl_akhir_kontrak . ').',

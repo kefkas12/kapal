@@ -14,10 +14,10 @@ class File_uploadController extends Controller
     {
         return [
             'kontrak' => ['label' => 'Kontrak'],
-            'cable' => ['label' => 'Cable'],
+            'cable' => ['label' => 'Master Cable'],
             'doc_cargo' => ['label' => 'Doc Cargo'],
             'off_hire_on_hire' => ['label' => 'Off Hire dan On Hire'],
-            'redelivery_delivery' => ['label' => 'Redelivery dan Delivery'],
+            'redelivery_delivery' => ['label' => 'Redelivery / Delivery'],
             'klaim_awal' => ['label' => 'Klaim Awal'],
             'klaim_akhir' => ['label' => 'Klaim Akhir'],
         ];
