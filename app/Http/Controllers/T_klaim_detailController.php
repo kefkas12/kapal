@@ -678,10 +678,16 @@ class T_klaim_detailController extends Controller
             : [];
 
         $filesAwal = !empty($lookupIds)
-            ? File_upload::whereIn('id_klaim_awal', $lookupIds)->orderBy('id', 'asc')->get()
+            ? File_upload::where(function ($q) use ($lookupIds) {
+                $q->whereIn('id_klaim_awal', $lookupIds)
+                    ->orWhereIn('id_klaim_detail_awal', $lookupIds);
+            })->orderBy('id', 'asc')->get()
             : collect();
         $filesAkhir = !empty($lookupIds)
-            ? File_upload::whereIn('id_klaim_akhir', $lookupIds)->orderBy('id', 'asc')->get()
+            ? File_upload::where(function ($q) use ($lookupIds) {
+                $q->whereIn('id_klaim_akhir', $lookupIds)
+                    ->orWhereIn('id_klaim_detail_akhir', $lookupIds);
+            })->orderBy('id', 'asc')->get()
             : collect();
         $filesAwal = $filesAwal->map(function ($file) use ($data) {
             $file->id_klaim_detail_awal = (int) $data->id;
