@@ -6,7 +6,7 @@ use App\Models\T_klaim;
 use App\Models\T_klaim_detail;
 use App\Models\T_klaim_detail_nilai;
 use App\Models\File_upload;
-use App\Helpers\FileUploadHelper;
+use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +14,28 @@ use Illuminate\Validation\ValidationException;
 
 class T_klaimController extends Controller
 {
+    private function extractIncomingUploadFiles(Request $request): array
+    {
+        $all = $request->allFiles();
+        $stack = is_array($all) ? array_values($all) : [$all];
+        $files = [];
+
+        while (!empty($stack)) {
+            $current = array_pop($stack);
+            if (is_array($current)) {
+                foreach ($current as $item) {
+                    $stack[] = $item;
+                }
+                continue;
+            }
+            if ($current) {
+                $files[] = $current;
+            }
+        }
+
+        return $files;
+    }
+
     public function index(Request $request)
     {
         $perPage = (int) $request->input('per_page', 10);
@@ -105,6 +127,7 @@ class T_klaimController extends Controller
         $data = T_klaim::where('id', $id)->first();
         $filesAwal = File_upload::where('id_klaim_awal', $id)->orderBy('id', 'asc')->get();
         $filesAkhir = File_upload::where('id_klaim_akhir', $id)->orderBy('id', 'asc')->get();
+
         $files = $filesAwal->concat($filesAkhir)->unique('id')->values();
         
         return response()->json([
@@ -341,10 +364,7 @@ class T_klaimController extends Controller
 
     private function validateIncomingUploadFilesArePdf(Request $request): void
     {
-        $files = $request->file('files', []);
-        if (!is_array($files)) {
-            $files = [$files];
-        }
+        $files = $this->extractIncomingUploadFiles($request);
 
         foreach ($files as $file) {
             if (!$file) continue;
@@ -359,15 +379,19 @@ class T_klaimController extends Controller
 
     private function storeKlaimFiles(Request $request, int $klaimId): void
     {
-        $incomingFiles = $request->file('files', []);
-        if (!is_array($incomingFiles)) {
-            $incomingFiles = $incomingFiles ? [$incomingFiles] : [];
-        }
+        $incomingFiles = $this->extractIncomingUploadFiles($request);
         if (empty($incomingFiles)) return;
 
-        $hasFinalKlaim = trim((string) $request->input('no_klaim_akhir', '')) !== ''
-            && trim((string) $request->input('tgl_klaim_akhir', '')) !== '';
-        $column = $hasFinalKlaim ? 'id_klaim_akhir' : 'id_klaim_awal';
+        $scope = strtoupper(trim((string) $request->input('upload_scope', '')));
+        if ($scope === 'AWAL') {
+            $column = 'id_klaim_awal';
+        } elseif ($scope === 'AKHIR') {
+            $column = 'id_klaim_akhir';
+        } else {
+            $hasFinalKlaim = trim((string) $request->input('no_klaim_akhir', '')) !== ''
+                && trim((string) $request->input('tgl_klaim_akhir', '')) !== '';
+            $column = $hasFinalKlaim ? 'id_klaim_akhir' : 'id_klaim_awal';
+        }
 
         foreach ($incomingFiles as $file) {
             if (!$file) continue;

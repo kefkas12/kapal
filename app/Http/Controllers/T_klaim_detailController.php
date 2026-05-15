@@ -678,30 +678,14 @@ class T_klaim_detailController extends Controller
             $data->no_tagihan_dipotong = $first->no_tagihan_dipotong ?? null;
         }
 
-        $lookupIds = $data
-            ? array_values(array_unique(array_filter([(int) $data->id, (int) $data->id_klaim])))
-            : [];
+        $klaimId = $data ? (int) ($data->id_klaim ?? 0) : 0;
 
-        $filesAwal = !empty($lookupIds)
-            ? File_upload::where(function ($q) use ($lookupIds) {
-                $q->whereIn('id_klaim_awal', $lookupIds)
-                    ->orWhereIn('id_klaim_detail_awal', $lookupIds);
-            })->orderBy('id', 'asc')->get()
+        $filesAwal = $klaimId > 0
+            ? File_upload::where('id_klaim_awal', $klaimId)->orderBy('id', 'asc')->get()
             : collect();
-        $filesAkhir = !empty($lookupIds)
-            ? File_upload::where(function ($q) use ($lookupIds) {
-                $q->whereIn('id_klaim_akhir', $lookupIds)
-                    ->orWhereIn('id_klaim_detail_akhir', $lookupIds);
-            })->orderBy('id', 'asc')->get()
+        $filesAkhir = $klaimId > 0
+            ? File_upload::where('id_klaim_akhir', $klaimId)->orderBy('id', 'asc')->get()
             : collect();
-        $filesAwal = $filesAwal->map(function ($file) use ($data) {
-            $file->id_klaim_detail_awal = (int) $data->id;
-            return $file;
-        })->values();
-        $filesAkhir = $filesAkhir->map(function ($file) use ($data) {
-            $file->id_klaim_detail_akhir = (int) $data->id;
-            return $file;
-        })->values();
         $files = $filesAwal->concat($filesAkhir)->unique('id')->values();
         
         return response()->json([

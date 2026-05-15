@@ -30,8 +30,8 @@ class File_uploadController extends Controller
         if (!is_null($row->id_doc_cargo)) return 'doc_cargo';
         if (!is_null($row->id_off_hire) || !is_null($row->id_on_hire)) return 'off_hire_on_hire';
         if (!is_null($row->id_redelivery) || !is_null($row->id_delivery)) return 'redelivery_delivery';
-        if (!is_null($row->id_klaim_awal) || !is_null($row->id_klaim_detail_awal)) return 'klaim_awal';
-        if (!is_null($row->id_klaim_akhir) || !is_null($row->id_klaim_detail_akhir)) return 'klaim_akhir';
+        if (!is_null($row->id_klaim_awal)) return 'klaim_awal';
+        if (!is_null($row->id_klaim_akhir)) return 'klaim_akhir';
         return 'others';
     }
 
@@ -44,8 +44,6 @@ class File_uploadController extends Controller
         $redeliveryIds = [];
         $klaimIdsAwal = [];
         $klaimIdsAkhir = [];
-        $klaimDetailIdsAwal = [];
-        $klaimDetailIdsAkhir = [];
 
         foreach ($rows as $row) {
             if (!is_null($row->id_kontrak)) $kontrakIds[] = (int) $row->id_kontrak;
@@ -57,8 +55,6 @@ class File_uploadController extends Controller
             if (!is_null($row->id_delivery)) $redeliveryIds[] = (int) $row->id_delivery;
             if (!is_null($row->id_klaim_awal)) $klaimIdsAwal[] = (int) $row->id_klaim_awal;
             if (!is_null($row->id_klaim_akhir)) $klaimIdsAkhir[] = (int) $row->id_klaim_akhir;
-            if (!is_null($row->id_klaim_detail_awal)) $klaimDetailIdsAwal[] = (int) $row->id_klaim_detail_awal;
-            if (!is_null($row->id_klaim_detail_akhir)) $klaimDetailIdsAkhir[] = (int) $row->id_klaim_detail_akhir;
         }
 
         $kontrakMap = DB::table('m_kontrak')
@@ -86,10 +82,6 @@ class File_uploadController extends Controller
             ->whereIn('id', array_values(array_unique(array_merge($klaimIdsAwal, $klaimIdsAkhir))))
             ->pluck('id_vessel', 'id');
 
-        $klaimDetailMap = DB::table('t_klaim_detail')
-            ->whereIn('id', array_values(array_unique(array_merge($klaimDetailIdsAwal, $klaimDetailIdsAkhir))))
-            ->pluck('id_klaim', 'id');
-
         return [
             'kontrak' => $kontrakMap,
             'cable' => $cableMap,
@@ -97,7 +89,6 @@ class File_uploadController extends Controller
             'off_hire_on_hire' => $offHireMap,
             'redelivery_delivery' => $redeliveryMap,
             'klaim' => $klaimMap,
-            'klaim_detail_to_klaim' => $klaimDetailMap,
         ];
     }
 
@@ -133,12 +124,7 @@ class File_uploadController extends Controller
                 $v = $maps['klaim'][$klaimId] ?? null;
                 return is_null($v) ? null : (int) $v;
             }
-            $detailId = $sectionKey === 'klaim_awal' ? $row->id_klaim_detail_awal : $row->id_klaim_detail_akhir;
-            if (is_null($detailId)) return null;
-            $resolvedKlaimId = $maps['klaim_detail_to_klaim'][$detailId] ?? null;
-            if (is_null($resolvedKlaimId)) return null;
-            $v = $maps['klaim'][$resolvedKlaimId] ?? null;
-            return is_null($v) ? null : (int) $v;
+            return null;
         }
         return null;
     }
@@ -163,8 +149,6 @@ class File_uploadController extends Controller
                 'id_cable',
                 'id_klaim_awal',
                 'id_klaim_akhir',
-                'id_klaim_detail_awal',
-                'id_klaim_detail_akhir',
                 'id_doc_cargo',
                 'id_off_hire',
                 'id_on_hire',
