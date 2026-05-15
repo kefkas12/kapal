@@ -636,6 +636,11 @@ class T_klaim_detailController extends Controller
             $query->where('t_klaim_detail.id_klaim', $idKlaim);
         }
 
+        $status = trim((string) $request->input('status', ''));
+        if ($status !== '') {
+            $query->whereRaw('UPPER(COALESCE(t_klaim_detail.status, "")) = ?', [strtoupper($status)]);
+        }
+
         $data = $query->get();
         $data = $this->attachNilaiItemsToDetails($data);
 
