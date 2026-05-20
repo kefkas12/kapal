@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\File_upload;
-use App\Models\Settings;
 use App\Models\T_off_hire;
 use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
@@ -106,10 +105,8 @@ class T_off_hireController extends Controller
         $charterRate = $this->toNumber($kontrak?->charter_rate);
         $bunkerOffHire = $this->toNumber($request->input('bunker_off_hire'));
         $bunkerOnHire = $this->toNumber($request->input('bunker_on_hire'));
-        $bunkerPrice = $this->toNumber($request->input('bunker_price'));
-        $estClaimBunkerFactor = $this->getEstClaimBunkerFactor();
         $estOh = $selisihHari * $charterRate;
-        $estBoh = ($bunkerOnHire - $bunkerOffHire) * $bunkerPrice * 1000 * $estClaimBunkerFactor;
+        $estBoh = $bunkerOffHire - $bunkerOnHire;
 
         $payload = [
             'id_vessel' => $idVessel,
@@ -131,22 +128,6 @@ class T_off_hireController extends Controller
 
         $allowedColumns = array_flip($this->offHireColumns());
         return array_intersect_key($payload, $allowedColumns);
-    }
-
-    private function getEstClaimBunkerFactor(): float
-    {
-        $value = Settings::query()
-            ->where('nama', 'variable est_claim_bunker')
-            ->where('status', 'ACTIVE')
-            ->orderByDesc('id')
-            ->value('value');
-
-        $factor = $this->toNumber($value);
-        if (!is_finite($factor) || $factor <= 0) {
-            return 0.847;
-        }
-
-        return $factor;
     }
 
     private function numberToStorage(float $value): string
