@@ -355,10 +355,10 @@ class T_master_cableController extends Controller
                 }
             }
 
-            $activeKontrakCount = DB::table('m_kontrak')
+            $activeKontrakQuery = DB::table('m_kontrak')
                 ->where('id_vessel', $request->input('id_vessel'))
-                ->where('status', 'ACTIVE')
-                ->count();
+                ->where('status', 'ACTIVE');
+            $activeKontrakCount = (clone $activeKontrakQuery)->count();
 
             if ($activeKontrakCount !== 1) {
                 DB::rollBack();
@@ -367,9 +367,11 @@ class T_master_cableController extends Controller
                     'message' => 'Vessel harus memiliki tepat 1 kontrak ACTIVE.'
                 ], 422);
             }
+            $activeKontrak = (clone $activeKontrakQuery)->orderByDesc('id')->first(['id']);
 
             $t_master_cable = new T_master_cable();
             $t_master_cable->id_vessel = $request->input('id_vessel');
+            $t_master_cable->id_kontrak = $activeKontrak->id ?? null;
             $t_master_cable->no_voyage_gab = $nextVoyage['no_voyage_gab'];
             $t_master_cable->no_voyage = $nextVoyage['no_voyage'];
             $t_master_cable->jenis_voyage = $nextVoyage['jenis_voyage'];
@@ -449,10 +451,10 @@ class T_master_cableController extends Controller
                 ]);
             }
 
-            $activeKontrakCount = DB::table('m_kontrak')
+            $activeKontrakQuery = DB::table('m_kontrak')
                 ->where('id_vessel', $request->input('id_vessel'))
-                ->where('status', 'ACTIVE')
-                ->count();
+                ->where('status', 'ACTIVE');
+            $activeKontrakCount = (clone $activeKontrakQuery)->count();
 
             if ($activeKontrakCount !== 1) {
                 DB::rollBack();
@@ -461,6 +463,7 @@ class T_master_cableController extends Controller
                     'message' => 'Vessel harus memiliki tepat 1 kontrak ACTIVE.'
                 ], 422);
             }
+            $activeKontrak = (clone $activeKontrakQuery)->orderByDesc('id')->first(['id']);
 
             $t_master_cable = T_master_cable::where('id', $id)->firstOrFail();
             $t_master_cable->no_voyage_gab = $request->input('no_voyage_gab');
@@ -485,6 +488,7 @@ class T_master_cableController extends Controller
             $t_master_cable->excess_bunker = $request->input('excess_bunker');
             $t_master_cable->bunker_price = $request->input('bunker_price');
             $t_master_cable->est_claim_bunker = $request->input('est_claim_bunker');
+            $t_master_cable->id_kontrak = $activeKontrak->id ?? null;
             $t_master_cable->status = 'OPEN';
             $t_master_cable->keterangan = $request->input('keterangan');
             $t_master_cable->user_id = Auth::id();
