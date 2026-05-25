@@ -89,7 +89,6 @@ class T_redelivery_deliveryController extends Controller
         if ($idVessel) {
             $kontrak = DB::table('m_kontrak')
                 ->where('id_vessel', $idVessel)
-                ->where('status', 'ACTIVE')
                 ->orderByDesc('id')
                 ->first();
         }
@@ -101,11 +100,9 @@ class T_redelivery_deliveryController extends Controller
 
         $payload = [
             'id_vessel' => $idVessel,
-            'id_kontrak_redelivery' => $request->input('id_kontrak_redelivery') ?: ($kontrak?->id ?? null),
-            'id_kontrak_delivery' => $request->input('id_kontrak_delivery') ?: ($kontrak?->id ?? null),
+            'id_kontrak' => $request->input('id_kontrak') ?: ($kontrak?->id ?? null),
             'no_sertifikat' => $request->input('no_sertifikat'),
-            'no_kontrak_redelivery' => $request->input('no_kontrak_redelivery') ?: ($kontrak?->no_kontrak ?? null),
-            'no_kontrak_delivery' => $request->input('no_kontrak_delivery') ?: ($kontrak?->no_kontrak ?? null),
+            'no_kontrak' => $request->input('no_kontrak') ?: ($kontrak?->no_kontrak ?? null),
             'bunker_price' => $request->input('bunker_price'),
             'est_bod' => $this->numberToStorage($estBod),
             'date_time_redelivery' => $request->input('date_time_redelivery'),
@@ -230,23 +227,6 @@ class T_redelivery_deliveryController extends Controller
         }
     }
 
-    private function assertKontrakSelection(Request $request): void
-    {
-        $idKontrakRedelivery = trim((string) $request->input('id_kontrak_redelivery', ''));
-        $idKontrakDelivery = trim((string) $request->input('id_kontrak_delivery', ''));
-        if ($idKontrakRedelivery === '' || $idKontrakDelivery === '') {
-            throw ValidationException::withMessages([
-                'id_kontrak_redelivery' => 'Kontrak Redelivery wajib diisi.',
-                'id_kontrak_delivery' => 'Kontrak Delivery wajib diisi.',
-            ]);
-        }
-        if ((int) $idKontrakRedelivery === (int) $idKontrakDelivery) {
-            throw ValidationException::withMessages([
-                'id_kontrak_delivery' => 'Kontrak Redelivery dan Delivery tidak boleh sama.',
-            ]);
-        }
-    }
-
     private function parseDateTs($value): ?int
     {
         $raw = trim((string) ($value ?? ''));
@@ -265,7 +245,6 @@ class T_redelivery_deliveryController extends Controller
         $activeStartTs = $this->parseDateTs($activeKontrak->tgl_awal_kontrak ?? null);
         $rows = DB::table('m_kontrak')
             ->where('id_vessel', $activeKontrak->id_vessel)
-            ->whereRaw('UPPER(COALESCE(status, "")) <> "ACTIVE"')
             ->orderBy('id', 'desc')
             ->get();
 
@@ -307,60 +286,6 @@ class T_redelivery_deliveryController extends Controller
             }
             return ((int) ($b->id ?? 0)) <=> ((int) ($a->id ?? 0));
         })->first();
-    }
-
-    private function assertKontrakBusinessRules(Request $request, ?int $excludeId = null): void
-    {
-        $idVessel = (int) $request->input('id_vessel');
-        $idKontrakDelivery = (int) $request->input('id_kontrak_delivery');
-        $idKontrakRedelivery = (int) $request->input('id_kontrak_redelivery');
-
-        $deliveryKontrak = DB::table('m_kontrak')->where('id', $idKontrakDelivery)->first();
-        if (!$deliveryKontrak) {
-            throw ValidationException::withMessages([
-                'id_kontrak_delivery' => 'Kontrak Delivery tidak ditemukan.',
-            ]);
-        }
-
-        if (strtoupper((string) ($deliveryKontrak->status ?? '')) !== 'ACTIVE') {
-            throw ValidationException::withMessages([
-                'id_kontrak_delivery' => 'Kontrak Delivery harus kontrak ACTIVE.',
-            ]);
-        }
-        if ($idVessel > 0 && (int) ($deliveryKontrak->id_vessel ?? 0) !== $idVessel) {
-            throw ValidationException::withMessages([
-                'id_kontrak_delivery' => 'Kontrak Delivery tidak sesuai dengan vessel yang dipilih.',
-            ]);
-        }
-
-        $deliveryUsageQuery = DB::table('t_redelivery_delivery')
-            ->where('id_kontrak_delivery', $idKontrakDelivery);
-        if (!is_null($excludeId)) {
-            $deliveryUsageQuery->where('id', '!=', $excludeId);
-        }
-        if ($deliveryUsageQuery->exists()) {
-            throw ValidationException::withMessages([
-                'id_kontrak_delivery' => 'Kontrak Delivery aktif ini sudah pernah dipakai.',
-            ]);
-        }
-
-        $expectedRedelivery = $this->resolveLatestNonActiveBeforeActive($deliveryKontrak);
-        if (!$expectedRedelivery) {
-            throw ValidationException::withMessages([
-                'id_kontrak_redelivery' => 'Tidak ditemukan kontrak non ACTIVE sebelum kontrak Delivery aktif.',
-            ]);
-        }
-        if ($idVessel > 0 && (int) ($expectedRedelivery->id_vessel ?? 0) !== $idVessel) {
-            throw ValidationException::withMessages([
-                'id_kontrak_redelivery' => 'Kontrak Redelivery tidak sesuai dengan vessel yang dipilih.',
-            ]);
-        }
-
-        if ((int) ($expectedRedelivery->id ?? 0) !== $idKontrakRedelivery) {
-            throw ValidationException::withMessages([
-                'id_kontrak_redelivery' => 'Kontrak Redelivery harus kontrak non ACTIVE terakhir sebelum kontrak Delivery aktif.',
-            ]);
-        }
     }
 
     public function index(Request $request)
@@ -497,8 +422,6 @@ class T_redelivery_deliveryController extends Controller
             $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
             $this->assertRequiredField($request, 'date_time_redelivery', 'Tgl/Jam Redelivery');
             $this->assertRequiredField($request, 'date_time_delivery', 'Tgl/Jam Delivery');
-            $this->assertKontrakSelection($request);
-            $this->assertKontrakBusinessRules($request, null);
             $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
             $this->assertNumericField($request, 'bunker_delivery', 'Bunker Delivery (MT)');
             $this->assertPdfFiles(array_merge($filesRedelivery, $filesDelivery));
@@ -552,8 +475,6 @@ class T_redelivery_deliveryController extends Controller
             $this->assertRequiredField($request, 'id_vessel', 'No Vessel');
             $this->assertRequiredField($request, 'date_time_redelivery', 'Tgl/Jam Redelivery');
             $this->assertRequiredField($request, 'date_time_delivery', 'Tgl/Jam Delivery');
-            $this->assertKontrakSelection($request);
-            $this->assertKontrakBusinessRules($request, (int) $id);
             $this->assertNumericField($request, 'bunker_redelivery', 'Bunker Redelivery (MT)');
             $this->assertNumericField($request, 'bunker_delivery', 'Bunker Delivery (MT)');
             $this->assertPdfFiles(array_merge($incomingFilesRedelivery, $incomingFilesDelivery));
