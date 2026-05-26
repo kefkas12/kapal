@@ -831,6 +831,7 @@ class T_klaim_detailController extends Controller
             'nama_kapal' => 'm_vessel.nama_vessel',
             'no_invoice' => 'nilai.no_tagihan_dipotong',
             'no_klaim_akhir' => 't_klaim.no_klaim_akhir',
+            'jenis_klaim' => 't_klaim.jenis_klaim',
             'no_surat' => 'nilai.no_tagihan_klaim',
             'keterangan_potongan' => 't_klaim_detail.keterangan',
             'currency' => 'nilai.currency',
@@ -860,6 +861,7 @@ class T_klaim_detailController extends Controller
                 'nilai.no_tagihan_dipotong as no_invoice',
                 't_klaim_detail.keterangan as keterangan_potongan',
                 't_klaim.no_klaim_akhir as no_klaim_akhir',
+                't_klaim.jenis_klaim as jenis_klaim',
                 'nilai.no_tagihan_klaim as no_surat',
                 'nilai.tanggal_tagihan_klaim as tgl_inv_pertamina',
                 'nilai.val_klaim_akhir as nominal',
@@ -873,6 +875,7 @@ class T_klaim_detailController extends Controller
                     ->orWhere('nilai.no_tagihan_dipotong', 'like', "%{$search}%")
                     ->orWhere('nilai.no_tagihan_klaim', 'like', "%{$search}%")
                     ->orWhere('t_klaim.no_klaim_akhir', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.jenis_klaim', 'like', "%{$search}%")
                     ->orWhere('t_klaim_detail.keterangan', 'like', "%{$search}%");
             });
         }

@@ -151,6 +151,7 @@ class T_klaimController extends Controller
             $t_klaim->jenis_klaim = $request->input('jenis_klaim');
             $t_klaim->no_klaim_akhir = $request->input('no_klaim_akhir');
             $t_klaim->tgl_klaim_akhir = $request->input('tgl_klaim_akhir');
+            $t_klaim->periode_klaim = $request->input('periode_klaim');
             $t_klaim->status = 'OPEN';
             $t_klaim->user_id = Auth::id();
             $t_klaim->save();
@@ -195,6 +196,7 @@ class T_klaimController extends Controller
             $t_klaim->jenis_klaim = $request->input('jenis_klaim');
             $t_klaim->no_klaim_akhir = $request->input('no_klaim_akhir');
             $t_klaim->tgl_klaim_akhir = $request->input('tgl_klaim_akhir');
+            $t_klaim->periode_klaim = $request->input('periode_klaim');
             $t_klaim->user_id = Auth::id();
             $t_klaim->save();
             $this->validateIncomingUploadFilesArePdf($request);
