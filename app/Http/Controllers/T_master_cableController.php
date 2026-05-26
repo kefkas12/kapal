@@ -16,9 +16,7 @@ class T_master_cableController extends Controller
     private function validateCableUploadExtensions(array $files): void
     {
         foreach ($files as $file) {
-            if (!$file) {
-                continue;
-            }
+            if (!$file) continue;
             $ext = strtolower((string) $file->getClientOriginalExtension());
             if (!in_array($ext, ['pdf', 'xls', 'xlsx'], true)) {
                 throw ValidationException::withMessages([

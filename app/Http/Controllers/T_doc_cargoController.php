@@ -86,6 +86,11 @@ class T_doc_cargoController extends Controller
         return date('Y-m-d H:i:s', $ts);
     }
 
+    private function percentPointsToDecimal(float $value): float
+    {
+        return $value / 100;
+    }
+
     private function calcDischargeTime($startTime, $stopTime): ?string
     {
         if ($startTime === null || $stopTime === null || $startTime === '' || $stopTime === '') {
@@ -132,9 +137,15 @@ class T_doc_cargoController extends Controller
             $transportLossThreshold = -0.07;
         }
 
-        $ratioR2 = $this->toNumber($request->input('ratio_r2'));
-        $estClaimTransportInput = $request->input('est_claim_transport');
-        $estClaimTransport = $ratioR2 < $transportLossThreshold ? $estClaimTransportInput : 0;
+        $ratioR2Percent = $this->toNumber($request->input('ratio_r2'));
+        $priceBblNum = $this->toNumber($priceBbl);
+        $bolNum = $this->toNumber($request->input('bill_of_lading'));
+        $estClaimTransport = 0;
+        if ($ratioR2Percent < $transportLossThreshold) {
+            $ratioR2 = $this->percentPointsToDecimal($ratioR2Percent);
+            $threshold = $this->percentPointsToDecimal($transportLossThreshold);
+            $estClaimTransport = (abs($ratioR2) - abs($threshold)) * $priceBblNum * $bolNum;
+        }
 
         $payload = [
             'id_cable' => $idCable,
@@ -157,7 +168,7 @@ class T_doc_cargoController extends Controller
             'overdue_discharge' => $request->input('overdue_discharge'),
             'est_claim_pumping' => $request->input('est_claim_pumping'),
             'est_claim_bunker' => $request->input('est_claim_bunker'),
-            'est_claim_transport' => $estClaimTransport,
+            'est_claim_transport' => number_format($estClaimTransport, 6, '.', ''),
             'flow_rate_pump' => $request->input('flow_rate_pump'),
             'nomor_pompa' => $request->input('nomor_pompa'),
             'pressure_pompa' => $request->input('pressure_pompa'),

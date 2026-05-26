@@ -371,9 +371,9 @@ class T_klaimController extends Controller
         foreach ($files as $file) {
             if (!$file) continue;
             $ext = strtolower((string) $file->getClientOriginalExtension());
-            if ($ext !== 'pdf') {
+            if (!in_array($ext, ['pdf', 'jpg', 'png', 'jpeg'], true)) {
                 throw ValidationException::withMessages([
-                    'files' => 'File upload hanya boleh PDF.'
+                    'files' => 'File upload hanya boleh PDF/JPG/JPEG/PNG.'
                 ]);
             }
         }
