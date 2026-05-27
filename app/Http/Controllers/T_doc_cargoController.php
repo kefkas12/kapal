@@ -322,13 +322,15 @@ class T_doc_cargoController extends Controller
         if (!array_key_exists($sortBy, $allowedSort)) {
             $sortBy = 'id';
         }
-        $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $sortDir = strtolower((string) $request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
         if (in_array($sortBy, ['no_voyage_gab', 'no_voyage_gab_display'], true)) {
             $voyageExpr = "COALESCE(t_doc_cargo.no_voyage_gab, t_master_cable.no_voyage_gab)";
+            $gradeExpr = "UPPER(TRIM(COALESCE(t_doc_cargo.grade, m_grade.grade, '')))";
             $query
                 ->orderByRaw("SUBSTRING_INDEX({$voyageExpr}, '/', 1) asc")
                 ->orderByRaw("CAST(SUBSTRING_INDEX(SUBSTRING_INDEX({$voyageExpr}, '/', 2), '/', -1) AS UNSIGNED) {$sortDir}")
+                ->orderByRaw("{$gradeExpr} asc")
                 ->orderByRaw("CASE
                     WHEN UPPER(SUBSTRING_INDEX({$voyageExpr}, '/', -1)) = 'L' THEN 0
                     WHEN UPPER(SUBSTRING_INDEX({$voyageExpr}, '/', -1)) LIKE 'D%' THEN 1
