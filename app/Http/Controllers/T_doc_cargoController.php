@@ -313,6 +313,7 @@ class T_doc_cargoController extends Controller
         $allowedSort = [
             'id' => 't_doc_cargo.id',
             'no_voyage_gab' => 't_doc_cargo.no_voyage_gab',
+            'no_voyage_gab_display' => 't_doc_cargo.no_voyage_gab',
             'bill_of_lading' => 't_doc_cargo.bill_of_lading',
             'status' => 't_doc_cargo.status',
             'created_at' => 't_doc_cargo.created_at',
@@ -323,7 +324,25 @@ class T_doc_cargoController extends Controller
         }
         $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
-        $query->orderBy($allowedSort[$sortBy], $sortDir);
+        if (in_array($sortBy, ['no_voyage_gab', 'no_voyage_gab_display'], true)) {
+            $voyageExpr = "COALESCE(t_doc_cargo.no_voyage_gab, t_master_cable.no_voyage_gab)";
+            $query
+                ->orderByRaw("SUBSTRING_INDEX({$voyageExpr}, '/', 1) asc")
+                ->orderByRaw("CAST(SUBSTRING_INDEX(SUBSTRING_INDEX({$voyageExpr}, '/', 2), '/', -1) AS UNSIGNED) {$sortDir}")
+                ->orderByRaw("CASE
+                    WHEN UPPER(SUBSTRING_INDEX({$voyageExpr}, '/', -1)) = 'L' THEN 0
+                    WHEN UPPER(SUBSTRING_INDEX({$voyageExpr}, '/', -1)) LIKE 'D%' THEN 1
+                    ELSE 2
+                END asc")
+                ->orderByRaw("CASE
+                    WHEN UPPER(SUBSTRING_INDEX({$voyageExpr}, '/', -1)) LIKE 'D%'
+                      THEN CAST(SUBSTRING(UPPER(SUBSTRING_INDEX({$voyageExpr}, '/', -1)), 2) AS UNSIGNED)
+                    ELSE 0
+                END asc")
+                ->orderBy('t_doc_cargo.id', 'desc');
+        } else {
+            $query->orderBy($allowedSort[$sortBy], $sortDir);
+        }
 
         $paginator = $query->paginate($perPage);
 
