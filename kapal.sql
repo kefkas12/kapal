@@ -731,12 +731,10 @@ CREATE TABLE `t_off_hire` (
 
 CREATE TABLE `t_redelivery_delivery` (
   `id` int NOT NULL,
-  `id_kontrak_redelivery` int NOT NULL,
-  `id_kontrak_delivery` int NOT NULL,
+  `id_kontrak` int NOT NULL,
   `id_vessel` int NOT NULL,
   `no_sertifikat` varchar(100) DEFAULT NULL,
-  `no_kontrak_redelivery` varchar(100) DEFAULT NULL,
-  `no_kontrak_delivery` varchar(100) DEFAULT NULL,
+  `no_kontrak` varchar(100) DEFAULT NULL,
   `bunker_price` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
   `est_bod` varchar(100) DEFAULT NULL,
   `date_time_redelivery` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
@@ -1029,8 +1027,7 @@ ALTER TABLE `t_off_hire`
 ALTER TABLE `t_redelivery_delivery`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
-  ADD KEY `id_kontrak_redelivery` (`id_kontrak_redelivery`) USING BTREE,
-  ADD KEY `id_kontrak_delivery` (`id_kontrak_delivery`) USING BTREE,
+  ADD KEY `id_kontrak` (`id_kontrak`) USING BTREE,
   ADD KEY `id_vessel` (`id_vessel`) USING BTREE;
 
 --
