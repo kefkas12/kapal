@@ -113,6 +113,7 @@ class T_off_hireController extends Controller
 
         $payload = [
             'id_vessel' => $idVessel,
+            'id_kontrak' => $request->input('id_kontrak') ?: ($kontrak?->id ?? null),
             'no_sertifikat' => $request->input('no_sertifikat'),
             'no_kontrak' => $request->input('no_kontrak') ?: ($kontrak?->no_kontrak ?? null),
             'bunker_price' => $request->input('bunker_price'),
