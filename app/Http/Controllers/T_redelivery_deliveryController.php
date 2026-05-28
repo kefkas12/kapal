@@ -93,10 +93,11 @@ class T_redelivery_deliveryController extends Controller
                 ->first();
         }
 
+        $bunkerPrice = $this->toNumber($request->input('bunker_price'));
         $bunkerRedelivery = $this->toNumber($request->input('bunker_redelivery'));
         $bunkerDelivery = $this->toNumber($request->input('bunker_delivery'));
         $estClaimBunkerFactor = $this->getEstClaimBunkerFactor();
-        $estBod = ($bunkerDelivery - $bunkerRedelivery) * $bunkerRedelivery * 1000 * $estClaimBunkerFactor;
+        $estBod = ($bunkerRedelivery - $bunkerDelivery) * $bunkerPrice * 1000 * $estClaimBunkerFactor;
 
         $payload = [
             'id_vessel' => $idVessel,
@@ -145,12 +146,13 @@ class T_redelivery_deliveryController extends Controller
         return rtrim(rtrim(number_format($value, 6, '.', ''), '0'), '.');
     }
 
-    private function computeEstBodValue($bunkerRedeliveryRaw, $bunkerDeliveryRaw): string
+    private function computeEstBodValue($bunkerPriceRaw, $bunkerRedeliveryRaw, $bunkerDeliveryRaw): string
     {
+        $bunkerPrice = $this->toNumber($bunkerPriceRaw);
         $bunkerRedelivery = $this->toNumber($bunkerRedeliveryRaw);
         $bunkerDelivery = $this->toNumber($bunkerDeliveryRaw);
         $estClaimBunkerFactor = $this->getEstClaimBunkerFactor();
-        $estBod = ($bunkerDelivery - $bunkerRedelivery) * $bunkerRedelivery * 1000 * $estClaimBunkerFactor;
+        $estBod = ($bunkerRedelivery - $bunkerDelivery) * $bunkerPrice * 1000 * $estClaimBunkerFactor;
         return $this->numberToStorage($estBod);
     }
 
@@ -377,7 +379,7 @@ class T_redelivery_deliveryController extends Controller
             );
         $data = $detailQuery->first();
         if ($data && (trim((string) ($data->est_bod ?? '')) === '')) {
-            $data->est_bod = $this->computeEstBodValue($data->bunker_redelivery ?? null, $data->bunker_delivery ?? null);
+            $data->est_bod = $this->computeEstBodValue($data->bunker_price ?? null, $data->bunker_redelivery ?? null, $data->bunker_delivery ?? null);
         }
 
         $redeliveryColumn = $this->redeliveryFileColumn();
