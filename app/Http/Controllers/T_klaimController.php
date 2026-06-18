@@ -7,6 +7,7 @@ use App\Models\T_klaim_detail;
 use App\Models\T_klaim_detail_nilai;
 use App\Models\File_upload;
 use App\Support\FileUploadHelper;
+use App\Support\SimpleSpreadsheetReader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,392 @@ use Illuminate\Validation\ValidationException;
 
 class T_klaimController extends Controller
 {
+    private function actingUserId(): ?int
+    {
+        return Auth::id() ?? DB::table('users')->orderBy('id')->value('id');
+    }
+
+    private function normalizeImportHeader(?string $value): string
+    {
+        $upper = strtoupper(trim((string) $value));
+        return preg_replace('/[^A-Z0-9]/', '', $upper) ?? '';
+    }
+
+    private function klaimImportFieldLabels(): array
+    {
+        return [
+            'no_klaim_awal' => 'No Klaim Awal',
+            'tgl_klaim_awal' => 'Tgl Klaim Awal',
+            'jenis_klaim' => 'Jenis Klaim',
+            'vessel' => 'Vessel',
+            'periode_klaim' => 'Periode Klaim',
+            'no_klaim_akhir' => 'No Klaim Akhir',
+            'tgl_klaim_akhir' => 'Tgl Klaim Akhir',
+        ];
+    }
+
+    private function klaimImportColumns(): array
+    {
+        return [
+            'no_klaim_awal' => ['NOKLAIMAWAL'],
+            'tgl_klaim_awal' => ['TGLKLAIMAWAL'],
+            'jenis_klaim' => ['JENISKLAIM'],
+            'vessel' => ['VESSEL'],
+            'periode_klaim' => ['PERIODEKLAIM'],
+            'no_klaim_akhir' => ['NOKLAIMAKHIR'],
+            'tgl_klaim_akhir' => ['TGLKLAIMAKHIR'],
+        ];
+    }
+
+    private function excelDateToDateTime($value, bool $dateOnly = false): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            $serial = (float) $value;
+            if ($serial > 0) {
+                $unix = (int) round(($serial - 25569) * 86400);
+                return gmdate($dateOnly ? 'Y-m-d' : 'Y-m-d H:i:s', $unix);
+            }
+        }
+
+        $text = trim((string) $value);
+        if ($text === '') {
+            return null;
+        }
+
+        $ts = strtotime($text);
+        if ($ts === false) {
+            return null;
+        }
+
+        return date($dateOnly ? 'Y-m-d' : 'Y-m-d H:i:s', $ts);
+    }
+
+    private function parseKlaimImportRows(array $rows): array
+    {
+        if ($rows === []) {
+            throw ValidationException::withMessages([
+                'file' => 'File import kosong.',
+            ]);
+        }
+
+        $headerRow = $rows[0] ?? [];
+        $normalizedHeaders = [];
+        foreach ($headerRow as $index => $header) {
+            $normalizedHeaders[$index] = $this->normalizeImportHeader($header);
+        }
+
+        $columnIndexes = [];
+        foreach ($this->klaimImportColumns() as $field => $aliases) {
+            foreach ($normalizedHeaders as $index => $header) {
+                if (in_array($header, $aliases, true)) {
+                    $columnIndexes[$field] = $index;
+                    break;
+                }
+            }
+        }
+
+        foreach (['no_klaim_awal', 'tgl_klaim_awal', 'jenis_klaim', 'vessel'] as $requiredField) {
+            if (!array_key_exists($requiredField, $columnIndexes)) {
+                $requiredLabel = $this->klaimImportFieldLabels()[$requiredField] ?? $requiredField;
+                throw ValidationException::withMessages([
+                    'file' => 'Header wajib tidak ditemukan: ' . $requiredLabel . '.',
+                ]);
+            }
+        }
+
+        $parsed = [];
+        foreach (array_slice($rows, 1) as $offset => $row) {
+            $item = ['row_number' => $offset + 2];
+            $hasValue = false;
+
+            foreach ($columnIndexes as $field => $index) {
+                $value = trim((string) ($row[$index] ?? ''));
+                if ($value !== '') {
+                    $hasValue = true;
+                }
+
+                if (in_array($field, ['tgl_klaim_awal', 'tgl_klaim_akhir'], true)) {
+                    $item[$field] = $value === '' ? null : $this->excelDateToDateTime($value, true);
+                } else {
+                    $item[$field] = $value === '' ? null : $value;
+                }
+            }
+
+            if (!$hasValue) {
+                continue;
+            }
+
+            $parsed[] = $item;
+        }
+
+        if ($parsed === []) {
+            throw ValidationException::withMessages([
+                'file' => 'Tidak ada baris data yang bisa diproses pada file import.',
+            ]);
+        }
+
+        return $parsed;
+    }
+
+    private function resolveVesselIdFromImport(?string $value): ?int
+    {
+        $lookup = $this->normalizeImportHeader($value);
+        if ($lookup === '') {
+            return null;
+        }
+
+        $vessel = DB::table('m_vessel')
+            ->select('id', 'kode_vessel', 'nama_vessel')
+            ->get()
+            ->first(function ($row) use ($lookup) {
+                $kode = $this->normalizeImportHeader($row->kode_vessel ?? '');
+                $nama = $this->normalizeImportHeader($row->nama_vessel ?? '');
+                return $lookup === $kode || $lookup === $nama || str_contains($nama, $lookup) || str_contains($lookup, $nama);
+            });
+
+        return $vessel ? (int) $vessel->id : null;
+    }
+
+    private function normalizeJenisKlaimImport(?string $value): ?string
+    {
+        $jenis = strtoupper(trim((string) $value));
+        if ($jenis === '') {
+            return null;
+        }
+
+        $aliases = [
+            'BUNKEROFFDELIVERY' => 'BOD',
+            'BUNKEROFDELIVERY' => 'BOD',
+        ];
+
+        $normalized = preg_replace('/[^A-Z0-9]/', '', $jenis) ?? '';
+        if (isset($aliases[$normalized])) {
+            $jenis = $aliases[$normalized];
+        }
+
+        $allowed = ['SSOB', 'SPOB', 'TL', 'BOD'];
+        return in_array($jenis, $allowed, true) ? $jenis : null;
+    }
+
+    private function buildKlaimImportTemplateHtml(): string
+    {
+        $headers = $this->klaimImportFieldLabels();
+        $sampleRows = [
+            ['KLAIM/OSL/001', '2026-06-01', 'SSOB', 'AB2F8', '2026-06', '', ''],
+            ['KLAIM/OSL/002', '2026-06-05', 'TL', 'AB5FL9', '2026-06', 'FIN/KLAIM/002', '2026-06-12'],
+        ];
+
+        $html = '<table border="1"><tr>';
+        foreach ($headers as $header) {
+            $html .= '<th>' . e($header) . '</th>';
+        }
+        $html .= '</tr>';
+
+        foreach ($sampleRows as $sampleRow) {
+            $html .= '<tr>';
+            foreach ($sampleRow as $value) {
+                $html .= '<td>' . e((string) $value) . '</td>';
+            }
+            $html .= '</tr>';
+        }
+
+        $html .= '</table>';
+
+        return $html;
+    }
+
+    private function buildKlaimExportHtml(): string
+    {
+        $headers = array_keys($this->klaimImportFieldLabels());
+        $labels = $this->klaimImportFieldLabels();
+
+        $rows = DB::table('t_klaim')
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_klaim.id_vessel')
+            ->select(
+                't_klaim.no_klaim_awal',
+                't_klaim.tgl_klaim_awal',
+                't_klaim.jenis_klaim',
+                'm_vessel.kode_vessel as vessel',
+                't_klaim.periode_klaim',
+                't_klaim.no_klaim_akhir',
+                't_klaim.tgl_klaim_akhir'
+            )
+            ->orderBy('t_klaim.id')
+            ->get();
+
+        $html = '<table border="1"><tr>';
+        foreach ($headers as $header) {
+            $html .= '<th>' . e($labels[$header]) . '</th>';
+        }
+        $html .= '</tr>';
+
+        foreach ($rows as $row) {
+            $html .= '<tr>';
+            foreach ($headers as $header) {
+                $html .= '<td>' . e((string) ($row->{$header} ?? '')) . '</td>';
+            }
+            $html .= '</tr>';
+        }
+
+        $html .= '</table>';
+
+        return $html;
+    }
+
+    private function processImportFile(Request $request): array
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv,html,xml|max:20480',
+        ], [
+            'file.required' => 'File import wajib diisi.',
+            'file.mimes' => 'File import harus berupa XLSX/XLS/CSV.',
+        ]);
+
+        $file = $request->file('file');
+        try {
+            $rows = SimpleSpreadsheetReader::readRows(
+                $file->getRealPath(),
+                $file->getClientOriginalExtension()
+            );
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages([
+                'file' => $e->getMessage(),
+            ]);
+        }
+
+        $parsedRows = $this->parseKlaimImportRows($rows);
+
+        $result = [
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => [],
+            'created_rows' => [],
+            'updated_rows' => [],
+        ];
+
+        DB::beginTransaction();
+        try {
+            foreach ($parsedRows as $row) {
+                $jenisKlaim = $this->normalizeJenisKlaimImport($row['jenis_klaim'] ?? null);
+                if (!$jenisKlaim) {
+                    $result['errors'][] = 'Baris ' . $row['row_number'] . ': Jenis Klaim harus salah satu dari SSOB, SPOB, TL, atau BOD.';
+                    $result['skipped']++;
+                    continue;
+                }
+
+                $idVessel = $this->resolveVesselIdFromImport($row['vessel'] ?? null);
+                if (!$idVessel) {
+                    $result['errors'][] = 'Baris ' . $row['row_number'] . ': Vessel "' . ($row['vessel'] ?? '') . '" tidak ditemukan.';
+                    $result['skipped']++;
+                    continue;
+                }
+
+                $payload = [
+                    'id_vessel' => $idVessel,
+                    'no_klaim_awal' => $row['no_klaim_awal'],
+                    'tgl_klaim_awal' => $row['tgl_klaim_awal'],
+                    'jenis_klaim' => $jenisKlaim,
+                    'no_klaim_akhir' => $row['no_klaim_akhir'] ?? null,
+                    'tgl_klaim_akhir' => $row['tgl_klaim_akhir'] ?? null,
+                    'periode_klaim' => $row['periode_klaim'] ?? null,
+                    'status' => 'OPEN',
+                    'user_id' => $this->actingUserId(),
+                    'updated_at' => now(),
+                ];
+
+                $existing = T_klaim::query()
+                    ->where('no_klaim_awal', $row['no_klaim_awal'])
+                    ->first();
+
+                if ($existing) {
+                    DB::table('t_klaim')->where('id', $existing->id)->update($payload);
+                    $result['updated']++;
+                    $result['updated_rows'][] = [
+                        'row_number' => $row['row_number'],
+                        'klaim_id' => (int) $existing->id,
+                        'no_klaim_awal' => $payload['no_klaim_awal'],
+                        'jenis_klaim' => $payload['jenis_klaim'],
+                        'vessel' => $row['vessel'] ?? null,
+                        'previous_status' => $existing->status,
+                    ];
+                    continue;
+                }
+
+                $payload['created_at'] = now();
+                $klaimId = DB::table('t_klaim')->insertGetId($payload);
+                $result['created']++;
+                $result['created_rows'][] = [
+                    'row_number' => $row['row_number'],
+                    'klaim_id' => (int) $klaimId,
+                    'no_klaim_awal' => $payload['no_klaim_awal'],
+                    'jenis_klaim' => $payload['jenis_klaim'],
+                    'vessel' => $row['vessel'] ?? null,
+                ];
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+
+        return $result;
+    }
+
+    public function importTemplate()
+    {
+        $filename = 'klaim_import_template.xls';
+
+        return response($this->buildKlaimImportTemplateHtml(), 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function exportImportSource()
+    {
+        $filename = 'klaim_import_source.xls';
+
+        return response($this->buildKlaimExportHtml(), 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function importPage()
+    {
+        return response()->view('klaim-import', [
+            'result' => session('result'),
+            'errorsFromImport' => session('errors_from_import', []),
+        ]);
+    }
+
+    public function importExcelWeb(Request $request)
+    {
+        $result = $this->processImportFile($request);
+
+        return redirect()
+            ->route('klaim.import.page')
+            ->with('result', $result)
+            ->with('errors_from_import', $result['errors'] ?? []);
+    }
+
+    public function importExcel(Request $request)
+    {
+        $result = $this->processImportFile($request);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Import Klaim selesai diproses.',
+            'data' => $result,
+        ]);
+    }
+
     private function extractIncomingUploadFiles(Request $request): array
     {
         $all = $request->allFiles();

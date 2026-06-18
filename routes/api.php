@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::controller(\App\Http\Controllers\File_uploadController::class)->prefix('file_upload')->group(function () {
         Route::get('/pdf-by-section', 'pdfBySection');
         Route::get('/pdf-bulk-download', 'bulkDownload');
+        Route::post('/cable/{id}', 'uploadCableFiles')->whereNumber('id');
     });
 
     Route::get('/me', function (Request $request) {
@@ -96,7 +97,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::controller(T_klaimController::class)->prefix('klaim')->group(function () {
         Route::get('/', 'index');
         Route::get('/search', 'search');
+        Route::get('/import-template', 'importTemplate');
         Route::get('/details/{id}', 'details');
+        Route::post('/import-excel', 'importExcel');
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
         Route::post('/{id}/approve', 'approve');
@@ -116,7 +119,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::controller(T_doc_cargoController::class)->prefix('doc_cargo')->group(function () {
         Route::get('/', 'index');
         Route::get('/search', 'search');
+        Route::get('/import-template', 'importTemplate');
         Route::get('/details/{id}', 'details');
+        Route::post('/import-excel', 'importExcel');
+        Route::post('/{id}/refresh', 'refresh');
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
         Route::post('/{id}/approve', 'approve');
@@ -151,6 +157,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/search', 'search');
         Route::get('/refs', 'refs');
         Route::get('/details/{id}', 'details');
+        Route::post('/import-excel', 'importExcel');
         Route::post('/', 'create');
         Route::put('/{id}', 'edit');
         Route::post('/{id}/approve', 'approve');

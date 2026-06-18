@@ -6,6 +6,7 @@ use App\Models\T_master_cable;
 use App\Models\File_upload;
 use App\Models\Settings;
 use App\Support\FileUploadHelper;
+use App\Support\SimpleSpreadsheetReader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,11 @@ use Illuminate\Validation\ValidationException;
 
 class T_master_cableController extends Controller
 {
+    private function actingUserId(): ?int
+    {
+        return Auth::id() ?? DB::table('users')->orderBy('id')->value('id');
+    }
+
     private function validateCableUploadExtensions(array $files): void
     {
         foreach ($files as $file) {
@@ -103,6 +109,695 @@ class T_master_cableController extends Controller
             'jenis_voyage' => $nextJenisVoyage,
             'no_voyage_gab' => $noVoyageGab,
         ];
+    }
+
+    private function normalizeImportHeader(?string $value): string
+    {
+        $upper = strtoupper(trim((string) $value));
+        return preg_replace('/[^A-Z0-9]/', '', $upper) ?? '';
+    }
+
+    private function toNumber($value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $str = trim((string) $value);
+        if ($str === '') {
+            return null;
+        }
+
+        if (str_contains($str, ',') && str_contains($str, '.')) {
+            if (strrpos($str, ',') > strrpos($str, '.')) {
+                $str = str_replace('.', '', $str);
+                $str = str_replace(',', '.', $str);
+            } else {
+                $str = str_replace(',', '', $str);
+            }
+        } elseif (str_contains($str, ',')) {
+            $str = str_replace(',', '.', $str);
+        }
+
+        $cleaned = preg_replace('/[^0-9.\-]/', '', $str);
+        if ($cleaned === null || $cleaned === '' || $cleaned === '-' || $cleaned === '.') {
+            return null;
+        }
+
+        return (float) $cleaned;
+    }
+
+    private function formatImportedNumber($value): ?string
+    {
+        $number = $this->toNumber($value);
+        if ($number === null) {
+            return null;
+        }
+
+        return number_format($number, 6, '.', '');
+    }
+
+    private function excelDateToDateTime($value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            $serial = (float) $value;
+            if ($serial > 0) {
+                $unix = (int) round(($serial - 25569) * 86400);
+                return gmdate('Y-m-d H:i:s', $unix);
+            }
+        }
+
+        $text = trim((string) $value);
+        if ($text === '') {
+            return null;
+        }
+
+        $ts = strtotime($text);
+        if ($ts === false) {
+            return null;
+        }
+
+        return date('Y-m-d H:i:s', $ts);
+    }
+
+    private function cableImportColumns(): array
+    {
+        return [
+            'no_kontrak' => ['NOKONTRAK', 'CONTRACTNO', 'NOCONTRACT'],
+            'no_voyage_gab' => ['NOVOYAGEGAB', 'VOYAGEGAB', 'NOVOYAGE'],
+            'master' => ['MASTER'],
+            'atd_port' => ['ATDPORT', 'LOADPORT'],
+            'atd_time' => ['ATDTIME', 'LOADTIME', 'LOADINGTIME'],
+            'atd_rob' => ['ATDROB', 'ATDROBMT'],
+            'ata_port' => ['ATAPORT', 'DISCHARGEPORT'],
+            'ata_time' => ['ATATIME', 'DISCHARGETIME'],
+            'ata_rob' => ['ATAROB', 'ATAROBMT'],
+            'distance' => ['DISTANCE', 'DISTANCENM'],
+            'bunker_price' => ['BUNKERPRICE', 'BUNKERPRICEIDRLITER'],
+        ];
+    }
+
+    private function cableImportFieldLabels(): array
+    {
+        return [
+            'no_kontrak' => 'No Kontrak',
+            'no_voyage_gab' => 'No Voyage Gab',
+            'master' => 'Master',
+            'atd_port' => 'ATD Port',
+            'atd_time' => 'ATD Time',
+            'atd_rob' => 'ATD ROB (MT)',
+            'ata_port' => 'ATA Port',
+            'ata_time' => 'ATA Time',
+            'ata_rob' => 'ATA ROB (MT)',
+            'distance' => 'Distance (NM)',
+            'bunker_price' => 'Bunker Price (IDR/liter)',
+        ];
+    }
+
+    private function daysInMonthFromDateTime(?string $value): ?int
+    {
+        if (!$value) {
+            return null;
+        }
+
+        $ts = strtotime($value);
+        if ($ts === false) {
+            return null;
+        }
+
+        return (int) date('t', $ts);
+    }
+
+    private function diffDays(?string $start, ?string $end): ?float
+    {
+        if (!$start || !$end) {
+            return null;
+        }
+
+        $startTs = strtotime($start);
+        $endTs = strtotime($end);
+        if ($startTs === false || $endTs === false) {
+            return null;
+        }
+
+        return ($endTs - $startTs) / 86400;
+    }
+
+    private function formatComputedNumber(?float $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return number_format($value, 6, '.', '');
+    }
+
+    private function getEstClaimBunkerFactor(): float
+    {
+        $value = $this->toNumber(
+            Settings::where('nama', 'variable est_claim_bunker')
+                ->where('status', 'ACTIVE')
+                ->orderByDesc('id')
+                ->value('value')
+        );
+
+        return $value ?? 0.847;
+    }
+
+    private function applyCableDerivedFields(array $payload, object $kontrak): array
+    {
+        $distance = $this->toNumber($payload['distance'] ?? null);
+        $atdRob = $this->toNumber($payload['atd_rob'] ?? null);
+        $ataRob = $this->toNumber($payload['ata_rob'] ?? null);
+        $bunkerPrice = $this->toNumber($payload['bunker_price'] ?? null);
+
+        $speed = null;
+        if ($distance !== null) {
+            $speed = $this->toNumber($kontrak->speed ?? null);
+        }
+
+        $estSailDay = ($distance !== null && $speed !== null && $speed != 0.0)
+            ? $distance / $speed / 24
+            : null;
+
+        $actSailDay = $this->diffDays($payload['atd_time'] ?? null, $payload['ata_time'] ?? null);
+
+        $actSpeed = ($distance !== null && $actSailDay !== null && $actSailDay != 0.0)
+            ? $distance / ($actSailDay * 24)
+            : null;
+
+        $charterRate = $this->toNumber($kontrak->charter_rate ?? null);
+        $charterRateDay = null;
+        if ($charterRate !== null) {
+            $period = strtoupper(trim((string) ($kontrak->period ?? '')));
+            if ($period === 'DAY') {
+                $charterRateDay = $charterRate;
+            } else {
+                $days = $this->daysInMonthFromDateTime($payload['ata_time'] ?? null) ?: (int) date('t');
+                if ($days > 0) {
+                    $charterRateDay = $charterRate / $days;
+                }
+            }
+        }
+
+        $estClaimSpeed = ($actSailDay !== null && $estSailDay !== null && $charterRateDay !== null)
+            ? ($actSailDay - $estSailDay) * $charterRateDay
+            : null;
+
+        $meRate = null;
+        $jenis = strtoupper(trim((string) ($payload['jenis_voyage'] ?? '')));
+        if (str_starts_with($jenis, 'D')) {
+            $meRate = $this->toNumber($kontrak->me_laden ?? null);
+        } else {
+            $meRate = $this->toNumber($kontrak->me_ballast ?? null);
+        }
+
+        $stdBunkerCons = ($meRate !== null && $estSailDay !== null)
+            ? $meRate * $estSailDay
+            : null;
+
+        $actBunkerCons = ($atdRob !== null && $ataRob !== null)
+            ? $atdRob - $ataRob
+            : null;
+
+        $excessBunker = ($actBunkerCons !== null && $stdBunkerCons !== null)
+            ? $actBunkerCons - $stdBunkerCons
+            : null;
+
+        $estClaimBunker = ($excessBunker !== null && $bunkerPrice !== null)
+            ? $excessBunker * $bunkerPrice * 1000 * $this->getEstClaimBunkerFactor()
+            : null;
+
+        $payload['speed'] = $this->formatComputedNumber($speed);
+        $payload['est_sail_day'] = $this->formatComputedNumber($estSailDay);
+        $payload['act_sail_day'] = $this->formatComputedNumber($actSailDay);
+        $payload['act_speed'] = $this->formatComputedNumber($actSpeed);
+        $payload['charter_rate_day'] = $this->formatComputedNumber($charterRateDay);
+        $payload['est_claim_speed'] = $this->formatComputedNumber($estClaimSpeed);
+        $payload['std_bunker_cons'] = $this->formatComputedNumber($stdBunkerCons);
+        $payload['act_bunker_cons'] = $this->formatComputedNumber($actBunkerCons);
+        $payload['excess_bunker'] = $this->formatComputedNumber($excessBunker);
+        $payload['est_claim_bunker'] = $this->formatComputedNumber($estClaimBunker);
+
+        return $payload;
+    }
+
+    private function parseCableImportRows(array $rows): array
+    {
+        if ($rows === []) {
+            throw ValidationException::withMessages([
+                'file' => 'File import kosong.',
+            ]);
+        }
+
+        $headerRow = $rows[0] ?? [];
+        $normalizedHeaders = [];
+        foreach ($headerRow as $index => $header) {
+            $normalizedHeaders[$index] = $this->normalizeImportHeader($header);
+        }
+
+        $columnIndexes = [];
+        foreach ($this->cableImportColumns() as $field => $aliases) {
+            foreach ($normalizedHeaders as $index => $header) {
+                if (in_array($header, $aliases, true)) {
+                    $columnIndexes[$field] = $index;
+                    break;
+                }
+            }
+        }
+
+        foreach (['no_kontrak', 'no_voyage_gab'] as $required) {
+            if (!array_key_exists($required, $columnIndexes)) {
+                throw ValidationException::withMessages([
+                    'file' => 'Header wajib tidak ditemukan: ' . $required . '.',
+                ]);
+            }
+        }
+
+        $parsed = [];
+        foreach (array_slice($rows, 1) as $offset => $row) {
+            $item = ['row_number' => $offset + 2];
+            $hasValue = false;
+
+            foreach ($columnIndexes as $field => $index) {
+                $value = trim((string) ($row[$index] ?? ''));
+                if ($value !== '') {
+                    $hasValue = true;
+                }
+                $item[$field] = $value === '' ? null : $value;
+            }
+
+            if (!$hasValue) {
+                continue;
+            }
+
+            $parsed[] = $item;
+        }
+
+        if ($parsed === []) {
+            throw ValidationException::withMessages([
+                'file' => 'Tidak ada baris data yang bisa diproses pada file import.',
+            ]);
+        }
+
+        return [$parsed, array_keys($columnIndexes)];
+    }
+
+    private function parseNoVoyageGabImport(string $value): ?array
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (!preg_match('/^([^\/]+)\/(\d{5})\/([A-Za-z0-9]+)$/', $trimmed, $matches)) {
+            return null;
+        }
+
+        return [
+            'kode_vessel' => strtoupper(trim($matches[1])),
+            'no_voyage' => $matches[2],
+            'jenis_voyage' => strtoupper(trim($matches[3])),
+            'no_voyage_gab' => strtoupper($trimmed),
+        ];
+    }
+
+    private function normalizeLookupKey(?string $value): string
+    {
+        return preg_replace('/[^A-Z0-9]/', '', strtoupper(trim((string) $value))) ?? '';
+    }
+
+    private function buildCableImportPayload(array $row, object $kontrak, array $voyageMeta, array $presentColumns): array
+    {
+        $payload = [
+            'id_vessel' => (int) $kontrak->id_vessel,
+            'id_kontrak' => (int) $kontrak->id,
+            'no_voyage_gab' => $voyageMeta['no_voyage_gab'],
+            'no_voyage' => $voyageMeta['no_voyage'],
+            'jenis_voyage' => $voyageMeta['jenis_voyage'],
+            'status' => 'APPROVE',
+            'user_id' => $this->actingUserId(),
+            'updated_at' => now(),
+        ];
+
+        $dateFields = ['atd_time', 'ata_time'];
+        $numberFields = ['atd_rob', 'ata_rob', 'distance', 'bunker_price'];
+
+        foreach ($presentColumns as $column) {
+            if (in_array($column, ['no_kontrak', 'no_voyage_gab'], true)) {
+                continue;
+            }
+
+            $raw = $row[$column] ?? null;
+            if (in_array($column, $dateFields, true)) {
+                $payload[$column] = $this->excelDateToDateTime($raw);
+                continue;
+            }
+
+            if (in_array($column, $numberFields, true)) {
+                $payload[$column] = $this->formatImportedNumber($raw);
+                continue;
+            }
+
+            $payload[$column] = $raw;
+        }
+
+        return $this->applyCableDerivedFields($payload, $kontrak);
+    }
+
+    private function buildCableImportTemplateHtml(): string
+    {
+        $headers = $this->cableImportFieldLabels();
+        $sample = [
+            'KONTRAK-001',
+            'AL2F8/26001/L',
+            'STEVEN',
+            'PALEMBANG',
+            '2026-05-10 04:18:00',
+            '123',
+            'JAKARTA',
+            '2026-05-14 04:18:00',
+            '12',
+            '100',
+            '1000',
+        ];
+
+        $html = '<table border="1"><tr>';
+        foreach ($headers as $header) {
+            $html .= '<th>' . e($header) . '</th>';
+        }
+        $html .= '</tr><tr>';
+        foreach ($sample as $value) {
+            $html .= '<td>' . e((string) $value) . '</td>';
+        }
+        $html .= '</tr></table>';
+
+        return $html;
+    }
+
+    private function buildCableExportHtml(): string
+    {
+        $rows = DB::table('t_master_cable')
+            ->leftJoin('m_kontrak', 'm_kontrak.id', '=', 't_master_cable.id_kontrak')
+            ->select(
+                'm_kontrak.no_kontrak',
+                't_master_cable.no_voyage_gab',
+                't_master_cable.master',
+                't_master_cable.atd_port',
+                't_master_cable.atd_time',
+                't_master_cable.atd_rob',
+                't_master_cable.ata_port',
+                't_master_cable.ata_time',
+                't_master_cable.ata_rob',
+                't_master_cable.distance',
+                't_master_cable.bunker_price',
+            )
+            ->orderBy('t_master_cable.id')
+            ->get();
+
+        $headers = array_keys($this->cableImportFieldLabels());
+        $headerLabels = $this->cableImportFieldLabels();
+
+        $html = '<table border="1"><tr>';
+        foreach ($headers as $header) {
+            $html .= '<th>' . e($headerLabels[$header]) . '</th>';
+        }
+        $html .= '</tr>';
+
+        foreach ($rows as $row) {
+            $html .= '<tr>';
+            foreach ($headers as $header) {
+                $html .= '<td>' . e((string) ($row->{$header} ?? '')) . '</td>';
+            }
+            $html .= '</tr>';
+        }
+
+        $html .= '</table>';
+
+        return $html;
+    }
+
+    private function buildCableKontrakCheckResult(): array
+    {
+        $kontrakRowsById = DB::table('m_kontrak')
+            ->select('id', 'id_vessel', 'no_kontrak', 'status')
+            ->get()
+            ->keyBy('id');
+
+        $cableRows = DB::table('t_master_cable')
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_master_cable.id_vessel')
+            ->leftJoin('m_kontrak', 'm_kontrak.id', '=', 't_master_cable.id_kontrak')
+            ->select(
+                't_master_cable.id',
+                't_master_cable.id_vessel',
+                't_master_cable.id_kontrak',
+                't_master_cable.no_voyage_gab',
+                'm_vessel.kode_vessel',
+                'm_kontrak.no_kontrak as current_no_kontrak',
+                'm_kontrak.status as current_kontrak_status'
+            )
+            ->orderBy('t_master_cable.id')
+            ->get();
+
+        $issues = [];
+        foreach ($cableRows as $cable) {
+            $currentKontrak = !empty($cable->id_kontrak)
+                ? $kontrakRowsById->get((int) $cable->id_kontrak)
+                : null;
+            $voyageMeta = $this->parseNoVoyageGabImport((string) $cable->no_voyage_gab);
+            $reasons = [];
+
+            if (empty($cable->id_kontrak)) {
+                $reasons[] = 'id_kontrak pada cable kosong.';
+            }
+
+            if ($currentKontrak && (int) $currentKontrak->id_vessel !== (int) $cable->id_vessel) {
+                $reasons[] = 'id_kontrak di cable mengarah ke vessel yang berbeda.';
+            }
+
+            if (!empty($cable->id_kontrak) && !$currentKontrak) {
+                $reasons[] = 'id_kontrak di cable tidak ditemukan di m_kontrak.';
+            }
+
+            $expectedKodeVessel = strtoupper(trim((string) $cable->kode_vessel));
+            if ($voyageMeta && $expectedKodeVessel !== '' && $voyageMeta['kode_vessel'] !== $expectedKodeVessel) {
+                $reasons[] = 'Prefix vessel pada no_voyage_gab tidak cocok dengan kode vessel.';
+            }
+
+            if ($reasons === []) {
+                continue;
+            }
+
+            $issues[] = [
+                'cable_id' => (int) $cable->id,
+                'no_voyage_gab' => $cable->no_voyage_gab,
+                'current_no_kontrak' => $cable->current_no_kontrak,
+                'expected_no_kontrak' => null,
+                'reasons' => $reasons,
+            ];
+        }
+
+        return [
+            'checked_count' => $cableRows->count(),
+            'issue_count' => count($issues),
+            'issues' => $issues,
+        ];
+    }
+
+    private function processImportFile(Request $request): array
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv,html,xml|max:20480',
+        ], [
+            'file.required' => 'File import wajib diisi.',
+            'file.mimes' => 'File import harus berupa XLSX/XLS/CSV.',
+        ]);
+
+        $file = $request->file('file');
+        try {
+            $rows = SimpleSpreadsheetReader::readRows(
+                $file->getRealPath(),
+                $file->getClientOriginalExtension()
+            );
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages([
+                'file' => $e->getMessage(),
+            ]);
+        }
+
+        [$parsedRows, $presentColumns] = $this->parseCableImportRows($rows);
+
+        $kontrakRows = DB::table('m_kontrak')
+            ->join('m_vessel', 'm_vessel.id', '=', 'm_kontrak.id_vessel')
+            ->select(
+                'm_kontrak.id',
+                'm_kontrak.id_vessel',
+                'm_kontrak.no_kontrak',
+                'm_kontrak.status',
+                'm_kontrak.speed',
+                'm_kontrak.charter_rate',
+                'm_kontrak.period',
+                'm_kontrak.me_ballast',
+                'm_kontrak.me_laden',
+                'm_vessel.kode_vessel'
+            )
+            ->get();
+
+        $kontrakByNo = [];
+        foreach ($kontrakRows as $kontrak) {
+            $kontrakByNo[$this->normalizeLookupKey($kontrak->no_kontrak)] = $kontrak;
+        }
+
+        $existingCables = DB::table('t_master_cable')
+            ->leftJoin('m_kontrak', 'm_kontrak.id', '=', 't_master_cable.id_kontrak')
+            ->select(
+                't_master_cable.id',
+                't_master_cable.id_kontrak',
+                't_master_cable.no_voyage_gab',
+                't_master_cable.status',
+                'm_kontrak.no_kontrak'
+            )
+            ->get()
+            ->groupBy(fn ($row) => $this->normalizeLookupKey($row->no_voyage_gab));
+
+        $result = [
+            'created' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => [],
+            'created_rows' => [],
+            'updated_rows' => [],
+        ];
+
+        DB::beginTransaction();
+        try {
+            foreach ($parsedRows as $row) {
+                $rowNumber = (int) $row['row_number'];
+                $noKontrak = trim((string) ($row['no_kontrak'] ?? ''));
+                $noVoyageGab = strtoupper(trim((string) ($row['no_voyage_gab'] ?? '')));
+
+                if ($noKontrak === '' || $noVoyageGab === '') {
+                    $result['errors'][] = 'Baris ' . $rowNumber . ': no_kontrak dan no_voyage_gab wajib diisi.';
+                    $result['skipped']++;
+                    continue;
+                }
+
+                $kontrak = $kontrakByNo[$this->normalizeLookupKey($noKontrak)] ?? null;
+                if (!$kontrak) {
+                    $result['errors'][] = 'Baris ' . $rowNumber . ': no_kontrak "' . $noKontrak . '" tidak ditemukan di m_kontrak.';
+                    $result['skipped']++;
+                    continue;
+                }
+
+                $voyageMeta = $this->parseNoVoyageGabImport($noVoyageGab);
+                if (!$voyageMeta) {
+                    $result['errors'][] = 'Baris ' . $rowNumber . ': format no_voyage_gab "' . $noVoyageGab . '" tidak valid.';
+                    $result['skipped']++;
+                    continue;
+                }
+
+                $expectedKodeVessel = strtoupper(trim((string) $kontrak->kode_vessel));
+                if ($expectedKodeVessel !== $voyageMeta['kode_vessel']) {
+                    $result['errors'][] = 'Baris ' . $rowNumber . ': no_voyage_gab "' . $noVoyageGab . '" tidak cocok dengan vessel kontrak "' . $noKontrak . '" (kode vessel ' . $expectedKodeVessel . ').';
+                    $result['skipped']++;
+                    continue;
+                }
+
+                $existingGroup = $existingCables[$this->normalizeLookupKey($noVoyageGab)] ?? collect();
+
+                $payload = $this->buildCableImportPayload($row, $kontrak, $voyageMeta, $presentColumns);
+                $existing = $existingGroup->first();
+
+                if ($existing) {
+                    foreach ($existingGroup as $matchedCable) {
+                        DB::table('t_master_cable')->where('id', $matchedCable->id)->update($payload);
+                        $result['updated']++;
+                        $result['updated_rows'][] = [
+                            'row_number' => $rowNumber,
+                            'cable_id' => (int) $matchedCable->id,
+                            'no_kontrak' => $noKontrak,
+                            'no_voyage_gab' => $noVoyageGab,
+                            'kontrak_changed' => !empty($matchedCable->id_kontrak) && (int) $matchedCable->id_kontrak !== (int) $kontrak->id,
+                            'previous_no_kontrak' => $matchedCable->no_kontrak ?? null,
+                            'previous_status' => $matchedCable->status ?? null,
+                            'duplicate_group_count' => $existingGroup->count(),
+                        ];
+                    }
+                    continue;
+                }
+
+                $payload['created_at'] = now();
+                $cableId = DB::table('t_master_cable')->insertGetId($payload);
+                $result['created']++;
+                $result['created_rows'][] = [
+                    'row_number' => $rowNumber,
+                    'cable_id' => (int) $cableId,
+                    'no_kontrak' => $noKontrak,
+                    'no_voyage_gab' => $noVoyageGab,
+                ];
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
+
+        return $result;
+    }
+
+    public function importTemplate()
+    {
+        $filename = 'cable_import_template.xls';
+
+        return response($this->buildCableImportTemplateHtml(), 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function exportImportSource()
+    {
+        $filename = 'cable_import_source.xls';
+
+        return response($this->buildCableExportHtml(), 200, [
+            'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function importPage()
+    {
+        return response()->view('cable-import', [
+            'checkResult' => $this->buildCableKontrakCheckResult(),
+            'result' => session('result'),
+            'errorsFromImport' => session('errors_from_import', []),
+        ]);
+    }
+
+    public function importExcelWeb(Request $request)
+    {
+        $result = $this->processImportFile($request);
+
+        return redirect()
+            ->route('cable.import.page')
+            ->with('result', $result)
+            ->with('errors_from_import', $result['errors'] ?? []);
+    }
+
+    public function importExcel(Request $request)
+    {
+        $result = $this->processImportFile($request);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Import Cable selesai diproses.',
+            'data' => $result,
+        ]);
     }
 
     public function index(Request $request)

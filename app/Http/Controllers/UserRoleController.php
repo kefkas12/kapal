@@ -13,7 +13,7 @@ use Spatie\Permission\Models\Role;
 
 class UserRoleController extends Controller
 {
-    private const ALLOWED_ROLES = ['approval', 'admin', 'superadmin'];
+    private const ALLOWED_ROLES = ['approval', 'admin', 'adminupload', 'superadmin'];
 
     private function ensureBaseRoles(): void
     {
@@ -63,7 +63,7 @@ class UserRoleController extends Controller
 
         $roles = Role::query()
             ->whereIn('name', self::ALLOWED_ROLES)
-            ->orderByRaw("FIELD(name, 'approval', 'admin', 'superadmin')")
+            ->orderByRaw("FIELD(name, 'approval', 'admin', 'adminupload', 'superadmin')")
             ->get();
 
         $roleIds = $roles->pluck('id')->all();

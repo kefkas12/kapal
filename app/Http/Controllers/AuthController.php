@@ -11,7 +11,7 @@ use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
-    private const ALLOWED_ROLES = ['approval', 'admin', 'superadmin'];
+    private const ALLOWED_ROLES = ['approval', 'admin', 'adminupload', 'superadmin'];
 
     private function ensureBaseRoles(): void
     {
@@ -28,7 +28,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'nullable|in:approval,admin,superadmin',
+            'role' => 'nullable|in:approval,admin,adminupload,superadmin',
         ]);
 
         $user = DB::transaction(function () use ($validated) {

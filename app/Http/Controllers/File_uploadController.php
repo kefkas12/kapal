@@ -3,13 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Models\File_upload;
+use App\Support\FileUploadHelper;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use ZipArchive;
 
 class File_uploadController extends Controller
 {
+    private function validateCableUploadExtensions(array $files): void
+    {
+        foreach ($files as $file) {
+            if (!$file) {
+                continue;
+            }
+
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+            if (!in_array($ext, ['pdf', 'xls', 'xlsx'], true)) {
+                throw ValidationException::withMessages([
+                    'files' => 'File cable hanya boleh PDF/XLS/XLSX.',
+                ]);
+            }
+        }
+    }
+
     private function sectionMeta(): array
     {
         return [
@@ -420,6 +438,52 @@ class File_uploadController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'File berhasil dihapus'
+        ]);
+    }
+
+    public function uploadCableFiles(Request $request, int $id)
+    {
+        $user = $request->user();
+        if (!$user || !$user->hasRole('adminupload')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya role adminupload yang boleh upload file cable dari halaman detail.'
+            ], 403);
+        }
+
+        $request->validate([
+            'files' => 'required|array|min:1',
+            'files.*' => 'file|max:51200',
+        ], [
+            'files.required' => 'File upload wajib diisi.',
+            'files.min' => 'Minimal 1 file harus diupload.',
+        ]);
+
+        $files = array_filter((array) $request->file('files', []));
+        $this->validateCableUploadExtensions($files);
+
+        $cable = DB::table('t_master_cable')->where('id', $id)->first();
+        if (!$cable) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cable tidak ditemukan.'
+            ], 404);
+        }
+
+        $created = [];
+        foreach ($files as $file) {
+            $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/cable');
+            $upload = new File_upload();
+            $upload->id_cable = $id;
+            $upload->nama_file = $path;
+            $upload->save();
+            $created[] = $upload;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'File cable berhasil diupload.',
+            'data' => $created,
         ]);
     }
 }
