@@ -280,18 +280,6 @@ class T_klaim_detailController extends Controller
                     continue;
                 }
 
-                if (in_array($value, $usedNoTagihan, true)) {
-                    throw ValidationException::withMessages([
-                        $tagihan['field'] => "{$tagihan['label']} harus unik, tidak boleh sama kiri kanan."
-                    ]);
-                }
-
-                if ($this->noTagihanExistsInDatabase($value, $excludeId)) {
-                    throw ValidationException::withMessages([
-                        $tagihan['field'] => "{$tagihan['label']} '{$value}' sudah ada di database."
-                    ]);
-                }
-
                 $usedNoTagihan[] = $value;
             }
 
@@ -375,18 +363,6 @@ class T_klaim_detailController extends Controller
                 $value = $tagihan['value'];
                 if ($value === '') {
                     continue;
-                }
-
-                if (in_array($value, $usedNoTagihan, true)) {
-                    throw ValidationException::withMessages([
-                        $tagihan['field'] => "{$tagihan['label']} harus unik, tidak boleh sama kiri kanan."
-                    ]);
-                }
-
-                if ($this->noTagihanExistsInDatabase($value, $excludeId)) {
-                    throw ValidationException::withMessages([
-                        $tagihan['field'] => "{$tagihan['label']} '{$value}' sudah ada di database."
-                    ]);
                 }
 
                 $usedNoTagihan[] = $value;
