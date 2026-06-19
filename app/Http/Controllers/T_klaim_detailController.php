@@ -145,6 +145,21 @@ class T_klaim_detailController extends Controller
             ->exists();
     }
 
+    private function isZeroNumericValue($value): bool
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return false;
+        }
+
+        $normalized = preg_replace('/[^0-9.\-]/', '', str_replace(',', '', $raw));
+        if ($normalized === '' || $normalized === '-' || $normalized === '.' || $normalized === '-.') {
+            return false;
+        }
+
+        return (float) $normalized == 0.0;
+    }
+
     private function syncNilaiRows(int $klaimDetailId, int $klaimId, Request $request): array
     {
         $klaim = T_klaim::where('id', $klaimId)->first();
@@ -238,6 +253,7 @@ class T_klaim_detailController extends Controller
             $row->val_klaim_awal = $item['val_klaim_awal'] ?? $request->input('val_klaim_awal');
             $row->val_klaim_akhir = $item['val_klaim_akhir'] ?? $request->input('val_klaim_akhir');
             $row->val_klaim_akhir_idr = $item['val_klaim_akhir_idr'] ?? $request->input('val_klaim_akhir_idr');
+            $requiresPertaminaInvoice = !$this->isZeroNumericValue($row->val_klaim_akhir);
             $noTagihanKlaim = trim((string) ($item['no_tagihan_klaim'] ?? $request->input('no_tagihan_klaim') ?? ''));
             $noTagihanDipotong = trim((string) ($item['no_tagihan_dipotong'] ?? $request->input('no_tagihan_dipotong') ?? ''));
             $tanggalTagihanKlaim = trim((string) ($item['tanggal_tagihan_klaim'] ?? $request->input('tanggal_tagihan_klaim') ?? ''));
@@ -258,7 +274,7 @@ class T_klaim_detailController extends Controller
             }
             $excludeId = $row->exists ? (int) $row->id : null;
 
-            if ($requireInvoiceFields && $tanggalTagihanKlaim === '') {
+            if ($requireInvoiceFields && $requiresPertaminaInvoice && $tanggalTagihanKlaim === '') {
                 throw ValidationException::withMessages([
                     'tanggal_tagihan_klaim' => 'Tanggal Invoice dari Pertamina wajib diisi.',
                 ]);
@@ -271,7 +287,7 @@ class T_klaim_detailController extends Controller
                 ]);
             }
 
-            foreach ($requireInvoiceFields ? [
+            foreach (($requireInvoiceFields && $requiresPertaminaInvoice) ? [
                 ['field' => 'no_tagihan_klaim', 'label' => 'Nomor Invoice dari Pertamina', 'value' => $noTagihanKlaim],
                 ['field' => 'no_tagihan_dipotong', 'label' => 'Nomor Invoice dari PT OSL', 'value' => $noTagihanDipotong],
             ] : [] as $tagihan) {
@@ -341,9 +357,10 @@ class T_klaim_detailController extends Controller
             $noTagihanDipotong = trim((string) ($incoming['no_tagihan_dipotong'] ?? ''));
             $tanggalTagihanKlaim = trim((string) ($incoming['tanggal_tagihan_klaim'] ?? ''));
             $tanggalTagihanDipotong = trim((string) ($incoming['tanggal_tagihan_dipotong'] ?? ''));
+            $requiresPertaminaInvoice = !$this->isZeroNumericValue($incoming['val_klaim_akhir'] ?? $row->val_klaim_akhir);
             $excludeId = (int) $row->id;
 
-            if ($tanggalTagihanKlaim === '') {
+            if ($requiresPertaminaInvoice && $tanggalTagihanKlaim === '') {
                 throw ValidationException::withMessages([
                     'tanggal_tagihan_klaim' => 'Tanggal Invoice dari Pertamina wajib diisi.',
                 ]);
@@ -356,10 +373,10 @@ class T_klaim_detailController extends Controller
                 ]);
             }
 
-            foreach ([
+            foreach ($requiresPertaminaInvoice ? [
                 ['field' => 'no_tagihan_klaim', 'label' => 'Nomor Invoice dari Pertamina', 'value' => $noTagihanKlaim],
                 ['field' => 'no_tagihan_dipotong', 'label' => 'Nomor Invoice dari PT OSL', 'value' => $noTagihanDipotong],
-            ] as $tagihan) {
+            ] : [] as $tagihan) {
                 $value = $tagihan['value'];
                 if ($value === '') {
                     continue;
@@ -909,17 +926,28 @@ class T_klaim_detailController extends Controller
 
         DB::beginTransaction();
         try {
-            $updatedDetails = T_klaim_detail::query()
+            $eligibleIds = T_klaim_detail::query()
                 ->whereIn('id', $ids->all())
                 ->whereRaw('UPPER(COALESCE(status, "")) = ?', ['APPROVE'])
-                ->whereExists(function ($q) {
+                ->whereNotExists(function ($q) {
                     $q->select(DB::raw(1))
                         ->from('t_klaim_detail_nilai as nilai')
                         ->whereColumn('nilai.id_klaim_detail', 't_klaim_detail.id')
                         ->whereRaw('UPPER(COALESCE(nilai.status, "")) = ?', ['APPROVE'])
-                        ->whereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_klaim, ""))) NOT IN ("", "-")')
-                        ->whereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_dipotong, ""))) NOT IN ("", "-")');
+                        ->whereRaw('NOT ((UPPER(TRIM(COALESCE(nilai.no_tagihan_klaim, ""))) NOT IN ("", "-") AND UPPER(TRIM(COALESCE(nilai.no_tagihan_dipotong, ""))) NOT IN ("", "-")) OR COALESCE(nilai.val_klaim_akhir, 0) = 0)');
                 })
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values();
+
+            if ($eligibleIds->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'ids' => 'Data klaim detail belum memenuhi syarat close.'
+                ]);
+            }
+
+            $updatedDetails = T_klaim_detail::query()
+                ->whereIn('id', $eligibleIds->all())
                 ->update([
                     'status' => 'CLOSE',
                     'user_id' => Auth::id(),
@@ -927,10 +955,14 @@ class T_klaim_detailController extends Controller
                 ]);
 
             DB::table('t_klaim_detail_nilai')
-                ->whereIn('id_klaim_detail', $ids->all())
+                ->whereIn('id_klaim_detail', $eligibleIds->all())
                 ->whereRaw('UPPER(COALESCE(status, "")) = ?', ['APPROVE'])
-                ->whereRaw('UPPER(TRIM(COALESCE(no_tagihan_klaim, ""))) NOT IN ("", "-")')
-                ->whereRaw('UPPER(TRIM(COALESCE(no_tagihan_dipotong, ""))) NOT IN ("", "-")')
+                ->where(function ($q) {
+                    $q->where(function ($inner) {
+                        $inner->whereRaw('UPPER(TRIM(COALESCE(no_tagihan_klaim, ""))) NOT IN ("", "-")')
+                            ->whereRaw('UPPER(TRIM(COALESCE(no_tagihan_dipotong, ""))) NOT IN ("", "-")');
+                    })->orWhereRaw('COALESCE(val_klaim_akhir, 0) = 0');
+                })
                 ->update([
                     'status' => 'CLOSE',
                     'user_id' => Auth::id(),
@@ -938,7 +970,7 @@ class T_klaim_detailController extends Controller
                 ]);
 
             $klaimIds = T_klaim_detail::query()
-                ->whereIn('id', $ids->all())
+                ->whereIn('id', $eligibleIds->all())
                 ->pluck('id_klaim')
                 ->filter()
                 ->unique()
