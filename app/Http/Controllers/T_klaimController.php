@@ -10,7 +10,9 @@ use App\Support\FileUploadHelper;
 use App\Support\SimpleSpreadsheetReader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class T_klaimController extends Controller
@@ -18,6 +20,421 @@ class T_klaimController extends Controller
     private function actingUserId(): ?int
     {
         return Auth::id() ?? DB::table('users')->orderBy('id')->value('id');
+    }
+
+    private function refreshEstimateHistoriesForApproval(T_klaim $klaim, T_klaim_detail $detail, Request $request, int $userId): void
+    {
+        $latestValues = $this->resolveLatestEstimateValues($klaim, $detail);
+        $incomingValues = $this->approvalEstimateItems($request);
+        $historySnapshots = $this->approvalEstimateHistorySnapshots($klaim, $request, (int) $detail->id);
+        $estimateHistoryFields = ['val_potensi', 'val_klaim_awal', 'val_klaim_akhir'];
+
+        $nilaiRows = T_klaim_detail_nilai::query()
+            ->where('id_klaim_detail', $detail->id)
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($nilaiRows as $nilai) {
+            $subJenis = strtoupper((string) $nilai->sub_jenis);
+            $latestValPotensi = $latestValues[$subJenis] ?? null;
+            $updates = [];
+            $snapshot = $historySnapshots['id'][$nilai->id] ?? $historySnapshots['sub_jenis'][$subJenis] ?? null;
+
+            if ($this->hasEstimateValue($latestValPotensi) && ! $this->sameEstimateValue($nilai->val_potensi, $latestValPotensi)) {
+                $updates['val_potensi'] = $latestValPotensi;
+            }
+
+            if ($this->hasEstimateValue($latestValPotensi)
+                && $this->shouldSyncKlaimAwalForApproval($nilai->val_klaim_awal, $nilai->val_potensi)
+                && ! $this->sameEstimateValue($nilai->val_klaim_awal, $latestValPotensi)) {
+                $updates['val_klaim_awal'] = $latestValPotensi;
+            }
+
+            $incoming = $incomingValues['id'][$nilai->id] ?? $incomingValues['sub_jenis'][$subJenis] ?? null;
+            if (is_array($incoming)) {
+                foreach (['val_potensi', 'val_klaim_awal', 'val_klaim_akhir', 'val_klaim_akhir_idr'] as $field) {
+                    if (! array_key_exists($field, $incoming)) {
+                        continue;
+                    }
+
+                    $incomingValue = $this->normalizeApprovalEstimateValue($incoming[$field]);
+                    if (! $this->sameEstimateValue($nilai->{$field}, $incomingValue)) {
+                        $updates[$field] = $incomingValue;
+                    }
+                }
+            }
+
+            $nextValues = [
+                'val_potensi' => $updates['val_potensi'] ?? $nilai->val_potensi,
+                'val_klaim_awal' => $updates['val_klaim_awal'] ?? $nilai->val_klaim_awal,
+                'val_klaim_akhir' => $updates['val_klaim_akhir'] ?? $nilai->val_klaim_akhir,
+                'val_klaim_akhir_idr' => $updates['val_klaim_akhir_idr'] ?? $nilai->val_klaim_akhir_idr,
+            ];
+
+            $oldValues = is_array($snapshot)
+                ? [
+                    'val_potensi' => $snapshot['val_potensi'] ?? $nilai->val_potensi,
+                    'val_klaim_awal' => $snapshot['val_klaim_awal'] ?? $nilai->val_klaim_awal,
+                    'val_klaim_akhir' => $snapshot['val_klaim_akhir'] ?? $nilai->val_klaim_akhir,
+                    'val_klaim_akhir_idr' => $snapshot['val_klaim_akhir_idr'] ?? $nilai->val_klaim_akhir_idr,
+                ]
+                : [
+                    'val_potensi' => $nilai->val_potensi,
+                    'val_klaim_awal' => $nilai->val_klaim_awal,
+                    'val_klaim_akhir' => $nilai->val_klaim_akhir,
+                    'val_klaim_akhir_idr' => $nilai->val_klaim_akhir_idr,
+                ];
+
+            $hasChangedEstimate = collect($estimateHistoryFields)->contains(
+                fn (string $field): bool => ! $this->sameEstimateValue($oldValues[$field] ?? null, $nextValues[$field] ?? null)
+            );
+
+            if (! $hasChangedEstimate && $updates === []) {
+                continue;
+            }
+
+            if ($hasChangedEstimate) {
+                $this->insertEstimateHistory($klaim, $detail, $nilai, $oldValues, $nextValues, $userId);
+            }
+
+            if ($updates !== []) {
+                T_klaim_detail_nilai::query()
+                    ->where('id', $nilai->id)
+                    ->update($updates + [
+                        'user_id' => $userId,
+                        'updated_at' => now(),
+                    ]);
+            }
+        }
+    }
+
+    private function approvalEstimateHistorySnapshots(T_klaim $klaim, Request $request, int $klaimDetailId): array
+    {
+        $raw = $request->input('estimate_history_snapshots');
+        if (is_string($raw) && trim($raw) !== '') {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+
+        $cached = $this->getPendingEstimateHistoryCache($this->estimateHistoryPendingCacheKey((int) $klaim->id));
+        if (is_array($cached) && $cached !== []) {
+            $raw = array_merge(is_array($raw) ? $raw : [], $cached);
+        }
+
+        if (! is_array($raw)) {
+            return ['id' => [], 'sub_jenis' => []];
+        }
+
+        $items = ['id' => [], 'sub_jenis' => []];
+        foreach ($raw as $item) {
+            if (! is_array($item) || (int) ($item['id_klaim_detail'] ?? 0) !== $klaimDetailId) {
+                continue;
+            }
+
+            $id = (int) ($item['id_klaim_detail_nilai'] ?? $item['id_nilai'] ?? $item['id'] ?? 0);
+            if ($id > 0) {
+                $items['id'][$id] = $item;
+            }
+
+            $subJenis = strtoupper(trim((string) ($item['sub_jenis'] ?? '')));
+            if ($subJenis !== '') {
+                $items['sub_jenis'][$subJenis] = $item;
+            }
+        }
+
+        return $items;
+    }
+
+    private function estimateHistoryPendingCacheKey(int $klaimId): string
+    {
+        return "klaim-estimate-history-pending:{$klaimId}";
+    }
+
+    private function getPendingEstimateHistoryCache(string $key): array
+    {
+        if (Schema::hasTable('cache')) {
+            $row = DB::table('cache')
+                ->where('key', $key)
+                ->where('expiration', '>', now()->timestamp)
+                ->first();
+
+            if ($row) {
+                $decoded = json_decode((string) $row->value, true);
+
+                return is_array($decoded) ? $decoded : [];
+            }
+        }
+
+        $cached = Cache::get($key, []);
+
+        return is_array($cached) ? $cached : [];
+    }
+
+    private function forgetPendingEstimateHistoryCache(string $key): void
+    {
+        if (Schema::hasTable('cache')) {
+            DB::table('cache')->where('key', $key)->delete();
+        }
+
+        Cache::forget($key);
+    }
+
+    private function putPendingEstimateHistoryCache(string $key, array $value): void
+    {
+        if (Schema::hasTable('cache')) {
+            DB::table('cache')->updateOrInsert(
+                ['key' => $key],
+                [
+                    'value' => json_encode($value),
+                    'expiration' => now()->addHours(6)->timestamp,
+                ]
+            );
+
+            return;
+        }
+
+        Cache::put($key, $value, now()->addHours(6));
+    }
+
+    private function rememberCurrentEstimateValuesForNextApproval(T_klaim $klaim): void
+    {
+        $snapshots = DB::table('t_klaim_detail as detail')
+            ->join('t_klaim_detail_nilai as nilai', 'nilai.id_klaim_detail', '=', 'detail.id')
+            ->where('detail.id_klaim', $klaim->id)
+            ->select([
+                'detail.id as id_klaim_detail',
+                'nilai.id as id_klaim_detail_nilai',
+                'nilai.sub_jenis',
+                'nilai.val_potensi',
+                'nilai.val_klaim_awal',
+                'nilai.val_klaim_akhir',
+                'nilai.val_klaim_akhir_idr',
+            ])
+            ->get()
+            ->map(fn ($row): array => [
+                'id_klaim' => $klaim->id,
+                'id_klaim_detail' => (int) $row->id_klaim_detail,
+                'id_klaim_detail_nilai' => (int) $row->id_klaim_detail_nilai,
+                'sub_jenis' => (string) $row->sub_jenis,
+                'val_potensi' => (string) ($row->val_potensi ?? ''),
+                'val_klaim_awal' => (string) ($row->val_klaim_awal ?? ''),
+                'val_klaim_akhir' => (string) ($row->val_klaim_akhir ?? ''),
+                'val_klaim_akhir_idr' => (string) ($row->val_klaim_akhir_idr ?? ''),
+            ])
+            ->all();
+
+        $this->putPendingEstimateHistoryCache($this->estimateHistoryPendingCacheKey((int) $klaim->id), $snapshots);
+    }
+
+    private function insertEstimateHistory(
+        T_klaim $klaim,
+        T_klaim_detail $detail,
+        T_klaim_detail_nilai $nilai,
+        array $oldValues,
+        array $nextValues,
+        int $userId
+    ): void {
+        DB::table('t_klaim_estimate_histories')->insert([
+            'id_klaim' => $klaim->id,
+            'id_klaim_detail' => $detail->id,
+            'id_klaim_detail_nilai' => $nilai->id,
+            'sub_jenis' => (string) $nilai->sub_jenis,
+            'val_potensi' => (string) ($nextValues['val_potensi'] ?? ''),
+            'val_klaim_awal' => (string) ($nextValues['val_klaim_awal'] ?? ''),
+            'val_klaim_akhir' => (string) ($nextValues['val_klaim_akhir'] ?? ''),
+            'val_klaim_akhir_idr' => (string) ($nextValues['val_klaim_akhir_idr'] ?? ''),
+            'old_val_potensi' => (string) ($oldValues['val_potensi'] ?? ''),
+            'old_val_klaim_awal' => (string) ($oldValues['val_klaim_awal'] ?? ''),
+            'old_val_klaim_akhir' => (string) ($oldValues['val_klaim_akhir'] ?? ''),
+            'old_val_klaim_akhir_idr' => (string) ($oldValues['val_klaim_akhir_idr'] ?? ''),
+            'user_id' => $userId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function approvalEstimateItems(Request $request): array
+    {
+        $raw = $request->input('nilai_items');
+        if (is_string($raw) && trim($raw) !== '') {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($raw)) {
+            return ['id' => [], 'sub_jenis' => []];
+        }
+
+        $items = ['id' => [], 'sub_jenis' => []];
+        foreach ($raw as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $id = (int) ($item['id'] ?? $item['id_nilai'] ?? $item['id_klaim_detail_nilai'] ?? 0);
+            if ($id > 0) {
+                $items['id'][$id] = $item;
+            }
+
+            $subJenis = strtoupper(trim((string) ($item['sub_jenis'] ?? '')));
+            if ($subJenis !== '') {
+                $items['sub_jenis'][$subJenis] = $item;
+            }
+        }
+
+        return $items;
+    }
+
+    private function normalizeApprovalEstimateValue($value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return $value !== '' ? $value : null;
+    }
+
+    private function resolveLatestEstimateValues(T_klaim $klaim, T_klaim_detail $detail): array
+    {
+        $jenisKlaim = strtoupper((string) $klaim->jenis_klaim);
+        $idCable = $detail->id_cable;
+        $noVoyageGab = $detail->no_voyage_gab;
+        $cable = null;
+
+        if ($idCable) {
+            $cable = DB::table('t_master_cable')->where('id', $idCable)->first();
+            $noVoyageGab = $noVoyageGab ?: ($cable->no_voyage_gab ?? null);
+        }
+
+        $docCargo = $this->findDocCargoForEstimate($detail->id_doc_cargo ?? null, $idCable, $noVoyageGab);
+        $offHire = $this->findOffHireForEstimate($detail->id_off_hire ?? null, $idCable, $noVoyageGab);
+        $redeliveryDelivery = $this->findRedeliveryDeliveryForEstimate($detail->id_redelivery_delivery ?? null, $idCable, $noVoyageGab);
+
+        return [
+            'SS' => $cable->est_claim_speed ?? null,
+            'SP' => $docCargo->est_claim_pumping ?? null,
+            'TL' => $docCargo->est_claim_transport ?? ($docCargo->est_transport_loss ?? null),
+            'OB' => $jenisKlaim === 'SPOB'
+                ? ($docCargo->est_claim_bunker ?? null)
+                : ($cable->est_claim_bunker ?? null),
+            'OH' => $offHire->est_oh ?? null,
+            'BOH' => $offHire->est_boh ?? null,
+            'BOD' => $redeliveryDelivery->est_bod ?? null,
+        ];
+    }
+
+    private function findDocCargoForEstimate($idDocCargo, $idCable, $noVoyageGab): ?object
+    {
+        $query = DB::table('t_doc_cargo');
+
+        if (! empty($idDocCargo)) {
+            $query->where('id', $idDocCargo);
+        } elseif (! empty($idCable)) {
+            $query->where('id_cable', $idCable);
+        } elseif (! empty($noVoyageGab)) {
+            $query->where('no_voyage_gab', $noVoyageGab);
+        } else {
+            return null;
+        }
+
+        return $query->orderByDesc('id')->first();
+    }
+
+    private function findOffHireForEstimate($idOffHire, $idCable, $noVoyageGab): ?object
+    {
+        $query = DB::table('t_off_hire');
+        $hasIdCable = Schema::hasColumn('t_off_hire', 'id_cable');
+        $hasNoVoyageGab = Schema::hasColumn('t_off_hire', 'no_voyage_gab');
+
+        if (! empty($idOffHire)) {
+            $query->where('id', $idOffHire);
+        } elseif (! empty($idCable) && $hasIdCable) {
+            $query->where('id_cable', $idCable);
+        } elseif (! empty($noVoyageGab) && $hasNoVoyageGab) {
+            $query->where('no_voyage_gab', $noVoyageGab);
+        } else {
+            return null;
+        }
+
+        return $query->orderByDesc('id')->first();
+    }
+
+    private function findRedeliveryDeliveryForEstimate($idRedeliveryDelivery, $idCable, $noVoyageGab): ?object
+    {
+        $query = DB::table('t_redelivery_delivery');
+        $hasIdCable = Schema::hasColumn('t_redelivery_delivery', 'id_cable');
+        $hasNoVoyageGab = Schema::hasColumn('t_redelivery_delivery', 'no_voyage_gab');
+
+        if (! empty($idRedeliveryDelivery)) {
+            $query->where('id', $idRedeliveryDelivery);
+        } elseif (! empty($idCable)) {
+            if ($hasIdCable) {
+                $query->where('id_cable', $idCable);
+            } else {
+                $query->where('id', $idCable);
+            }
+        } elseif (! empty($noVoyageGab) && $hasNoVoyageGab) {
+            $query->where('no_voyage_gab', $noVoyageGab);
+        } else {
+            return null;
+        }
+
+        return $query->orderByDesc('id')->first();
+    }
+
+    private function shouldSyncKlaimAwalForApproval($currentValue, $currentEstimate): bool
+    {
+        if (! $this->hasEstimateValue($currentValue)) {
+            return true;
+        }
+
+        $currentNumber = $this->estimateNumber($currentValue);
+        if ($currentNumber !== null && abs($currentNumber) < 0.000001) {
+            return true;
+        }
+
+        return $this->sameEstimateValue($currentValue, $currentEstimate);
+    }
+
+    private function sameEstimateValue($left, $right): bool
+    {
+        $leftNumber = $this->estimateNumber($left);
+        $rightNumber = $this->estimateNumber($right);
+
+        if ($leftNumber !== null && $rightNumber !== null) {
+            return abs($leftNumber - $rightNumber) < 0.000001;
+        }
+
+        return trim((string) ($left ?? '')) === trim((string) ($right ?? ''));
+    }
+
+    private function hasEstimateValue($value): bool
+    {
+        return trim((string) ($value ?? '')) !== '';
+    }
+
+    private function estimateNumber($value): ?float
+    {
+        if (! $this->hasEstimateValue($value)) {
+            return null;
+        }
+
+        $str = trim((string) $value);
+        if (str_contains($str, ',') && str_contains($str, '.')) {
+            if (strrpos($str, ',') > strrpos($str, '.')) {
+                $str = str_replace('.', '', $str);
+                $str = str_replace(',', '.', $str);
+            } else {
+                $str = str_replace(',', '', $str);
+            }
+        } elseif (str_contains($str, ',')) {
+            $str = str_replace(',', '.', $str);
+        }
+
+        $cleaned = preg_replace('/[^0-9.\-]/', '', $str);
+        if ($cleaned === null || $cleaned === '' || $cleaned === '-' || $cleaned === '.') {
+            return null;
+        }
+
+        return (float) $cleaned;
     }
 
     private function normalizeImportHeader(?string $value): string
@@ -674,6 +1091,50 @@ class T_klaimController extends Controller
         ]);
     }
 
+    public function estimateHistories(Request $request)
+    {
+        $id = (int) $request->route('id');
+
+        $rows = DB::table('t_klaim_estimate_histories as history')
+            ->join('t_klaim_detail as detail', 'detail.id', '=', 'history.id_klaim_detail')
+            ->leftJoin('t_klaim_detail_nilai as nilai', 'nilai.id', '=', 'history.id_klaim_detail_nilai')
+            ->leftJoin('users', 'users.id', '=', 'history.user_id')
+            ->where('history.id_klaim', $id)
+            ->orderByDesc('history.id')
+            ->select([
+                'history.id',
+                'history.id_klaim',
+                'history.id_klaim_detail',
+                'history.id_klaim_detail_nilai',
+                'history.sub_jenis',
+                'history.val_potensi',
+                'history.val_klaim_awal',
+                'history.val_klaim_akhir',
+                'history.val_klaim_akhir_idr',
+                'history.old_val_potensi',
+                'history.old_val_klaim_awal',
+                'history.old_val_klaim_akhir',
+                'history.old_val_klaim_akhir_idr',
+                'history.user_id',
+                'history.created_at',
+                'detail.no_urut',
+                'detail.no_voyage_gab',
+                'detail.keterangan',
+                'nilai.val_potensi as current_val_potensi',
+                'nilai.val_klaim_awal as current_val_klaim_awal',
+                'nilai.val_klaim_akhir as current_val_klaim_akhir',
+                'nilai.val_klaim_akhir_idr as current_val_klaim_akhir_idr',
+                'users.name as user_name',
+            ])
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'History perubahan estimasi klaim berhasil diambil',
+            'data' => $rows,
+        ]);
+    }
+
     public function create(Request $request)
     {
         try {
@@ -818,27 +1279,31 @@ class T_klaimController extends Controller
                     'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.',
                 ], 403);
             }
+            $userId = (int) $user->id;
 
             $klaim = T_klaim::where('id', $id)->firstOrFail();
 
-            $details = T_klaim_detail::where('id_klaim', $id)->get();
+            $details = T_klaim_detail::where('id_klaim', $id)->lockForUpdate()->get();
             foreach ($details as $detail) {
+                $this->refreshEstimateHistoriesForApproval($klaim, $detail, $request, $userId);
+
                 $detail->status = 'APPROVE';
-                $detail->user_id = Auth::id();
+                $detail->user_id = $userId;
                 $detail->save();
 
                 DB::table('t_klaim_detail_nilai')
                     ->where('id_klaim_detail', $detail->id)
                     ->update([
                         'status' => 'APPROVE',
-                        'user_id' => Auth::id(),
+                        'user_id' => $userId,
                         'updated_at' => now(),
                     ]);
             }
 
             $klaim->status = 'APPROVE';
-            $klaim->user_id = Auth::id();
+            $klaim->user_id = $userId;
             $klaim->save();
+            $this->forgetPendingEstimateHistoryCache($this->estimateHistoryPendingCacheKey((int) $klaim->id));
 
             DB::commit();
 
@@ -870,6 +1335,7 @@ class T_klaimController extends Controller
             }
 
             $klaim = T_klaim::where('id', $id)->firstOrFail();
+            $this->rememberCurrentEstimateValuesForNextApproval($klaim);
 
             $details = T_klaim_detail::where('id_klaim', $id)->get();
             foreach ($details as $detail) {

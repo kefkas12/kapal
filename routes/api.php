@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/search', 'search');
         Route::get('/detail-nilai', 'detailNilaiList');
         Route::get('/import-template', 'importTemplate');
+        Route::get('/{id}/estimate-histories', 'estimateHistories');
         Route::get('/details/{id}', 'details');
         Route::post('/import-excel', 'importExcel');
         Route::post('/', 'create');

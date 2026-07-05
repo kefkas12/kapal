@@ -2,29 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\T_klaim_detail;
-use App\Models\T_klaim_detail_nilai;
-use App\Models\T_klaim;
 use App\Models\File_upload;
 use App\Models\T_doc_cargo;
+use App\Models\T_klaim;
+use App\Models\T_klaim_detail;
+use App\Models\T_klaim_detail_nilai;
 use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Carbon;
 
 class T_klaim_detailController extends Controller
 {
     private function resolveDefaultCurrency(?string $jenisKlaim, string $subJenis, $fallback = null): ?string
     {
         $sub = strtoupper((string) $subJenis);
-        if (in_array($sub, ['SP', 'SS', 'TL', 'OH'], true)) return 'USD';
-        if (in_array($sub, ['OB', 'BOH', 'BOD'], true)) return 'IDR';
+        if (in_array($sub, ['SP', 'SS', 'TL', 'OH'], true)) {
+            return 'USD';
+        }
+        if (in_array($sub, ['OB', 'BOH', 'BOD'], true)) {
+            return 'IDR';
+        }
 
         $value = trim((string) ($fallback ?? ''));
+
         return $value !== '' ? strtoupper($value) : null;
     }
 
@@ -47,6 +53,7 @@ class T_klaim_detailController extends Controller
     private function getSubJenisByJenisKlaim(?string $jenisKlaim): array
     {
         $jenis = strtoupper((string) $jenisKlaim);
+
         return match ($jenis) {
             'SSOB' => ['SS', 'OB'],
             'SPOB' => ['SP', 'OB'],
@@ -65,8 +72,10 @@ class T_klaim_detailController extends Controller
         }
         if (is_string($raw) && trim($raw) !== '') {
             $decoded = json_decode($raw, true);
+
             return is_array($decoded) ? $decoded : [];
         }
+
         return [];
     }
 
@@ -74,9 +83,9 @@ class T_klaim_detailController extends Controller
     {
         $query = T_doc_cargo::query();
 
-        if (!empty($idCable)) {
+        if (! empty($idCable)) {
             $query->where('id_cable', $idCable);
-        } elseif (!empty($noVoyageGab)) {
+        } elseif (! empty($noVoyageGab)) {
             $query->where('no_voyage_gab', $noVoyageGab);
         } else {
             return null;
@@ -91,11 +100,11 @@ class T_klaim_detailController extends Controller
         $hasIdCable = Schema::hasColumn('t_off_hire', 'id_cable');
         $hasNoVoyageGab = Schema::hasColumn('t_off_hire', 'no_voyage_gab');
 
-        if (!empty($idOffHire)) {
+        if (! empty($idOffHire)) {
             $query->where('id', $idOffHire);
-        } elseif (!empty($idCable) && $hasIdCable) {
+        } elseif (! empty($idCable) && $hasIdCable) {
             $query->where('id_cable', $idCable);
-        } elseif (!empty($noVoyageGab) && $hasNoVoyageGab) {
+        } elseif (! empty($noVoyageGab) && $hasNoVoyageGab) {
             $query->where('no_voyage_gab', $noVoyageGab);
         } else {
             return null;
@@ -110,9 +119,9 @@ class T_klaim_detailController extends Controller
         $hasIdCable = Schema::hasColumn('t_redelivery_delivery', 'id_cable');
         $hasNoVoyageGab = Schema::hasColumn('t_redelivery_delivery', 'no_voyage_gab');
 
-        if (!empty($idRedeliveryDelivery)) {
+        if (! empty($idRedeliveryDelivery)) {
             $query->where('id', $idRedeliveryDelivery);
-        } elseif (!empty($idCable)) {
+        } elseif (! empty($idCable)) {
             if ($hasIdCable) {
                 $query->where('id_cable', $idCable);
             } else {
@@ -120,7 +129,7 @@ class T_klaim_detailController extends Controller
                 // Gunakan id klaim_detail.id_cable sebagai pointer ke t_redelivery_delivery.id.
                 $query->where('id', $idCable);
             }
-        } elseif (!empty($noVoyageGab) && $hasNoVoyageGab) {
+        } elseif (! empty($noVoyageGab) && $hasNoVoyageGab) {
             $query->where('no_voyage_gab', $noVoyageGab);
         } else {
             return null;
@@ -160,6 +169,224 @@ class T_klaim_detailController extends Controller
         return (float) $normalized == 0.0;
     }
 
+    private function estimateHistoryPendingCacheKey(int $klaimId): string
+    {
+        return "klaim-estimate-history-pending:{$klaimId}";
+    }
+
+    private function rememberPendingEstimateHistoriesBeforeNilaiSync(int $klaimDetailId, int $klaimId, Request $request): void
+    {
+        $requestSnapshots = $this->approvalEstimateHistorySnapshotsFromRequest($request, $klaimDetailId);
+        if ($requestSnapshots !== []) {
+            $this->storePendingEstimateHistorySnapshots($klaimId, $requestSnapshots);
+
+            return;
+        }
+
+        $estimateFields = ['val_potensi', 'val_klaim_awal', 'val_klaim_akhir'];
+        $nilaiItems = $this->parseNilaiItems($request);
+        $hasSingleEstimatePayload = collect($estimateFields)->contains(fn (string $field): bool => $request->has($field));
+
+        if (empty($nilaiItems) && ! $hasSingleEstimatePayload) {
+            return;
+        }
+
+        $existingRows = T_klaim_detail_nilai::query()
+            ->where('id_klaim_detail', $klaimDetailId)
+            ->lockForUpdate()
+            ->get()
+            ->keyBy(fn ($row) => strtoupper((string) $row->sub_jenis));
+
+        if ($existingRows->isEmpty()) {
+            return;
+        }
+
+        if (empty($nilaiItems)) {
+            $nilaiItems = $existingRows->keys()
+                ->map(fn ($subJenis): array => ['sub_jenis' => $subJenis])
+                ->all();
+        }
+
+        $snapshots = [];
+        foreach ($nilaiItems as $item) {
+            $subJenis = strtoupper(trim((string) ($item['sub_jenis'] ?? '')));
+            if ($subJenis === '') {
+                continue;
+            }
+
+            $row = $existingRows->get($subJenis);
+            if (! $row) {
+                continue;
+            }
+
+            $hasChangedEstimate = false;
+            foreach ($estimateFields as $field) {
+                if (! array_key_exists($field, $item) && ! $request->has($field)) {
+                    continue;
+                }
+
+                $incomingValue = $this->normalizeEstimateSnapshotValue($item[$field] ?? $request->input($field));
+                if (! $this->sameEstimateSnapshotValue($row->{$field}, $incomingValue)) {
+                    $hasChangedEstimate = true;
+                    break;
+                }
+            }
+
+            if (! $hasChangedEstimate) {
+                continue;
+            }
+
+            $snapshots[] = [
+                'id_klaim' => $klaimId,
+                'id_klaim_detail' => $klaimDetailId,
+                'id_klaim_detail_nilai' => $row->id,
+                'sub_jenis' => (string) $row->sub_jenis,
+                'val_potensi' => (string) ($row->val_potensi ?? ''),
+                'val_klaim_awal' => (string) ($row->val_klaim_awal ?? ''),
+                'val_klaim_akhir' => (string) ($row->val_klaim_akhir ?? ''),
+                'val_klaim_akhir_idr' => (string) ($row->val_klaim_akhir_idr ?? ''),
+            ];
+        }
+
+        $this->storePendingEstimateHistorySnapshots($klaimId, $snapshots);
+    }
+
+    private function approvalEstimateHistorySnapshotsFromRequest(Request $request, int $klaimDetailId): array
+    {
+        $raw = $request->input('estimate_history_snapshots');
+        if (is_string($raw) && trim($raw) !== '') {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        return collect($raw)
+            ->filter(fn ($item): bool => is_array($item) && (int) ($item['id_klaim_detail'] ?? 0) === $klaimDetailId)
+            ->values()
+            ->all();
+    }
+
+    private function storePendingEstimateHistorySnapshots(int $klaimId, array $snapshots): void
+    {
+        if ($snapshots === []) {
+            return;
+        }
+
+        $cacheKey = $this->estimateHistoryPendingCacheKey($klaimId);
+        $existing = $this->getPendingEstimateHistoryCache($cacheKey);
+        $byRow = [];
+
+        foreach (is_array($existing) ? $existing : [] as $item) {
+            $rowKey = $this->pendingEstimateHistoryRowKey($item);
+            if ($rowKey !== '') {
+                $byRow[$rowKey] = $item;
+            }
+        }
+
+        foreach ($snapshots as $snapshot) {
+            $rowKey = $this->pendingEstimateHistoryRowKey($snapshot);
+            if ($rowKey !== '') {
+                $byRow[$rowKey] = $snapshot;
+            }
+        }
+
+        $this->putPendingEstimateHistoryCache($cacheKey, array_values($byRow));
+    }
+
+    private function getPendingEstimateHistoryCache(string $key): array
+    {
+        if (Schema::hasTable('cache')) {
+            $row = DB::table('cache')
+                ->where('key', $key)
+                ->where('expiration', '>', now()->timestamp)
+                ->first();
+
+            if ($row) {
+                $decoded = json_decode((string) $row->value, true);
+
+                return is_array($decoded) ? $decoded : [];
+            }
+        }
+
+        $cached = Cache::get($key, []);
+
+        return is_array($cached) ? $cached : [];
+    }
+
+    private function putPendingEstimateHistoryCache(string $key, array $value): void
+    {
+        if (Schema::hasTable('cache')) {
+            DB::table('cache')->updateOrInsert(
+                ['key' => $key],
+                [
+                    'value' => json_encode($value),
+                    'expiration' => now()->addHours(6)->timestamp,
+                ]
+            );
+
+            return;
+        }
+
+        Cache::put($key, $value, now()->addHours(6));
+    }
+
+    private function pendingEstimateHistoryRowKey(array $item): string
+    {
+        $detailId = (int) ($item['id_klaim_detail'] ?? 0);
+        $nilaiId = (int) ($item['id_klaim_detail_nilai'] ?? 0);
+        $subJenis = strtoupper((string) ($item['sub_jenis'] ?? ''));
+
+        return $detailId > 0 && ($nilaiId > 0 || $subJenis !== '') ? "{$detailId}:{$nilaiId}:{$subJenis}" : '';
+    }
+
+    private function normalizeEstimateSnapshotValue($value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+
+        return $value !== '' ? $value : null;
+    }
+
+    private function sameEstimateSnapshotValue($left, $right): bool
+    {
+        $leftNumber = $this->estimateSnapshotNumber($left);
+        $rightNumber = $this->estimateSnapshotNumber($right);
+
+        if ($leftNumber !== null && $rightNumber !== null) {
+            return abs($leftNumber - $rightNumber) < 0.000001;
+        }
+
+        return trim((string) ($left ?? '')) === trim((string) ($right ?? ''));
+    }
+
+    private function estimateSnapshotNumber($value): ?float
+    {
+        $str = trim((string) ($value ?? ''));
+        if ($str === '') {
+            return null;
+        }
+
+        if (str_contains($str, ',') && str_contains($str, '.')) {
+            if (strrpos($str, ',') > strrpos($str, '.')) {
+                $str = str_replace('.', '', $str);
+                $str = str_replace(',', '.', $str);
+            } else {
+                $str = str_replace(',', '', $str);
+            }
+        } elseif (str_contains($str, ',')) {
+            $str = str_replace(',', '.', $str);
+        }
+
+        $cleaned = preg_replace('/[^0-9.\-]/', '', $str);
+        if ($cleaned === null || $cleaned === '' || $cleaned === '-' || $cleaned === '.') {
+            return null;
+        }
+
+        return (float) $cleaned;
+    }
+
     private function syncNilaiRows(int $klaimDetailId, int $klaimId, Request $request): array
     {
         $klaim = T_klaim::where('id', $klaimId)->first();
@@ -177,7 +404,7 @@ class T_klaim_detailController extends Controller
                     || trim((string) ($item['tanggal_tagihan_klaim'] ?? '')) !== ''
                     || trim((string) ($item['tanggal_tagihan_dipotong'] ?? '')) !== '';
             });
-        $requireInvoiceFields = !$this->isKlaimAwal($klaim) && $hasInvoicePayload;
+        $requireInvoiceFields = ! $this->isKlaimAwal($klaim) && $hasInvoicePayload;
         $idCable = $request->input('id_cable');
         $idOffHire = $request->input('id_off_hire');
         $idRedeliveryDelivery = $request->input('id_redelivery_delivery');
@@ -214,7 +441,7 @@ class T_klaim_detailController extends Controller
                 continue;
             }
 
-            $row = $existingRows->get($subJenis) ?? new T_klaim_detail_nilai();
+            $row = $existingRows->get($subJenis) ?? new T_klaim_detail_nilai;
             $row->id_klaim_detail = $klaimDetailId;
             $row->sub_jenis = $subJenis;
             $resolvedCurrency = $this->resolveDefaultCurrency(
@@ -253,7 +480,7 @@ class T_klaim_detailController extends Controller
             $row->val_klaim_awal = $item['val_klaim_awal'] ?? $request->input('val_klaim_awal');
             $row->val_klaim_akhir = $item['val_klaim_akhir'] ?? $request->input('val_klaim_akhir');
             $row->val_klaim_akhir_idr = $item['val_klaim_akhir_idr'] ?? $request->input('val_klaim_akhir_idr');
-            $requiresPertaminaInvoice = !$this->isZeroNumericValue($row->val_klaim_akhir);
+            $requiresPertaminaInvoice = ! $this->isZeroNumericValue($row->val_klaim_akhir);
             $noTagihanKlaim = trim((string) ($item['no_tagihan_klaim'] ?? $request->input('no_tagihan_klaim') ?? ''));
             $noTagihanDipotong = trim((string) ($item['no_tagihan_dipotong'] ?? $request->input('no_tagihan_dipotong') ?? ''));
             $tanggalTagihanKlaim = trim((string) ($item['tanggal_tagihan_klaim'] ?? $request->input('tanggal_tagihan_klaim') ?? ''));
@@ -312,7 +539,7 @@ class T_klaim_detailController extends Controller
         }
 
         $toDeleteRows = T_klaim_detail_nilai::where('id_klaim_detail', $klaimDetailId)
-            ->when(!empty($keepIds), fn ($q) => $q->whereNotIn('id', $keepIds))
+            ->when(! empty($keepIds), fn ($q) => $q->whereNotIn('id', $keepIds))
             ->get();
 
         foreach ($toDeleteRows as $row) {
@@ -349,7 +576,7 @@ class T_klaim_detailController extends Controller
         $usedNoTagihan = [];
         foreach ($existingRows as $subJenis => $row) {
             $incoming = $incomingBySubJenis[$subJenis] ?? null;
-            if (!$incoming) {
+            if (! $incoming) {
                 continue;
             }
 
@@ -357,7 +584,7 @@ class T_klaim_detailController extends Controller
             $noTagihanDipotong = trim((string) ($incoming['no_tagihan_dipotong'] ?? ''));
             $tanggalTagihanKlaim = trim((string) ($incoming['tanggal_tagihan_klaim'] ?? ''));
             $tanggalTagihanDipotong = trim((string) ($incoming['tanggal_tagihan_dipotong'] ?? ''));
-            $requiresPertaminaInvoice = !$this->isZeroNumericValue($incoming['val_klaim_akhir'] ?? $row->val_klaim_akhir);
+            $requiresPertaminaInvoice = ! $this->isZeroNumericValue($incoming['val_klaim_akhir'] ?? $row->val_klaim_akhir);
             $excludeId = (int) $row->id;
 
             if ($requiresPertaminaInvoice && $tanggalTagihanKlaim === '') {
@@ -399,7 +626,7 @@ class T_klaim_detailController extends Controller
         $files = $this->fileUploadQueryByKlaimDetailId($klaimDetailId)->get();
         foreach ($files as $file) {
             if ($file->nama_file) {
-                $path = public_path('storage/' . ltrim((string) $file->nama_file, '/'));
+                $path = public_path('storage/'.ltrim((string) $file->nama_file, '/'));
                 if (file_exists($path)) {
                     @unlink($path);
                 }
@@ -434,11 +661,11 @@ class T_klaim_detailController extends Controller
         $targetId = $klaimId > 0 ? $klaimId : $klaimDetailId;
 
         foreach ($files as $file) {
-            if (!$file) {
+            if (! $file) {
                 continue;
             }
             $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim_detail');
-            $upload = new File_upload();
+            $upload = new File_upload;
             $column = $this->resolveFileUploadDetailColumn($klaimDetailId, $request);
             $upload->id_klaim_awal = null;
             $upload->id_klaim_akhir = null;
@@ -465,6 +692,7 @@ class T_klaim_detailController extends Controller
             ->first();
 
         $isAwal = $detail && empty($detail->no_klaim_akhir) && empty($detail->tgl_klaim_akhir);
+
         return $isAwal ? 'id_klaim_awal' : 'id_klaim_akhir';
     }
 
@@ -488,7 +716,7 @@ class T_klaim_detailController extends Controller
         $files = [];
 
         $incomingFiles = $request->file('files', []);
-        if (!is_array($incomingFiles)) {
+        if (! is_array($incomingFiles)) {
             $incomingFiles = $incomingFiles ? [$incomingFiles] : [];
         }
         $files = array_merge($files, $incomingFiles);
@@ -512,7 +740,7 @@ class T_klaim_detailController extends Controller
             $ext = strtolower((string) $file->getClientOriginalExtension());
             if ($ext !== 'pdf') {
                 throw ValidationException::withMessages([
-                    'files' => 'File upload hanya boleh PDF.'
+                    'files' => 'File upload hanya boleh PDF.',
                 ]);
             }
         }
@@ -557,6 +785,7 @@ class T_klaim_detailController extends Controller
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -565,7 +794,7 @@ class T_klaim_detailController extends Controller
 
     private function hasUploadedFilesBySubJenis($rawFilesBySubJenis): bool
     {
-        if (!is_array($rawFilesBySubJenis)) {
+        if (! is_array($rawFilesBySubJenis)) {
             return false;
         }
 
@@ -580,7 +809,7 @@ class T_klaim_detailController extends Controller
 
     private function isKlaimAwal(?T_klaim $klaim): bool
     {
-        if (!$klaim) {
+        if (! $klaim) {
             return false;
         }
 
@@ -595,11 +824,11 @@ class T_klaim_detailController extends Controller
         $errors = [];
         $hasIncomingFiles = $this->hasUploadedFiles($request->file('files', []))
             || $this->hasUploadedFilesBySubJenis($request->file('files_by_sub_jenis', []));
-        if (!empty($requiredSubJenis) && !$hasIncomingFiles) {
+        if (! empty($requiredSubJenis) && ! $hasIncomingFiles) {
             $errors['files'] = 'File upload wajib diisi.';
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             throw ValidationException::withMessages($errors);
         }
     }
@@ -610,22 +839,22 @@ class T_klaim_detailController extends Controller
         $hasIncomingFiles = $this->hasUploadedFiles($request->file('files', []))
             || $this->hasUploadedFilesBySubJenis($request->file('files_by_sub_jenis', []));
         $hasExistingFiles = $this->fileUploadQueryByKlaimDetailId($klaimDetailId)->exists();
-        if (!$hasIncomingFiles && !$hasExistingFiles) {
+        if (! $hasIncomingFiles && ! $hasExistingFiles) {
             $errors['files'] = 'File upload wajib diisi.';
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             throw ValidationException::withMessages($errors);
         }
     }
 
     public function index(Request $request)
     {
-        $query = T_klaim_detail::query()->leftJoin('t_master_cable','t_klaim_detail.id_cable','=','t_master_cable.id')
-            ->select('t_klaim_detail.*','t_master_cable.atd_port','t_master_cable.ata_port','t_master_cable.atd_time','t_master_cable.ata_time');
+        $query = T_klaim_detail::query()->leftJoin('t_master_cable', 't_klaim_detail.id_cable', '=', 't_master_cable.id')
+            ->select('t_klaim_detail.*', 't_master_cable.atd_port', 't_master_cable.ata_port', 't_master_cable.atd_time', 't_master_cable.ata_time');
 
         $idKlaim = $request->input('id_klaim');
-        if (!is_null($idKlaim) && $idKlaim !== '') {
+        if (! is_null($idKlaim) && $idKlaim !== '') {
             $query->where('t_klaim_detail.id_klaim', $idKlaim);
         }
 
@@ -640,7 +869,7 @@ class T_klaim_detailController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data T_klaim_detail berhasil diambil',
-            'data'    => $data
+            'data' => $data,
         ]);
     }
 
@@ -680,16 +909,16 @@ class T_klaim_detailController extends Controller
             ? File_upload::where('id_klaim_akhir', $klaimId)->orderBy('id', 'asc')->get()
             : collect();
         $files = $filesAwal->concat($filesAkhir)->unique('id')->values();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Data details T_klaim_detail berhasil diambil',
-            'data'    => [
+            'data' => [
                 'detail' => $data,
                 'files' => $files,
                 'files_awal' => $filesAwal->values(),
                 'files_akhir' => $filesAkhir->values(),
-            ]
+            ],
         ]);
     }
 
@@ -700,7 +929,7 @@ class T_klaim_detailController extends Controller
             $this->validateIncomingUploadFilesArePdf($request);
             $idKlaim = (int) $request->input('id_klaim');
 
-            $t_klaim_detail = new T_klaim_detail();
+            $t_klaim_detail = new T_klaim_detail;
             $t_klaim_detail->id_klaim = $idKlaim;
             if (Schema::hasColumn('t_klaim_detail', 'id_doc_cargo')) {
                 $t_klaim_detail->id_doc_cargo = $request->input('id_doc_cargo');
@@ -716,6 +945,7 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail->user_id = Auth::id();
             $t_klaim_detail->save();
 
+            $this->rememberPendingEstimateHistoriesBeforeNilaiSync((int) $t_klaim_detail->id, (int) $t_klaim_detail->id_klaim, $request);
             $this->syncNilaiRows($t_klaim_detail->id, (int) $t_klaim_detail->id_klaim, $request);
             $this->storeFilesPerNilai($request, (int) $t_klaim_detail->id);
 
@@ -723,7 +953,7 @@ class T_klaim_detailController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_klaim_detail berhasil ditambah'
+                'message' => 'Data T_klaim_detail berhasil ditambah',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -747,7 +977,7 @@ class T_klaim_detailController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL berhasil diubah.'
+                    'message' => 'Nomor Invoice dari Pertamina dan Nomor Invoice dari PT OSL berhasil diubah.',
                 ]);
             }
             $t_klaim_detail->id_klaim = $request->input('id_klaim');
@@ -771,7 +1001,7 @@ class T_klaim_detailController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_klaim_detail berhasil diubah'
+                'message' => 'Data T_klaim_detail berhasil diubah',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -788,9 +1018,10 @@ class T_klaim_detailController extends Controller
             $t_klaim_detail = T_klaim_detail::where('id', $id)->firstOrFail();
             if (strtoupper((string) $t_klaim_detail->status) === 'APPROVE') {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Data Klaim Detail yang sudah APPROVE tidak bisa dihapus.'
+                    'message' => 'Data Klaim Detail yang sudah APPROVE tidak bisa dihapus.',
                 ], 422);
             }
 
@@ -802,7 +1033,7 @@ class T_klaim_detailController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_klaim_detail berhasil dihapus'
+                'message' => 'Data T_klaim_detail berhasil dihapus',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -876,7 +1107,7 @@ class T_klaim_detailController extends Controller
         if ($sortBy === 'currency') {
             // Force USD first, then the rest (e.g. IDR), while respecting requested direction.
             $query->orderByRaw(
-                "CASE WHEN UPPER(COALESCE(nilai.currency, '')) = 'USD' THEN 0 ELSE 1 END " . ($sortDir === 'desc' ? 'DESC' : 'ASC')
+                "CASE WHEN UPPER(COALESCE(nilai.currency, '')) = 'USD' THEN 0 ELSE 1 END ".($sortDir === 'desc' ? 'DESC' : 'ASC')
             );
             $query->orderBy('nilai.currency', $sortDir);
         } else {
@@ -894,6 +1125,7 @@ class T_klaim_detailController extends Controller
             $row->tgl_inv_pertamina_display = $row->tgl_inv_pertamina
                 ? Carbon::parse($row->tgl_inv_pertamina)->format('Y-m-d')
                 : null;
+
             return $row;
         })->values();
 
@@ -920,7 +1152,7 @@ class T_klaim_detailController extends Controller
 
         if ($ids->isEmpty()) {
             throw ValidationException::withMessages([
-                'ids' => 'Pilih minimal 1 data klaim detail untuk di-close.'
+                'ids' => 'Pilih minimal 1 data klaim detail untuk di-close.',
             ]);
         }
 
@@ -942,7 +1174,7 @@ class T_klaim_detailController extends Controller
 
             if ($eligibleIds->isEmpty()) {
                 throw ValidationException::withMessages([
-                    'ids' => 'Data klaim detail belum memenuhi syarat close.'
+                    'ids' => 'Data klaim detail belum memenuhi syarat close.',
                 ]);
             }
 
@@ -982,7 +1214,7 @@ class T_klaim_detailController extends Controller
                     ->whereRaw('UPPER(COALESCE(status, "")) = ?', ['APPROVE'])
                     ->exists();
 
-                if (!$hasRemainingApprove) {
+                if (! $hasRemainingApprove) {
                     T_klaim::query()
                         ->where('id', (int) $klaimId)
                         ->update([
@@ -997,7 +1229,7 @@ class T_klaim_detailController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Berhasil close {$updatedDetails} klaim detail."
+                'message' => "Berhasil close {$updatedDetails} klaim detail.",
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
