@@ -1,14 +1,15 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\File_uploadController;
 use App\Http\Controllers\M_gradeController;
 use App\Http\Controllers\M_kontrakController;
 use App\Http\Controllers\M_vesselController;
+use App\Http\Controllers\T_doc_cargo_detailController;
+use App\Http\Controllers\T_doc_cargoController;
 use App\Http\Controllers\T_klaim_detailController;
 use App\Http\Controllers\T_klaimController;
 use App\Http\Controllers\T_master_cableController;
-use App\Http\Controllers\T_doc_cargoController;
-use App\Http\Controllers\T_doc_cargo_detailController;
 use App\Http\Controllers\T_off_hireController;
 use App\Http\Controllers\T_redelivery_deliveryController;
 use App\Http\Controllers\UserRoleController;
@@ -22,14 +23,14 @@ Route::options('{any}', function () {
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
-Route::controller(\App\Http\Controllers\File_uploadController::class)->prefix('file_upload')->group(function () {
+Route::controller(File_uploadController::class)->prefix('file_upload')->group(function () {
     Route::get('/view/{id}', 'view')->whereNumber('id');
     Route::get('/download/{id}', 'download')->whereNumber('id');
     Route::delete('/{id}', 'delete')->whereNumber('id');
 });
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::controller(\App\Http\Controllers\File_uploadController::class)->prefix('file_upload')->group(function () {
+    Route::controller(File_uploadController::class)->prefix('file_upload')->group(function () {
         Route::get('/pdf-by-section', 'pdfBySection');
         Route::get('/pdf-bulk-download', 'bulkDownload');
         Route::post('/cable/{id}', 'uploadCableFiles')->whereNumber('id');
@@ -37,7 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/me', function (Request $request) {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(null, 401);
         }
 
@@ -97,6 +98,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::controller(T_klaimController::class)->prefix('klaim')->group(function () {
         Route::get('/', 'index');
         Route::get('/search', 'search');
+        Route::get('/detail-nilai', 'detailNilaiList');
         Route::get('/import-template', 'importTemplate');
         Route::get('/details/{id}', 'details');
         Route::post('/import-excel', 'importExcel');
@@ -164,7 +166,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/unapprove', 'unapprove');
         Route::delete('/{id}', 'delete');
     });
-
 
     Route::post('/logout', [AuthController::class, 'logout']);
 

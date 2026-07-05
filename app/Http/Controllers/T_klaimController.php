@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\File_upload;
 use App\Models\T_klaim;
 use App\Models\T_klaim_detail;
 use App\Models\T_klaim_detail_nilai;
-use App\Models\File_upload;
 use App\Support\FileUploadHelper;
 use App\Support\SimpleSpreadsheetReader;
 use Illuminate\Http\Request;
@@ -23,6 +23,7 @@ class T_klaimController extends Controller
     private function normalizeImportHeader(?string $value): string
     {
         $upper = strtoupper(trim((string) $value));
+
         return preg_replace('/[^A-Z0-9]/', '', $upper) ?? '';
     }
 
@@ -62,6 +63,7 @@ class T_klaimController extends Controller
             $serial = (float) $value;
             if ($serial > 0) {
                 $unix = (int) round(($serial - 25569) * 86400);
+
                 return gmdate($dateOnly ? 'Y-m-d' : 'Y-m-d H:i:s', $unix);
             }
         }
@@ -104,10 +106,10 @@ class T_klaimController extends Controller
         }
 
         foreach (['no_klaim_awal', 'tgl_klaim_awal', 'jenis_klaim', 'vessel'] as $requiredField) {
-            if (!array_key_exists($requiredField, $columnIndexes)) {
+            if (! array_key_exists($requiredField, $columnIndexes)) {
                 $requiredLabel = $this->klaimImportFieldLabels()[$requiredField] ?? $requiredField;
                 throw ValidationException::withMessages([
-                    'file' => 'Header wajib tidak ditemukan: ' . $requiredLabel . '.',
+                    'file' => 'Header wajib tidak ditemukan: '.$requiredLabel.'.',
                 ]);
             }
         }
@@ -130,7 +132,7 @@ class T_klaimController extends Controller
                 }
             }
 
-            if (!$hasValue) {
+            if (! $hasValue) {
                 continue;
             }
 
@@ -159,6 +161,7 @@ class T_klaimController extends Controller
             ->first(function ($row) use ($lookup) {
                 $kode = $this->normalizeImportHeader($row->kode_vessel ?? '');
                 $nama = $this->normalizeImportHeader($row->nama_vessel ?? '');
+
                 return $lookup === $kode || $lookup === $nama || str_contains($nama, $lookup) || str_contains($lookup, $nama);
             });
 
@@ -183,6 +186,7 @@ class T_klaimController extends Controller
         }
 
         $allowed = ['SSOB', 'SPOB', 'TL', 'BOD'];
+
         return in_array($jenis, $allowed, true) ? $jenis : null;
     }
 
@@ -196,14 +200,14 @@ class T_klaimController extends Controller
 
         $html = '<table border="1"><tr>';
         foreach ($headers as $header) {
-            $html .= '<th>' . e($header) . '</th>';
+            $html .= '<th>'.e($header).'</th>';
         }
         $html .= '</tr>';
 
         foreach ($sampleRows as $sampleRow) {
             $html .= '<tr>';
             foreach ($sampleRow as $value) {
-                $html .= '<td>' . e((string) $value) . '</td>';
+                $html .= '<td>'.e((string) $value).'</td>';
             }
             $html .= '</tr>';
         }
@@ -234,14 +238,14 @@ class T_klaimController extends Controller
 
         $html = '<table border="1"><tr>';
         foreach ($headers as $header) {
-            $html .= '<th>' . e($labels[$header]) . '</th>';
+            $html .= '<th>'.e($labels[$header]).'</th>';
         }
         $html .= '</tr>';
 
         foreach ($rows as $row) {
             $html .= '<tr>';
             foreach ($headers as $header) {
-                $html .= '<td>' . e((string) ($row->{$header} ?? '')) . '</td>';
+                $html .= '<td>'.e((string) ($row->{$header} ?? '')).'</td>';
             }
             $html .= '</tr>';
         }
@@ -287,16 +291,18 @@ class T_klaimController extends Controller
         try {
             foreach ($parsedRows as $row) {
                 $jenisKlaim = $this->normalizeJenisKlaimImport($row['jenis_klaim'] ?? null);
-                if (!$jenisKlaim) {
-                    $result['errors'][] = 'Baris ' . $row['row_number'] . ': Jenis Klaim harus salah satu dari SSOB, SPOB, TL, atau BOD.';
+                if (! $jenisKlaim) {
+                    $result['errors'][] = 'Baris '.$row['row_number'].': Jenis Klaim harus salah satu dari SSOB, SPOB, TL, atau BOD.';
                     $result['skipped']++;
+
                     continue;
                 }
 
                 $idVessel = $this->resolveVesselIdFromImport($row['vessel'] ?? null);
-                if (!$idVessel) {
-                    $result['errors'][] = 'Baris ' . $row['row_number'] . ': Vessel "' . ($row['vessel'] ?? '') . '" tidak ditemukan.';
+                if (! $idVessel) {
+                    $result['errors'][] = 'Baris '.$row['row_number'].': Vessel "'.($row['vessel'] ?? '').'" tidak ditemukan.';
                     $result['skipped']++;
+
                     continue;
                 }
 
@@ -328,6 +334,7 @@ class T_klaimController extends Controller
                         'vessel' => $row['vessel'] ?? null,
                         'previous_status' => $existing->status,
                     ];
+
                     continue;
                 }
 
@@ -358,7 +365,7 @@ class T_klaimController extends Controller
 
         return response($this->buildKlaimImportTemplateHtml(), 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -368,7 +375,7 @@ class T_klaimController extends Controller
 
         return response($this->buildKlaimExportHtml(), 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -407,12 +414,13 @@ class T_klaimController extends Controller
         $stack = is_array($all) ? array_values($all) : [$all];
         $files = [];
 
-        while (!empty($stack)) {
+        while (! empty($stack)) {
             $current = array_pop($stack);
             if (is_array($current)) {
                 foreach ($current as $item) {
                     $stack[] = $item;
                 }
+
                 continue;
             }
             if ($current) {
@@ -431,6 +439,10 @@ class T_klaimController extends Controller
         }
         if ($perPage > 100) {
             $perPage = 100;
+        }
+
+        if ($request->boolean('detail_nilai', false)) {
+            return $this->indexDetailNilai($request, $perPage);
         }
 
         $query = T_klaim::query()
@@ -452,12 +464,12 @@ class T_klaimController extends Controller
         }
 
         $idVessel = $request->input('id_vessel');
-        if (!is_null($idVessel) && $idVessel !== '') {
+        if (! is_null($idVessel) && $idVessel !== '') {
             $query->where('t_klaim.id_vessel', $idVessel);
         }
 
         $jenisKlaim = $request->input('jenis_klaim');
-        if (!is_null($jenisKlaim) && $jenisKlaim !== '') {
+        if (! is_null($jenisKlaim) && $jenisKlaim !== '') {
             $query->where('t_klaim.jenis_klaim', $jenisKlaim);
         }
 
@@ -480,7 +492,7 @@ class T_klaimController extends Controller
             'status' => 't_klaim.status',
         ];
         $sortBy = $request->input('sort_by', 'id');
-        if (!array_key_exists($sortBy, $allowedSort)) {
+        if (! array_key_exists($sortBy, $allowedSort)) {
             $sortBy = 'id';
         }
         $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
@@ -492,13 +504,148 @@ class T_klaimController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data T_klaim berhasil diambil',
-            'data'    => $paginator->items(),
-            'meta'    => [
+            'data' => $paginator->items(),
+            'meta' => [
                 'current_page' => $paginator->currentPage(),
-                'per_page'     => $paginator->perPage(),
-                'total'        => $paginator->total(),
-                'last_page'    => $paginator->lastPage(),
-            ]
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
+        ]);
+    }
+
+    public function detailNilaiList(Request $request)
+    {
+        $perPage = (int) $request->input('per_page', 10);
+        if ($perPage < 1) {
+            $perPage = 10;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        return $this->indexDetailNilai($request, $perPage);
+    }
+
+    private function indexDetailNilai(Request $request, int $perPage)
+    {
+        $query = DB::table('t_klaim_detail')
+            ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
+            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_klaim.id_vessel')
+            ->leftJoin('t_klaim_detail_nilai as nilai', 'nilai.id_klaim_detail', '=', 't_klaim_detail.id')
+            ->select([
+                't_klaim.id as id',
+                DB::raw('COALESCE(nilai.id, t_klaim_detail.id) as row_key'),
+                't_klaim.id_vessel',
+                't_klaim.no_klaim_awal',
+                't_klaim.tgl_klaim_awal',
+                't_klaim.jenis_klaim as jenis_klaim_header',
+                DB::raw('COALESCE(NULLIF(nilai.sub_jenis, ""), t_klaim.jenis_klaim) as jenis_klaim'),
+                't_klaim.no_klaim_akhir',
+                't_klaim.tgl_klaim_akhir',
+                't_klaim.periode_klaim',
+                't_klaim.user_id',
+                't_klaim.status',
+                't_klaim.created_at',
+                't_klaim.updated_at',
+                'm_vessel.nama_vessel',
+                't_klaim_detail.id as id_klaim_detail',
+                't_klaim_detail.no_urut',
+                't_klaim_detail.no_voyage_gab',
+                't_klaim_detail.keterangan',
+                't_klaim_detail.status as status_detail',
+                'nilai.id as id_nilai',
+                'nilai.sub_jenis',
+                'nilai.currency',
+                'nilai.val_potensi',
+                'nilai.val_klaim_awal',
+                'nilai.val_klaim_akhir',
+                'nilai.val_klaim_akhir_idr',
+                'nilai.no_tagihan_klaim',
+                'nilai.tanggal_tagihan_klaim',
+                'nilai.no_tagihan_dipotong',
+                'nilai.tanggal_tagihan_dipotong',
+            ]);
+
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('t_klaim.no_klaim_awal', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.tgl_klaim_awal', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.jenis_klaim', 'like', "%{$search}%")
+                    ->orWhere('m_vessel.nama_vessel', 'like', "%{$search}%")
+                    ->orWhere('t_klaim_detail.no_voyage_gab', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.no_klaim_akhir', 'like', "%{$search}%")
+                    ->orWhere('t_klaim.status', 'like', "%{$search}%")
+                    ->orWhere('t_klaim_detail.keterangan', 'like', "%{$search}%")
+                    ->orWhere('nilai.sub_jenis', 'like', "%{$search}%")
+                    ->orWhere('nilai.val_potensi', 'like', "%{$search}%")
+                    ->orWhere('nilai.val_klaim_awal', 'like', "%{$search}%")
+                    ->orWhere('nilai.val_klaim_akhir', 'like', "%{$search}%")
+                    ->orWhere('nilai.no_tagihan_klaim', 'like', "%{$search}%")
+                    ->orWhere('nilai.tanggal_tagihan_klaim', 'like', "%{$search}%")
+                    ->orWhere('nilai.tanggal_tagihan_dipotong', 'like', "%{$search}%");
+            });
+        }
+
+        $status = $request->input('status');
+        if (! is_null($status) && $status !== '') {
+            $query->whereRaw('UPPER(COALESCE(t_klaim_detail.status, "")) = ?', [strtoupper((string) $status)]);
+        }
+
+        $idVessel = $request->input('id_vessel');
+        if (! is_null($idVessel) && $idVessel !== '') {
+            $query->where('t_klaim.id_vessel', $idVessel);
+        }
+
+        $jenisKlaim = $request->input('jenis_klaim');
+        if (! is_null($jenisKlaim) && $jenisKlaim !== '') {
+            $query->where('t_klaim.jenis_klaim', $jenisKlaim);
+        }
+
+        $allowedSort = [
+            'id' => 't_klaim.id',
+            'id_klaim_detail' => 't_klaim_detail.id',
+            'id_nilai' => 'nilai.id',
+            'no_voyage_gab' => 't_klaim_detail.no_voyage_gab',
+            'no_klaim_awal' => 't_klaim.no_klaim_awal',
+            'tgl_klaim_awal' => 't_klaim.tgl_klaim_awal',
+            'jenis_klaim' => 't_klaim.jenis_klaim',
+            'id_vessel' => 't_klaim.id_vessel',
+            'nama_vessel' => 'm_vessel.nama_vessel',
+            'no_klaim_akhir' => 't_klaim.no_klaim_akhir',
+            'tgl_klaim_akhir' => 't_klaim.tgl_klaim_akhir',
+            'val_potensi' => 'nilai.val_potensi',
+            'val_klaim_awal' => 'nilai.val_klaim_awal',
+            'val_klaim_akhir' => 'nilai.val_klaim_akhir',
+            'no_tagihan_klaim' => 'nilai.no_tagihan_klaim',
+            'tanggal_tagihan_klaim' => 'nilai.tanggal_tagihan_klaim',
+            'tanggal_tagihan_dipotong' => 'nilai.tanggal_tagihan_dipotong',
+            'created_at' => 't_klaim.created_at',
+            'status' => 't_klaim.status',
+        ];
+        $sortBy = $request->input('sort_by', 'id');
+        if (! array_key_exists($sortBy, $allowedSort)) {
+            $sortBy = 'id';
+        }
+        $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $paginator = $query
+            ->orderBy($allowedSort[$sortBy], $sortDir)
+            ->orderBy('t_klaim_detail.id', 'asc')
+            ->orderBy('nilai.id', 'asc')
+            ->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data T_klaim detail nilai berhasil diambil',
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
         ]);
     }
 
@@ -516,11 +663,11 @@ class T_klaimController extends Controller
         $filesAkhir = File_upload::where('id_klaim_akhir', $id)->orderBy('id', 'asc')->get();
 
         $files = $filesAwal->concat($filesAkhir)->unique('id')->values();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Data details T_klaim berhasil diambil',
-            'data'    => $data,
+            'data' => $data,
             'files' => $files,
             'files_awal' => $filesAwal->values(),
             'files_akhir' => $filesAkhir->values(),
@@ -531,7 +678,7 @@ class T_klaimController extends Controller
     {
         try {
             DB::beginTransaction();
-            $t_klaim = new T_klaim();
+            $t_klaim = new T_klaim;
             $t_klaim->id_vessel = $request->input('id_vessel');
             $t_klaim->no_klaim_awal = $request->input('no_klaim_awal');
             $t_klaim->tgl_klaim_awal = $request->input('tgl_klaim_awal');
@@ -550,8 +697,8 @@ class T_klaimController extends Controller
                 'success' => true,
                 'message' => 'Data T_klaim berhasil ditambah',
                 'data' => [
-                    'id' => $t_klaim->id
-                ]
+                    'id' => $t_klaim->id,
+                ],
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -570,9 +717,10 @@ class T_klaimController extends Controller
                 ->exists();
             if ($hasApprovedDetail) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Klaim yang sudah APPROVE tidak bisa diubah.'
+                    'message' => 'Klaim yang sudah APPROVE tidak bisa diubah.',
                 ], 422);
             }
 
@@ -592,7 +740,7 @@ class T_klaimController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_klaim berhasil diubah'
+                'message' => 'Data T_klaim berhasil diubah',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -611,16 +759,17 @@ class T_klaimController extends Controller
                 ->exists();
             if ($hasApprovedDetail) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Klaim yang sudah APPROVE tidak bisa dihapus.'
+                    'message' => 'Klaim yang sudah APPROVE tidak bisa dihapus.',
                 ], 422);
             }
 
             $t_klaim = T_klaim::where('id', $id)->firstOrFail();
 
             $detailIds = T_klaim_detail::where('id_klaim', $id)->pluck('id')->all();
-            if (!empty($detailIds)) {
+            if (! empty($detailIds)) {
                 $lookupIds = array_values(array_unique(array_merge($detailIds, [(int) $id])));
                 $files = File_upload::whereIn('id_klaim_awal', $lookupIds)
                     ->orWhereIn('id_klaim_akhir', $lookupIds)
@@ -628,7 +777,7 @@ class T_klaimController extends Controller
 
                 foreach ($files as $file) {
                     if ($file->nama_file) {
-                        $path = public_path('storage/' . ltrim((string) $file->nama_file, '/'));
+                        $path = public_path('storage/'.ltrim((string) $file->nama_file, '/'));
                         if (file_exists($path)) {
                             @unlink($path);
                         }
@@ -645,7 +794,7 @@ class T_klaimController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_klaim berhasil dihapus'
+                'message' => 'Data T_klaim berhasil dihapus',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -661,11 +810,12 @@ class T_klaimController extends Controller
             DB::beginTransaction();
 
             $user = Auth::user();
-            if (!$user || !($user->hasRole('approval') || $user->hasRole('superadmin'))) {
+            if (! $user || ! ($user->hasRole('approval') || $user->hasRole('superadmin'))) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.'
+                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.',
                 ], 403);
             }
 
@@ -694,7 +844,7 @@ class T_klaimController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Approve Klaim berhasil diproses.'
+                'message' => 'Approve Klaim berhasil diproses.',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -710,11 +860,12 @@ class T_klaimController extends Controller
             DB::beginTransaction();
 
             $user = Auth::user();
-            if (!$user || !($user->hasRole('approval') || $user->hasRole('superadmin'))) {
+            if (! $user || ! ($user->hasRole('approval') || $user->hasRole('superadmin'))) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan unapprove.'
+                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan unapprove.',
                 ], 403);
             }
 
@@ -743,7 +894,7 @@ class T_klaimController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Unapprove Klaim berhasil diproses.'
+                'message' => 'Unapprove Klaim berhasil diproses.',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -756,11 +907,13 @@ class T_klaimController extends Controller
         $files = $this->extractIncomingUploadFiles($request);
 
         foreach ($files as $file) {
-            if (!$file) continue;
+            if (! $file) {
+                continue;
+            }
             $ext = strtolower((string) $file->getClientOriginalExtension());
-            if (!in_array($ext, ['pdf', 'jpg', 'png', 'jpeg'], true)) {
+            if (! in_array($ext, ['pdf', 'jpg', 'png', 'jpeg'], true)) {
                 throw ValidationException::withMessages([
-                    'files' => 'File upload hanya boleh PDF/JPG/JPEG/PNG.'
+                    'files' => 'File upload hanya boleh PDF/JPG/JPEG/PNG.',
                 ]);
             }
         }
@@ -769,7 +922,9 @@ class T_klaimController extends Controller
     private function storeKlaimFiles(Request $request, int $klaimId): void
     {
         $incomingFiles = $this->extractIncomingUploadFiles($request);
-        if (empty($incomingFiles)) return;
+        if (empty($incomingFiles)) {
+            return;
+        }
 
         $scope = strtoupper(trim((string) $request->input('upload_scope', '')));
         if ($scope === 'AWAL') {
@@ -783,9 +938,11 @@ class T_klaimController extends Controller
         }
 
         foreach ($incomingFiles as $file) {
-            if (!$file) continue;
+            if (! $file) {
+                continue;
+            }
             $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/klaim');
-            $upload = new File_upload();
+            $upload = new File_upload;
             $upload->id_klaim_awal = null;
             $upload->id_klaim_akhir = null;
             $upload->{$column} = $klaimId;
