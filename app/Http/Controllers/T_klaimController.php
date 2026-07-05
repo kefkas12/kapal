@@ -1020,6 +1020,12 @@ class T_klaimController extends Controller
             $query->where('t_klaim.jenis_klaim', $jenisKlaim);
         }
 
+        if ($request->boolean('exclude_zero_klaim_akhir')) {
+            // val_klaim_akhir disimpan sebagai varchar (bisa null/kosong/berformat ribuan).
+            // Sembunyikan baris yang nilai klaim akhirnya 0/kosong.
+            $query->whereRaw("CAST(REPLACE(COALESCE(nilai.val_klaim_akhir, ''), ',', '') AS DECIMAL(30,4)) <> 0");
+        }
+
         $allowedSort = [
             'id' => 't_klaim.id',
             'id_klaim_detail' => 't_klaim_detail.id',
