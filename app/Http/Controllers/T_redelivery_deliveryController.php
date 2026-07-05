@@ -6,6 +6,7 @@ use App\Models\File_upload;
 use App\Models\Settings;
 use App\Models\T_redelivery_delivery;
 use App\Support\FileUploadHelper;
+use App\Support\KlaimEstimateSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -487,9 +488,15 @@ class T_redelivery_deliveryController extends Controller
                     'status' => 'Redelivery Delivery yang sudah APPROVE tidak bisa diubah.',
                 ]);
             }
+            $oldEstBod = $existing->est_bod;
             $payload = $this->sanitizeRedeliveryDeliveryPayload($request);
 
             DB::table('t_redelivery_delivery')->where('id', $existing->id)->update($payload);
+            app(KlaimEstimateSyncService::class)->syncRedeliveryDelivery(
+                (int) $existing->id,
+                $oldEstBod,
+                $payload['est_bod'] ?? null
+            );
 
             $this->persistFiles($incomingFilesRedelivery, $redeliveryColumn, $existing->id, 'uploads/redelivery');
             $this->persistFiles($incomingFilesDelivery, $deliveryColumn, $existing->id, 'uploads/delivery');

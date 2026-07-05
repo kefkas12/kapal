@@ -9,6 +9,7 @@ use App\Models\T_doc_cargo;
 use App\Models\T_klaim;
 use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
+use App\Support\KlaimEstimateSyncService;
 use App\Support\SimpleSpreadsheetReader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -2076,6 +2077,10 @@ HTML;
                     'status' => 'Doc Cargo yang sudah APPROVE tidak bisa diubah.',
                 ]);
             }
+            $oldIdCable = (int) ($existing->id_cable ?? 0);
+            $oldEstClaimPumping = $existing->est_claim_pumping;
+            $oldEstClaimBunker = $existing->est_claim_bunker;
+            $oldEstClaimTransport = $existing->est_claim_transport ?? ($existing->est_transport_loss ?? null);
             $payload = $this->sanitizeDocCargoPayload($request);
             $idCable = (int) ($payload['id_cable'] ?? 0);
             $idGrade = (int) ($payload['id_grade'] ?? 0);
@@ -2087,6 +2092,16 @@ HTML;
 
             $noVoyageGab = $payload['no_voyage_gab'] ?? $existing->no_voyage_gab ?? null;
             $this->syncDetailRows((int) $existing->id, $noVoyageGab, $request);
+            app(KlaimEstimateSyncService::class)->syncDocCargo(
+                (int) $existing->id,
+                $idCable ?: ($oldIdCable ?: null),
+                $oldEstClaimPumping,
+                $payload['est_claim_pumping'] ?? null,
+                $oldEstClaimBunker,
+                $payload['est_claim_bunker'] ?? null,
+                $oldEstClaimTransport,
+                $payload['est_claim_transport'] ?? null
+            );
 
             $files = $request->file('files', []);
             if ($files) {

@@ -6,6 +6,7 @@ use App\Models\File_upload;
 use App\Models\Settings;
 use App\Models\T_off_hire;
 use App\Support\FileUploadHelper;
+use App\Support\KlaimEstimateSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -477,9 +478,18 @@ class T_off_hireController extends Controller
                     'status' => 'Off Hire yang sudah APPROVE tidak bisa diubah.',
                 ]);
             }
+            $oldEstOh = $existing->est_oh;
+            $oldEstBoh = $existing->est_boh;
             $payload = $this->sanitizeOffHirePayload($request);
 
             DB::table('t_off_hire')->where('id', $existing->id)->update($payload);
+            app(KlaimEstimateSyncService::class)->syncOffHire(
+                (int) $existing->id,
+                $oldEstOh,
+                $payload['est_oh'] ?? null,
+                $oldEstBoh,
+                $payload['est_boh'] ?? null
+            );
 
             $this->persistFiles($incomingFilesOffHire, 'id_off_hire', $existing->id, 'uploads/off_hire');
             $this->persistFiles($incomingFilesOnHire, 'id_on_hire', $existing->id, 'uploads/on_hire');

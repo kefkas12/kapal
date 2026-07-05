@@ -6,6 +6,7 @@ use App\Models\T_master_cable;
 use App\Models\File_upload;
 use App\Models\Settings;
 use App\Support\FileUploadHelper;
+use App\Support\KlaimEstimateSyncService;
 use App\Support\SimpleSpreadsheetReader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -1159,6 +1160,8 @@ class T_master_cableController extends Controller
             $activeKontrak = (clone $activeKontrakQuery)->orderByDesc('id')->first(['id']);
 
             $t_master_cable = T_master_cable::where('id', $id)->firstOrFail();
+            $oldEstClaimSpeed = $t_master_cable->est_claim_speed;
+            $oldEstClaimBunker = $t_master_cable->est_claim_bunker;
             $t_master_cable->no_voyage_gab = $request->input('no_voyage_gab');
             $t_master_cable->no_voyage = $request->input('no_voyage');
             $t_master_cable->jenis_voyage = $request->input('jenis_voyage');
@@ -1186,6 +1189,14 @@ class T_master_cableController extends Controller
             $t_master_cable->keterangan = $request->input('keterangan');
             $t_master_cable->user_id = Auth::id();
             $t_master_cable->save();
+
+            app(KlaimEstimateSyncService::class)->syncCable(
+                (int) $t_master_cable->id,
+                $oldEstClaimSpeed,
+                $t_master_cable->est_claim_speed,
+                $oldEstClaimBunker,
+                $t_master_cable->est_claim_bunker
+            );
 
             $files = $request->file('files', []);
             if ($files) {
