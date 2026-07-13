@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class T_klaimController extends Controller
 {
+    private const KLAIM_IMPORT_ALLOWED_JENIS = ['SSOB', 'SPOB', 'TL', 'BOD', 'OH', 'BOH', 'OHBOH'];
+
     private function actingUserId(): ?int
     {
         return Auth::id() ?? DB::table('users')->orderBy('id')->value('id');
@@ -600,11 +602,11 @@ class T_klaimController extends Controller
         $normalized = preg_replace('/[^A-Z0-9]/', '', $jenis) ?? '';
         if (isset($aliases[$normalized])) {
             $jenis = $aliases[$normalized];
+        } else {
+            $jenis = $normalized;
         }
 
-        $allowed = ['SSOB', 'SPOB', 'TL', 'BOD'];
-
-        return in_array($jenis, $allowed, true) ? $jenis : null;
+        return in_array($jenis, self::KLAIM_IMPORT_ALLOWED_JENIS, true) ? $jenis : null;
     }
 
     private function buildKlaimImportTemplateHtml(): string
@@ -612,7 +614,7 @@ class T_klaimController extends Controller
         $headers = $this->klaimImportFieldLabels();
         $sampleRows = [
             ['KLAIM/OSL/001', '2026-06-01', 'SSOB', 'AB2F8', '2026-06', '', ''],
-            ['KLAIM/OSL/002', '2026-06-05', 'TL', 'AB5FL9', '2026-06', 'FIN/KLAIM/002', '2026-06-12'],
+            ['KLAIM/OSL/002', '2026-06-05', 'OHBOH', 'AB5FL9', '2026-06', 'FIN/KLAIM/002', '2026-06-12'],
         ];
 
         $html = '<table border="1"><tr>';
@@ -709,7 +711,7 @@ class T_klaimController extends Controller
             foreach ($parsedRows as $row) {
                 $jenisKlaim = $this->normalizeJenisKlaimImport($row['jenis_klaim'] ?? null);
                 if (! $jenisKlaim) {
-                    $result['errors'][] = 'Baris '.$row['row_number'].': Jenis Klaim harus salah satu dari SSOB, SPOB, TL, atau BOD.';
+                    $result['errors'][] = 'Baris '.$row['row_number'].': Jenis Klaim harus salah satu dari '.implode(', ', self::KLAIM_IMPORT_ALLOWED_JENIS).'.';
                     $result['skipped']++;
 
                     continue;

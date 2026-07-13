@@ -119,7 +119,7 @@
                 <li>Header wajib: <code>No Klaim Awal</code>, <code>Tgl Klaim Awal</code>, <code>Jenis Klaim</code>, dan <code>Vessel</code>.</li>
                 <li>Header opsional: <code>Periode Klaim</code>, <code>No Klaim Akhir</code>, dan <code>Tgl Klaim Akhir</code>.</li>
                 <li><code>Vessel</code> bisa diisi kode vessel atau nama vessel.</li>
-                <li><code>Jenis Klaim</code> yang didukung: <code>SSOB</code>, <code>SPOB</code>, <code>TL</code>, dan <code>BOD</code>.</li>
+                <li><code>Jenis Klaim</code> yang didukung: <code>SSOB</code>, <code>SPOB</code>, <code>TL</code>, <code>BOD</code>, <code>OH</code>, <code>BOH</code>, dan <code>OHBOH</code>.</li>
                 <li>Import akan create baru atau update data existing berdasarkan <code>No Klaim Awal</code>.</li>
                 <li>Status hasil import disimpan sebagai <strong>OPEN</strong>.</li>
             </ul>
