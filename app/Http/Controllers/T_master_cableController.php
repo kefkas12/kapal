@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\T_master_cable;
 use App\Models\File_upload;
 use App\Models\Settings;
+use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
 use App\Support\KlaimEstimateSyncService;
 use App\Support\SimpleSpreadsheetReader;
@@ -23,9 +23,11 @@ class T_master_cableController extends Controller
     private function validateCableUploadExtensions(array $files): void
     {
         foreach ($files as $file) {
-            if (!$file) continue;
+            if (! $file) {
+                continue;
+            }
             $ext = strtolower((string) $file->getClientOriginalExtension());
-            if (!in_array($ext, ['pdf', 'xls', 'xlsx'], true)) {
+            if (! in_array($ext, ['pdf', 'xls', 'xlsx'], true)) {
                 throw ValidationException::withMessages([
                     'files' => 'File cable hanya boleh PDF/XLS/XLSX.',
                 ]);
@@ -42,6 +44,7 @@ class T_master_cableController extends Controller
         if (preg_match('/^(\d{5})(?:\/[A-Za-z0-9]+)?$/', $trimmed, $matches)) {
             return $matches[1];
         }
+
         return null;
     }
 
@@ -56,7 +59,7 @@ class T_master_cableController extends Controller
 
         foreach ($noVoyages as $noVoyage) {
             $base = $this->parseNoVoyageBase((string) $noVoyage);
-            if (!$base || !preg_match('/^' . preg_quote($yy, '/') . '(\d{3})$/', $base, $matches)) {
+            if (! $base || ! preg_match('/^'.preg_quote($yy, '/').'(\d{3})$/', $base, $matches)) {
                 continue;
             }
             $seq = (int) $matches[1];
@@ -66,7 +69,8 @@ class T_master_cableController extends Controller
         }
 
         $nextSeq = $maxSeq + 1;
-        return $yy . str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
+
+        return $yy.str_pad((string) $nextSeq, 3, '0', STR_PAD_LEFT);
     }
 
     private function buildNextVoyageMeta(int $idVessel, bool $flagL): array
@@ -77,8 +81,8 @@ class T_master_cableController extends Controller
             ->first(['no_voyage', 'jenis_voyage']);
         $kodeVessel = (string) (DB::table('m_vessel')->where('id', $idVessel)->value('kode_vessel') ?? '');
 
-        $hasCable = !is_null($latestCable);
-        $forceFlagL = !$hasCable;
+        $hasCable = ! is_null($latestCable);
+        $forceFlagL = ! $hasCable;
         $effectiveFlagL = $forceFlagL ? true : $flagL;
 
         if ($effectiveFlagL) {
@@ -86,20 +90,20 @@ class T_master_cableController extends Controller
             $nextJenisVoyage = 'L';
         } else {
             $currentNoVoyage = $this->parseNoVoyageBase((string) ($latestCable?->no_voyage ?? ''));
-            if (!preg_match('/^\d{5}$/', (string) $currentNoVoyage)) {
+            if (! preg_match('/^\d{5}$/', (string) $currentNoVoyage)) {
                 $currentNoVoyage = $this->getNextNoVoyageForVessel($idVessel);
             }
             $lastJenis = strtoupper(trim((string) ($latestCable?->jenis_voyage ?? '')));
             if (preg_match('/^D(\d+)$/', $lastJenis, $matches)) {
-                $nextJenisVoyage = 'D' . (((int) $matches[1]) + 1);
+                $nextJenisVoyage = 'D'.(((int) $matches[1]) + 1);
             } else {
                 $nextJenisVoyage = 'D1';
             }
             $nextNoVoyage = $currentNoVoyage;
         }
 
-        $noVoyageDisplay = $nextNoVoyage . '/' . $nextJenisVoyage;
-        $noVoyageGab = ($kodeVessel !== '' ? $kodeVessel . '/' : '') . $noVoyageDisplay;
+        $noVoyageDisplay = $nextNoVoyage.'/'.$nextJenisVoyage;
+        $noVoyageGab = ($kodeVessel !== '' ? $kodeVessel.'/' : '').$noVoyageDisplay;
 
         return [
             'has_cable_for_vessel' => $hasCable,
@@ -112,9 +116,43 @@ class T_master_cableController extends Controller
         ];
     }
 
+    private function normalizeStatusVoyage(?string $value): ?string
+    {
+        $statusVoyage = strtolower(trim((string) $value));
+
+        return in_array($statusVoyage, ['deviasi', 'bunker'], true) ? $statusVoyage : null;
+    }
+
+    private function resolveExistingVoyage(Request $request, int $idVessel): ?T_master_cable
+    {
+        $statusVoyage = $this->normalizeStatusVoyage($request->input('status_voyage'));
+        if (is_null($statusVoyage)) {
+            return null;
+        }
+
+        $existingCableId = $request->input('existing_cable_id');
+        if (is_null($existingCableId) || $existingCableId === '') {
+            return null;
+        }
+
+        $existingVoyage = T_master_cable::query()
+            ->where('id_vessel', $idVessel)
+            ->where('id', $existingCableId)
+            ->first(['id', 'id_vessel', 'no_voyage_gab', 'no_voyage', 'jenis_voyage']);
+
+        if (! $existingVoyage) {
+            throw ValidationException::withMessages([
+                'existing_cable_id' => 'No Voyage Gab existing tidak valid untuk vessel yang dipilih.',
+            ]);
+        }
+
+        return $existingVoyage;
+    }
+
     private function normalizeImportHeader(?string $value): string
     {
         $upper = strtoupper(trim((string) $value));
+
         return preg_replace('/[^A-Z0-9]/', '', $upper) ?? '';
     }
 
@@ -168,6 +206,7 @@ class T_master_cableController extends Controller
             $serial = (float) $value;
             if ($serial > 0) {
                 $unix = (int) round(($serial - 25569) * 86400);
+
                 return gmdate('Y-m-d H:i:s', $unix);
             }
         }
@@ -190,6 +229,7 @@ class T_master_cableController extends Controller
         return [
             'no_kontrak' => ['NOKONTRAK', 'CONTRACTNO', 'NOCONTRACT'],
             'no_voyage_gab' => ['NOVOYAGEGAB', 'VOYAGEGAB', 'NOVOYAGE'],
+            'status_voyage' => ['STATUSVOYAGE', 'VOYAGESTATUS'],
             'master' => ['MASTER'],
             'atd_port' => ['ATDPORT', 'LOADPORT'],
             'atd_time' => ['ATDTIME', 'LOADTIME', 'LOADINGTIME'],
@@ -207,6 +247,7 @@ class T_master_cableController extends Controller
         return [
             'no_kontrak' => 'No Kontrak',
             'no_voyage_gab' => 'No Voyage Gab',
+            'status_voyage' => 'Status Voyage',
             'master' => 'Master',
             'atd_port' => 'ATD Port',
             'atd_time' => 'ATD Time',
@@ -221,7 +262,7 @@ class T_master_cableController extends Controller
 
     private function daysInMonthFromDateTime(?string $value): ?int
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 
@@ -235,7 +276,7 @@ class T_master_cableController extends Controller
 
     private function diffDays(?string $start, ?string $end): ?float
     {
-        if (!$start || !$end) {
+        if (! $start || ! $end) {
             return null;
         }
 
@@ -372,9 +413,9 @@ class T_master_cableController extends Controller
         }
 
         foreach (['no_kontrak', 'no_voyage_gab'] as $required) {
-            if (!array_key_exists($required, $columnIndexes)) {
+            if (! array_key_exists($required, $columnIndexes)) {
                 throw ValidationException::withMessages([
-                    'file' => 'Header wajib tidak ditemukan: ' . $required . '.',
+                    'file' => 'Header wajib tidak ditemukan: '.$required.'.',
                 ]);
             }
         }
@@ -392,7 +433,7 @@ class T_master_cableController extends Controller
                 $item[$field] = $value === '' ? null : $value;
             }
 
-            if (!$hasValue) {
+            if (! $hasValue) {
                 continue;
             }
 
@@ -415,7 +456,7 @@ class T_master_cableController extends Controller
             return null;
         }
 
-        if (!preg_match('/^([^\/]+)\/(\d{5})\/([A-Za-z0-9]+)$/', $trimmed, $matches)) {
+        if (! preg_match('/^([^\/]+)\/(\d{5})\/([A-Za-z0-9]+)$/', $trimmed, $matches)) {
             return null;
         }
 
@@ -432,6 +473,11 @@ class T_master_cableController extends Controller
         return preg_replace('/[^A-Z0-9]/', '', strtoupper(trim((string) $value))) ?? '';
     }
 
+    private function cableImportLookupKey(?string $noVoyageGab, ?string $statusVoyage): string
+    {
+        return $this->normalizeLookupKey($noVoyageGab).'|'.($this->normalizeStatusVoyage($statusVoyage) ?? '');
+    }
+
     private function buildCableImportPayload(array $row, object $kontrak, array $voyageMeta, array $presentColumns): array
     {
         $payload = [
@@ -440,6 +486,7 @@ class T_master_cableController extends Controller
             'no_voyage_gab' => $voyageMeta['no_voyage_gab'],
             'no_voyage' => $voyageMeta['no_voyage'],
             'jenis_voyage' => $voyageMeta['jenis_voyage'],
+            'status_voyage' => $this->normalizeStatusVoyage($row['status_voyage'] ?? null),
             'status' => 'APPROVE',
             'user_id' => $this->actingUserId(),
             'updated_at' => now(),
@@ -449,18 +496,20 @@ class T_master_cableController extends Controller
         $numberFields = ['atd_rob', 'ata_rob', 'distance', 'bunker_price'];
 
         foreach ($presentColumns as $column) {
-            if (in_array($column, ['no_kontrak', 'no_voyage_gab'], true)) {
+            if (in_array($column, ['no_kontrak', 'no_voyage_gab', 'status_voyage'], true)) {
                 continue;
             }
 
             $raw = $row[$column] ?? null;
             if (in_array($column, $dateFields, true)) {
                 $payload[$column] = $this->excelDateToDateTime($raw);
+
                 continue;
             }
 
             if (in_array($column, $numberFields, true)) {
                 $payload[$column] = $this->formatImportedNumber($raw);
+
                 continue;
             }
 
@@ -476,6 +525,7 @@ class T_master_cableController extends Controller
         $sample = [
             'KONTRAK-001',
             'AL2F8/26001/L',
+            'deviasi',
             'STEVEN',
             'PALEMBANG',
             '2026-05-10 04:18:00',
@@ -489,11 +539,11 @@ class T_master_cableController extends Controller
 
         $html = '<table border="1"><tr>';
         foreach ($headers as $header) {
-            $html .= '<th>' . e($header) . '</th>';
+            $html .= '<th>'.e($header).'</th>';
         }
         $html .= '</tr><tr>';
         foreach ($sample as $value) {
-            $html .= '<td>' . e((string) $value) . '</td>';
+            $html .= '<td>'.e((string) $value).'</td>';
         }
         $html .= '</tr></table>';
 
@@ -507,6 +557,7 @@ class T_master_cableController extends Controller
             ->select(
                 'm_kontrak.no_kontrak',
                 't_master_cable.no_voyage_gab',
+                't_master_cable.status_voyage',
                 't_master_cable.master',
                 't_master_cable.atd_port',
                 't_master_cable.atd_time',
@@ -525,14 +576,14 @@ class T_master_cableController extends Controller
 
         $html = '<table border="1"><tr>';
         foreach ($headers as $header) {
-            $html .= '<th>' . e($headerLabels[$header]) . '</th>';
+            $html .= '<th>'.e($headerLabels[$header]).'</th>';
         }
         $html .= '</tr>';
 
         foreach ($rows as $row) {
             $html .= '<tr>';
             foreach ($headers as $header) {
-                $html .= '<td>' . e((string) ($row->{$header} ?? '')) . '</td>';
+                $html .= '<td>'.e((string) ($row->{$header} ?? '')).'</td>';
             }
             $html .= '</tr>';
         }
@@ -566,7 +617,7 @@ class T_master_cableController extends Controller
 
         $issues = [];
         foreach ($cableRows as $cable) {
-            $currentKontrak = !empty($cable->id_kontrak)
+            $currentKontrak = ! empty($cable->id_kontrak)
                 ? $kontrakRowsById->get((int) $cable->id_kontrak)
                 : null;
             $voyageMeta = $this->parseNoVoyageGabImport((string) $cable->no_voyage_gab);
@@ -580,7 +631,7 @@ class T_master_cableController extends Controller
                 $reasons[] = 'id_kontrak di cable mengarah ke vessel yang berbeda.';
             }
 
-            if (!empty($cable->id_kontrak) && !$currentKontrak) {
+            if (! empty($cable->id_kontrak) && ! $currentKontrak) {
                 $reasons[] = 'id_kontrak di cable tidak ditemukan di m_kontrak.';
             }
 
@@ -659,11 +710,12 @@ class T_master_cableController extends Controller
                 't_master_cable.id',
                 't_master_cable.id_kontrak',
                 't_master_cable.no_voyage_gab',
+                't_master_cable.status_voyage',
                 't_master_cable.status',
                 'm_kontrak.no_kontrak'
             )
             ->get()
-            ->groupBy(fn ($row) => $this->normalizeLookupKey($row->no_voyage_gab));
+            ->groupBy(fn ($row) => $this->cableImportLookupKey($row->no_voyage_gab, $row->status_voyage));
 
         $result = [
             'created' => 0,
@@ -680,35 +732,48 @@ class T_master_cableController extends Controller
                 $rowNumber = (int) $row['row_number'];
                 $noKontrak = trim((string) ($row['no_kontrak'] ?? ''));
                 $noVoyageGab = strtoupper(trim((string) ($row['no_voyage_gab'] ?? '')));
+                $rawStatusVoyage = strtolower(trim((string) ($row['status_voyage'] ?? '')));
+                $statusVoyage = $this->normalizeStatusVoyage($row['status_voyage'] ?? null);
 
                 if ($noKontrak === '' || $noVoyageGab === '') {
-                    $result['errors'][] = 'Baris ' . $rowNumber . ': no_kontrak dan no_voyage_gab wajib diisi.';
+                    $result['errors'][] = 'Baris '.$rowNumber.': no_kontrak dan no_voyage_gab wajib diisi.';
                     $result['skipped']++;
+
+                    continue;
+                }
+
+                if ($rawStatusVoyage !== '' && $rawStatusVoyage !== 'none' && is_null($statusVoyage)) {
+                    $result['errors'][] = 'Baris '.$rowNumber.': status_voyage harus deviasi, bunker, none, atau kosong.';
+                    $result['skipped']++;
+
                     continue;
                 }
 
                 $kontrak = $kontrakByNo[$this->normalizeLookupKey($noKontrak)] ?? null;
-                if (!$kontrak) {
-                    $result['errors'][] = 'Baris ' . $rowNumber . ': no_kontrak "' . $noKontrak . '" tidak ditemukan di m_kontrak.';
+                if (! $kontrak) {
+                    $result['errors'][] = 'Baris '.$rowNumber.': no_kontrak "'.$noKontrak.'" tidak ditemukan di m_kontrak.';
                     $result['skipped']++;
+
                     continue;
                 }
 
                 $voyageMeta = $this->parseNoVoyageGabImport($noVoyageGab);
-                if (!$voyageMeta) {
-                    $result['errors'][] = 'Baris ' . $rowNumber . ': format no_voyage_gab "' . $noVoyageGab . '" tidak valid.';
+                if (! $voyageMeta) {
+                    $result['errors'][] = 'Baris '.$rowNumber.': format no_voyage_gab "'.$noVoyageGab.'" tidak valid.';
                     $result['skipped']++;
+
                     continue;
                 }
 
                 $expectedKodeVessel = strtoupper(trim((string) $kontrak->kode_vessel));
                 if ($expectedKodeVessel !== $voyageMeta['kode_vessel']) {
-                    $result['errors'][] = 'Baris ' . $rowNumber . ': no_voyage_gab "' . $noVoyageGab . '" tidak cocok dengan vessel kontrak "' . $noKontrak . '" (kode vessel ' . $expectedKodeVessel . ').';
+                    $result['errors'][] = 'Baris '.$rowNumber.': no_voyage_gab "'.$noVoyageGab.'" tidak cocok dengan vessel kontrak "'.$noKontrak.'" (kode vessel '.$expectedKodeVessel.').';
                     $result['skipped']++;
+
                     continue;
                 }
 
-                $existingGroup = $existingCables[$this->normalizeLookupKey($noVoyageGab)] ?? collect();
+                $existingGroup = $existingCables[$this->cableImportLookupKey($noVoyageGab, $statusVoyage)] ?? collect();
 
                 $payload = $this->buildCableImportPayload($row, $kontrak, $voyageMeta, $presentColumns);
                 $existing = $existingGroup->first();
@@ -722,12 +787,14 @@ class T_master_cableController extends Controller
                             'cable_id' => (int) $matchedCable->id,
                             'no_kontrak' => $noKontrak,
                             'no_voyage_gab' => $noVoyageGab,
-                            'kontrak_changed' => !empty($matchedCable->id_kontrak) && (int) $matchedCable->id_kontrak !== (int) $kontrak->id,
+                            'status_voyage' => $statusVoyage,
+                            'kontrak_changed' => ! empty($matchedCable->id_kontrak) && (int) $matchedCable->id_kontrak !== (int) $kontrak->id,
                             'previous_no_kontrak' => $matchedCable->no_kontrak ?? null,
                             'previous_status' => $matchedCable->status ?? null,
                             'duplicate_group_count' => $existingGroup->count(),
                         ];
                     }
+
                     continue;
                 }
 
@@ -739,6 +806,7 @@ class T_master_cableController extends Controller
                     'cable_id' => (int) $cableId,
                     'no_kontrak' => $noKontrak,
                     'no_voyage_gab' => $noVoyageGab,
+                    'status_voyage' => $statusVoyage,
                 ];
             }
 
@@ -757,7 +825,7 @@ class T_master_cableController extends Controller
 
         return response($this->buildCableImportTemplateHtml(), 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -767,7 +835,7 @@ class T_master_cableController extends Controller
 
         return response($this->buildCableExportHtml(), 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -824,6 +892,7 @@ class T_master_cableController extends Controller
                 $q->where('t_master_cable.no_voyage_gab', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.no_voyage', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.jenis_voyage', 'like', "%{$search}%")
+                    ->orWhere('t_master_cable.status_voyage', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.master', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.atd_port', 'like', "%{$search}%")
                     ->orWhere('t_master_cable.ata_port', 'like', "%{$search}%")
@@ -832,12 +901,12 @@ class T_master_cableController extends Controller
         }
 
         $status = $request->input('status');
-        if (!is_null($status) && $status !== '') {
+        if (! is_null($status) && $status !== '') {
             $query->where('t_master_cable.status', $status);
         }
 
         $idVessel = $request->input('id_vessel');
-        if (!is_null($idVessel) && $idVessel !== '') {
+        if (! is_null($idVessel) && $idVessel !== '') {
             $query->where('t_master_cable.id_vessel', $idVessel);
         }
 
@@ -851,7 +920,7 @@ class T_master_cableController extends Controller
                     ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
                     ->whereColumn('t_klaim_detail.id_cable', 't_master_cable.id');
 
-                if (!is_null($excludeKlaimId) && $excludeKlaimId !== '') {
+                if (! is_null($excludeKlaimId) && $excludeKlaimId !== '') {
                     $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
                 }
                 if ($jenisKlaim !== '') {
@@ -868,15 +937,15 @@ class T_master_cableController extends Controller
                     ->from('t_doc_cargo')
                     ->whereColumn('t_doc_cargo.id_cable', 't_master_cable.id');
 
-                if (!is_null($excludeDocCargoId) && $excludeDocCargoId !== '') {
+                if (! is_null($excludeDocCargoId) && $excludeDocCargoId !== '') {
                     $sub->where('t_doc_cargo.id', '!=', $excludeDocCargoId);
                 }
             });
         }
 
-        $allowedSort = ['id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'master', 'atd_port', 'ata_port', 'status', 'created_at'];
+        $allowedSort = ['id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'status_voyage', 'master', 'atd_port', 'ata_port', 'status', 'created_at'];
         $sortBy = $request->input('sort_by', 'id');
-        if (!in_array($sortBy, $allowedSort, true)) {
+        if (! in_array($sortBy, $allowedSort, true)) {
             $sortBy = 'id';
         }
         $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
@@ -888,13 +957,13 @@ class T_master_cableController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Data T_master_cable berhasil diambil',
-            'data'    => $paginator->items(),
-            'meta'    => [
+            'data' => $paginator->items(),
+            'meta' => [
                 'current_page' => $paginator->currentPage(),
-                'per_page'     => $paginator->perPage(),
-                'total'        => $paginator->total(),
-                'last_page'    => $paginator->lastPage(),
-            ]
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'last_page' => $paginator->lastPage(),
+            ],
         ]);
     }
 
@@ -915,14 +984,14 @@ class T_master_cableController extends Controller
         $files = File_upload::where('id_cable', $id)
             ->orderBy('id', 'asc')
             ->get();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Data details T_master_cable berhasil diambil',
-            'data'    => [
+            'data' => [
                 'detail' => $data,
                 'files' => $files,
-            ]
+            ],
         ]);
     }
 
@@ -948,6 +1017,7 @@ class T_master_cableController extends Controller
         $kontrak = null;
         $settings = null;
         $nextVoyage = null;
+        $existingVoyages = [];
 
         if ($idVessel) {
             $lastCable = T_master_cable::where('id_vessel', $idVessel)
@@ -976,6 +1046,13 @@ class T_master_cableController extends Controller
                 ->orderBy('ata_port')
                 ->pluck('ata_port');
 
+            $existingVoyages = T_master_cable::where('id_vessel', $idVessel)
+                ->whereNotNull('no_voyage_gab')
+                ->where('no_voyage_gab', '<>', '')
+                ->select('id', 'no_voyage_gab', 'no_voyage', 'jenis_voyage', 'status_voyage')
+                ->orderByDesc('id')
+                ->get();
+
             $kontrak = DB::table('m_kontrak')
                 ->where('id_vessel', $idVessel)
                 ->where('status', 'ACTIVE')
@@ -993,7 +1070,7 @@ class T_master_cableController extends Controller
             ->value('value');
         $settings = [
             'est_claim_bunker' => $settingValue,
-            'est_claim_transport' => $settingTransportValue
+            'est_claim_transport' => $settingTransportValue,
         ];
 
         return response()->json([
@@ -1008,7 +1085,8 @@ class T_master_cableController extends Controller
                 'kontrak' => $kontrak,
                 'settings' => $settings,
                 'next_voyage' => $nextVoyage,
-            ]
+                'existing_voyages' => $existingVoyages,
+            ],
         ]);
     }
 
@@ -1027,12 +1105,14 @@ class T_master_cableController extends Controller
 
             $idVessel = $request->input('id_vessel');
             $atdTimeBaru = $request->input('atd_time');
-            if (!$idVessel) {
+            if (! $idVessel) {
                 throw ValidationException::withMessages([
                     'id_vessel' => 'Vessel wajib diisi.',
                 ]);
             }
 
+            $statusVoyage = $this->normalizeStatusVoyage($request->input('status_voyage'));
+            $existingVoyage = $this->resolveExistingVoyage($request, (int) $idVessel);
             $nextVoyage = $this->buildNextVoyageMeta((int) $idVessel, $request->boolean('flag_l', false));
 
             if ($idVessel && $atdTimeBaru) {
@@ -1044,7 +1124,7 @@ class T_master_cableController extends Controller
 
                 if ($lastCable && strtotime((string) $atdTimeBaru) <= strtotime((string) $lastCable->ata_time)) {
                     throw ValidationException::withMessages([
-                        'atd_time' => 'ATD Time baru harus lebih besar dari ATA Time cable terakhir (' . $lastCable->ata_time . ').',
+                        'atd_time' => 'ATD Time baru harus lebih besar dari ATA Time cable terakhir ('.$lastCable->ata_time.').',
                     ]);
                 }
             }
@@ -1056,19 +1136,21 @@ class T_master_cableController extends Controller
 
             if ($activeKontrakCount !== 1) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Vessel harus memiliki tepat 1 kontrak ACTIVE.'
+                    'message' => 'Vessel harus memiliki tepat 1 kontrak ACTIVE.',
                 ], 422);
             }
             $activeKontrak = (clone $activeKontrakQuery)->orderByDesc('id')->first(['id']);
 
-            $t_master_cable = new T_master_cable();
+            $t_master_cable = new T_master_cable;
             $t_master_cable->id_vessel = $request->input('id_vessel');
             $t_master_cable->id_kontrak = $activeKontrak->id ?? null;
-            $t_master_cable->no_voyage_gab = $nextVoyage['no_voyage_gab'];
-            $t_master_cable->no_voyage = $nextVoyage['no_voyage'];
-            $t_master_cable->jenis_voyage = $nextVoyage['jenis_voyage'];
+            $t_master_cable->no_voyage_gab = $existingVoyage?->no_voyage_gab ?? $nextVoyage['no_voyage_gab'];
+            $t_master_cable->no_voyage = $existingVoyage?->no_voyage ?? $nextVoyage['no_voyage'];
+            $t_master_cable->status_voyage = $statusVoyage;
+            $t_master_cable->jenis_voyage = $existingVoyage?->jenis_voyage ?? $nextVoyage['jenis_voyage'];
             $t_master_cable->master = $request->input('master');
             $t_master_cable->atd_port = $request->input('atd_port');
             $t_master_cable->atd_time = $request->input('atd_time');
@@ -1096,11 +1178,11 @@ class T_master_cableController extends Controller
             $files = $request->file('files', []);
             if ($files) {
                 foreach ($files as $file) {
-                    if (!$file) {
+                    if (! $file) {
                         continue;
                     }
                     $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/cable');
-                    $upload = new File_upload();
+                    $upload = new File_upload;
                     $upload->id_cable = $t_master_cable->id;
                     $upload->nama_file = $path;
                     $upload->save();
@@ -1116,8 +1198,9 @@ class T_master_cableController extends Controller
                     'id' => $t_master_cable->id,
                     'no_voyage_gab' => $t_master_cable->no_voyage_gab,
                     'no_voyage' => $t_master_cable->no_voyage,
+                    'status_voyage' => $t_master_cable->status_voyage,
                     'jenis_voyage' => $t_master_cable->jenis_voyage,
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1139,7 +1222,7 @@ class T_master_cableController extends Controller
 
             $incomingFiles = array_filter((array) $request->file('files', []));
             $hasExistingFiles = File_upload::where('id_cable', $id)->exists();
-            if (empty($incomingFiles) && !$hasExistingFiles) {
+            if (empty($incomingFiles) && ! $hasExistingFiles) {
                 throw ValidationException::withMessages([
                     'files' => 'File upload wajib diisi.',
                 ]);
@@ -1152,9 +1235,10 @@ class T_master_cableController extends Controller
 
             if ($activeKontrakCount !== 1) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Vessel harus memiliki tepat 1 kontrak ACTIVE.'
+                    'message' => 'Vessel harus memiliki tepat 1 kontrak ACTIVE.',
                 ], 422);
             }
             $activeKontrak = (clone $activeKontrakQuery)->orderByDesc('id')->first(['id']);
@@ -1162,9 +1246,13 @@ class T_master_cableController extends Controller
             $t_master_cable = T_master_cable::where('id', $id)->firstOrFail();
             $oldEstClaimSpeed = $t_master_cable->est_claim_speed;
             $oldEstClaimBunker = $t_master_cable->est_claim_bunker;
-            $t_master_cable->no_voyage_gab = $request->input('no_voyage_gab');
-            $t_master_cable->no_voyage = $request->input('no_voyage');
-            $t_master_cable->jenis_voyage = $request->input('jenis_voyage');
+            $idVessel = (int) $request->input('id_vessel');
+            $statusVoyage = $this->normalizeStatusVoyage($request->input('status_voyage'));
+            $existingVoyage = $this->resolveExistingVoyage($request, $idVessel);
+            $t_master_cable->no_voyage_gab = $existingVoyage?->no_voyage_gab ?? $request->input('no_voyage_gab');
+            $t_master_cable->no_voyage = $existingVoyage?->no_voyage ?? $request->input('no_voyage');
+            $t_master_cable->status_voyage = $statusVoyage;
+            $t_master_cable->jenis_voyage = $existingVoyage?->jenis_voyage ?? $request->input('jenis_voyage');
             $t_master_cable->master = $request->input('master');
             $t_master_cable->atd_port = $request->input('atd_port');
             $t_master_cable->atd_time = $request->input('atd_time');
@@ -1201,11 +1289,11 @@ class T_master_cableController extends Controller
             $files = $request->file('files', []);
             if ($files) {
                 foreach ($files as $file) {
-                    if (!$file) {
+                    if (! $file) {
                         continue;
                     }
                     $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/cable');
-                    $upload = new File_upload();
+                    $upload = new File_upload;
                     $upload->id_cable = $t_master_cable->id;
                     $upload->nama_file = $path;
                     $upload->save();
@@ -1216,7 +1304,7 @@ class T_master_cableController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_master_cable berhasil diubah'
+                'message' => 'Data T_master_cable berhasil diubah',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1231,11 +1319,12 @@ class T_master_cableController extends Controller
         try {
             DB::beginTransaction();
             $user = Auth::user();
-            if (!$user || !($user->hasRole('approval') || $user->hasRole('superadmin'))) {
+            if (! $user || ! ($user->hasRole('approval') || $user->hasRole('superadmin'))) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.'
+                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.',
                 ], 403);
             }
 
@@ -1247,7 +1336,7 @@ class T_master_cableController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Cable berhasil di-approve'
+                'message' => 'Cable berhasil di-approve',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1262,11 +1351,12 @@ class T_master_cableController extends Controller
         try {
             DB::beginTransaction();
             $user = Auth::user();
-            if (!$user || !$user->hasRole('approval')) {
+            if (! $user || ! $user->hasRole('approval')) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hanya role approval yang boleh melakukan unapprove.'
+                    'message' => 'Hanya role approval yang boleh melakukan unapprove.',
                 ], 403);
             }
 
@@ -1278,7 +1368,7 @@ class T_master_cableController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Cable berhasil di-unapprove'
+                'message' => 'Cable berhasil di-unapprove',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1297,7 +1387,7 @@ class T_master_cableController extends Controller
             $files = File_upload::where('id_cable', $id)->get();
             foreach ($files as $file) {
                 if ($file->nama_file) {
-                    $path = public_path('storage/' . ltrim((string) $file->nama_file, '/'));
+                    $path = public_path('storage/'.ltrim((string) $file->nama_file, '/'));
                     if (file_exists($path)) {
                         @unlink($path);
                     }
@@ -1310,12 +1400,11 @@ class T_master_cableController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data T_master_cable berhasil dihapus'
+                'message' => 'Data T_master_cable berhasil dihapus',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
         }
     }
-
 }

@@ -948,13 +948,19 @@ class T_klaimController extends Controller
 
     private function indexDetailNilai(Request $request, int $perPage)
     {
-        $query = DB::table('t_klaim_detail')
-            ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
-            ->leftJoin('m_vessel', 'm_vessel.id', '=', 't_klaim.id_vessel')
+        $includeHeaderWithoutDetail = $request->boolean('include_header_without_detail', false);
+
+        $query = $includeHeaderWithoutDetail
+            ? DB::table('t_klaim')
+                ->leftJoin('t_klaim_detail', 't_klaim_detail.id_klaim', '=', 't_klaim.id')
+            : DB::table('t_klaim_detail')
+                ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim');
+
+        $query->leftJoin('m_vessel', 'm_vessel.id', '=', 't_klaim.id_vessel')
             ->leftJoin('t_klaim_detail_nilai as nilai', 'nilai.id_klaim_detail', '=', 't_klaim_detail.id')
             ->select([
                 't_klaim.id as id',
-                DB::raw('COALESCE(nilai.id, t_klaim_detail.id) as row_key'),
+                DB::raw('COALESCE(nilai.id, t_klaim_detail.id, CONCAT("klaim-", t_klaim.id)) as row_key'),
                 't_klaim.id_vessel',
                 't_klaim.no_klaim_awal',
                 't_klaim.tgl_klaim_awal',

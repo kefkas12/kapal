@@ -108,11 +108,12 @@
             <ul>
                 <li>Header wajib: <code>No Kontrak</code> dan <code>No Voyage Gab</code>.</li>
                 <li>Kolom lain opsional. Kalau tidak ada, import tetap jalan.</li>
+                <li><code>Status Voyage</code> opsional, isi dengan <code>deviasi</code>, <code>bunker</code>, atau kosong/<code>none</code>.</li>
                 <li>Kolom turunan seperti <code>speed</code> s.d. <code>excess_bunker</code> dan <code>est_claim_bunker</code> tidak perlu ada di file karena dihitung otomatis saat import.</li>
-                <li>Jika <code>No Voyage Gab</code> sudah ada, sistem akan update record yang sama dan menyesuaikan <code>id_kontrak</code> dari file import.</li>
+                <li>Jika kombinasi <code>No Voyage Gab</code> dan <code>Status Voyage</code> sudah ada, sistem akan update record yang sama dan menyesuaikan <code>id_kontrak</code> dari file import.</li>
                 <li>Setiap row hasil import akan langsung disimpan dengan status <strong>APPROVE</strong>.</li>
                 <li>Saat import, sistem tidak membandingkan dengan kontrak <strong>ACTIVE</strong>. Acuan utamanya adalah <code>No Kontrak</code> dari file.</li>
-                <li>Jika <code>No Voyage Gab</code> duplikat di database, semua row yang cocok akan ikut diupdate.</li>
+                <li>Jika kombinasi <code>No Voyage Gab</code> dan <code>Status Voyage</code> duplikat di database, semua row yang cocok akan ikut diupdate.</li>
             </ul>
             <div class="actions">
                 <a class="button" href="{{ route('cable.import.template') }}">Download Template</a>
@@ -162,6 +163,7 @@
                             <th>Cable ID</th>
                             <th>No Kontrak</th>
                             <th>No Voyage Gab</th>
+                            <th>Status Voyage</th>
                             <th>Catatan</th>
                         </tr>
                     </thead>
@@ -172,6 +174,7 @@
                                 <td>{{ $item['cable_id'] }}</td>
                                 <td>{{ $item['no_kontrak'] }}</td>
                                 <td>{{ $item['no_voyage_gab'] }}</td>
+                                <td>{{ $item['status_voyage'] ?? '-' }}</td>
                                 <td>
                                     @if (!empty($item['kontrak_changed']))
                                         id_kontrak diubah dari {{ $item['previous_no_kontrak'] ?? '-' }} ke {{ $item['no_kontrak'] }}
@@ -202,6 +205,7 @@
                             <th>Cable ID</th>
                             <th>No Kontrak</th>
                             <th>No Voyage Gab</th>
+                            <th>Status Voyage</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -211,6 +215,7 @@
                                 <td>{{ $item['cable_id'] }}</td>
                                 <td>{{ $item['no_kontrak'] }}</td>
                                 <td>{{ $item['no_voyage_gab'] }}</td>
+                                <td>{{ $item['status_voyage'] ?? '-' }}</td>
                             </tr>
                         @endforeach
                     </tbody>
