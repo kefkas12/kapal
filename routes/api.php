@@ -95,6 +95,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', 'delete');
     });
 
+    Route::controller(T_klaim_detailController::class)->prefix('klaim_detail_nilai')->group(function () {
+        Route::get('/details/{id}', 'nilaiDetails');
+        Route::put('/{id}', 'editNilai');
+    });
+
     Route::controller(T_klaimController::class)->prefix('klaim')->group(function () {
         Route::get('/', 'index');
         Route::get('/search', 'search');

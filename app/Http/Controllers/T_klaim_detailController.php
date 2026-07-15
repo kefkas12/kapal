@@ -9,6 +9,7 @@ use App\Models\T_klaim_detail;
 use App\Models\T_klaim_detail_nilai;
 use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -920,6 +921,120 @@ class T_klaim_detailController extends Controller
                 'files_akhir' => $filesAkhir->values(),
             ],
         ]);
+    }
+
+    public function nilaiDetails(Request $request): JsonResponse
+    {
+        $nilai = T_klaim_detail_nilai::where('id', $request->route('id'))->firstOrFail();
+        $detail = T_klaim_detail::where('id', $nilai->id_klaim_detail)->firstOrFail();
+        $klaim = T_klaim::where('id', $detail->id_klaim)->firstOrFail();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data nilai klaim berhasil diambil',
+            'data' => [
+                'nilai' => $nilai,
+                'detail' => $detail,
+                'klaim' => $klaim,
+                'source' => $this->resolveNilaiSource($detail, $klaim),
+            ],
+        ]);
+    }
+
+    private function resolveNilaiSource(T_klaim_detail $detail, T_klaim $klaim): ?object
+    {
+        $jenisKlaim = strtoupper((string) $klaim->jenis_klaim);
+
+        if ($jenisKlaim === 'OHBOH' && $detail->id_off_hire) {
+            return DB::table('t_off_hire')->where('id', $detail->id_off_hire)->first();
+        }
+
+        if ($jenisKlaim === 'BOD' && $detail->id_redelivery_delivery) {
+            return DB::table('t_redelivery_delivery')->where('id', $detail->id_redelivery_delivery)->first();
+        }
+
+        if ($detail->id_cable) {
+            return T_master_cable::where('id', $detail->id_cable)->first();
+        }
+
+        return null;
+    }
+
+    public function editNilai(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'stage' => ['required', 'in:AWAL,AKHIR'],
+            'val_klaim_awal' => ['required_if:stage,AWAL', 'nullable', 'numeric', 'min:0'],
+            'val_klaim_akhir' => ['required_if:stage,AKHIR', 'nullable', 'numeric', 'min:0'],
+        ]);
+
+        $nilai = DB::transaction(function () use ($request, $validated): T_klaim_detail_nilai {
+            $nilai = T_klaim_detail_nilai::where('id', $request->route('id'))
+                ->lockForUpdate()
+                ->firstOrFail();
+            $detail = T_klaim_detail::where('id', $nilai->id_klaim_detail)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $klaim = T_klaim::where('id', $detail->id_klaim)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $detailStatus = strtoupper((string) $detail->status);
+            $klaimStatus = strtoupper((string) $klaim->status);
+            if (in_array($detailStatus, ['APPROVE', 'CLOSE'], true)
+                || in_array($klaimStatus, ['APPROVE', 'CLOSE'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Nilai klaim yang sudah APPROVE atau CLOSE tidak bisa diubah.',
+                ]);
+            }
+
+            if ($validated['stage'] === 'AWAL') {
+                $nilai->val_klaim_awal = $validated['val_klaim_awal'];
+            } else {
+                if (empty($klaim->no_klaim_akhir) && empty($klaim->tgl_klaim_akhir)) {
+                    throw ValidationException::withMessages([
+                        'stage' => 'Klaim Akhir belum dibuat untuk klaim ini.',
+                    ]);
+                }
+
+                $nilai->val_klaim_akhir = $validated['val_klaim_akhir'];
+                $nilai->val_klaim_akhir_idr = $this->calculateKlaimAkhirIdr(
+                    $validated['val_klaim_akhir'],
+                    $nilai->currency,
+                    $nilai->kurs,
+                );
+            }
+
+            $nilai->user_id = Auth::id();
+            $nilai->save();
+
+            return $nilai->fresh();
+        }, attempts: 3);
+
+        return response()->json([
+            'success' => true,
+            'message' => $validated['stage'] === 'AWAL'
+                ? 'Nilai Klaim Awal berhasil diubah.'
+                : 'Nilai Klaim Akhir berhasil diubah.',
+            'data' => $nilai,
+        ]);
+    }
+
+    private function calculateKlaimAkhirIdr($value, $currency, $kurs): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (strtoupper(trim((string) $currency)) === 'IDR') {
+            return (string) $value;
+        }
+
+        if (! is_numeric($kurs)) {
+            return null;
+        }
+
+        return (string) ((float) $value * (float) $kurs);
     }
 
     public function create(Request $request)
