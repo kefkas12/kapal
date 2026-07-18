@@ -123,6 +123,18 @@ class T_master_cableController extends Controller
         return in_array($statusVoyage, ['deviasi', 'bunker'], true) ? $statusVoyage : null;
     }
 
+    private function buildNoVoyageGabPenyesuaian(?string $noVoyageGab, ?string $statusVoyage): ?string
+    {
+        $noVoyageGab = strtoupper(trim((string) $noVoyageGab));
+        $statusVoyage = $this->normalizeStatusVoyage($statusVoyage);
+
+        if ($noVoyageGab === '' || is_null($statusVoyage)) {
+            return null;
+        }
+
+        return $noVoyageGab.($statusVoyage === 'deviasi' ? '-D' : '-B');
+    }
+
     private function resolveExistingVoyage(Request $request, int $idVessel): ?T_master_cable
     {
         $statusVoyage = $this->normalizeStatusVoyage($request->input('status_voyage'));
@@ -799,6 +811,10 @@ class T_master_cableController extends Controller
                 }
 
                 $payload['created_at'] = now();
+                $payload['no_voyage_gab_penyesuaian'] = $this->buildNoVoyageGabPenyesuaian(
+                    $payload['no_voyage_gab'] ?? null,
+                    $payload['status_voyage'] ?? null,
+                );
                 $cableId = DB::table('t_master_cable')->insertGetId($payload);
                 $result['created']++;
                 $result['created_rows'][] = [
@@ -1150,6 +1166,10 @@ class T_master_cableController extends Controller
             $t_master_cable->no_voyage_gab = $existingVoyage?->no_voyage_gab ?? $nextVoyage['no_voyage_gab'];
             $t_master_cable->no_voyage = $existingVoyage?->no_voyage ?? $nextVoyage['no_voyage'];
             $t_master_cable->status_voyage = $statusVoyage;
+            $t_master_cable->no_voyage_gab_penyesuaian = $this->buildNoVoyageGabPenyesuaian(
+                $t_master_cable->no_voyage_gab,
+                $t_master_cable->status_voyage,
+            );
             $t_master_cable->jenis_voyage = $existingVoyage?->jenis_voyage ?? $nextVoyage['jenis_voyage'];
             $t_master_cable->master = $request->input('master');
             $t_master_cable->atd_port = $request->input('atd_port');
@@ -1160,6 +1180,7 @@ class T_master_cableController extends Controller
             $t_master_cable->ata_rob = $request->input('ata_rob');
             $t_master_cable->distance = $request->input('distance');
             $t_master_cable->speed = $request->input('speed');
+            $t_master_cable->gps_speed = $request->input('gps_speed');
             $t_master_cable->act_speed = $request->input('act_speed');
             $t_master_cable->est_sail_day = $request->input('est_sail_day');
             $t_master_cable->act_sail_day = $request->input('act_sail_day');
