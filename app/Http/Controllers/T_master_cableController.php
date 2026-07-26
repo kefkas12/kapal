@@ -926,21 +926,34 @@ class T_master_cableController extends Controller
             $query->where('t_master_cable.id_vessel', $idVessel);
         }
 
+        $includeCableIds = collect($request->input('include_ids', []))
+            ->filter(fn ($id): bool => is_numeric($id) && (int) $id > 0)
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
         $availableForKlaim = $request->boolean('available_for_klaim', false);
         if ($availableForKlaim) {
             $excludeKlaimId = $request->input('exclude_klaim_id');
             $jenisKlaim = trim((string) $request->input('jenis_klaim', ''));
-            $query->whereNotExists(function ($sub) use ($excludeKlaimId, $jenisKlaim) {
-                $sub->select(DB::raw(1))
-                    ->from('t_klaim_detail')
-                    ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
-                    ->whereColumn('t_klaim_detail.id_cable', 't_master_cable.id');
+            $query->where(function ($availabilityQuery) use ($excludeKlaimId, $jenisKlaim, $includeCableIds) {
+                $availabilityQuery->whereNotExists(function ($sub) use ($excludeKlaimId, $jenisKlaim) {
+                    $sub->select(DB::raw(1))
+                        ->from('t_klaim_detail')
+                        ->join('t_klaim', 't_klaim.id', '=', 't_klaim_detail.id_klaim')
+                        ->whereColumn('t_klaim_detail.id_cable', 't_master_cable.id');
 
-                if (! is_null($excludeKlaimId) && $excludeKlaimId !== '') {
-                    $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
-                }
-                if ($jenisKlaim !== '') {
-                    $sub->where('t_klaim.jenis_klaim', $jenisKlaim);
+                    if (! is_null($excludeKlaimId) && $excludeKlaimId !== '') {
+                        $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
+                    }
+                    if ($jenisKlaim !== '') {
+                        $sub->where('t_klaim.jenis_klaim', $jenisKlaim);
+                    }
+                });
+
+                if ($includeCableIds !== []) {
+                    $availabilityQuery->orWhereIn('t_master_cable.id', $includeCableIds);
                 }
             });
         }
@@ -966,6 +979,10 @@ class T_master_cableController extends Controller
         }
         $sortDir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
 
+        if ($includeCableIds !== []) {
+            $placeholders = implode(',', array_fill(0, count($includeCableIds), '?'));
+            $query->orderByRaw("CASE WHEN t_master_cable.id IN ({$placeholders}) THEN 0 ELSE 1 END", $includeCableIds);
+        }
         $query->orderBy($sortBy, $sortDir);
 
         $paginator = $query->paginate($perPage);
