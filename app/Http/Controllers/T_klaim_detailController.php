@@ -864,7 +864,10 @@ class T_klaim_detailController extends Controller
             $query->whereRaw('UPPER(COALESCE(t_klaim_detail.status, "")) = ?', [strtoupper($status)]);
         }
 
-        $data = $query->get();
+        $data = $query
+            ->orderBy('t_klaim_detail.no_urut', 'asc')
+            ->orderBy('t_klaim_detail.id', 'asc')
+            ->get();
         $data = $this->attachNilaiItemsToDetails($data);
 
         return response()->json([
