@@ -132,6 +132,7 @@
             <strong>Format file import</strong>
             <ul>
                 <li>Header wajib: <code>No Voyage</code> dan <code>Grade</code>.</li>
+                <li>Isi <code>No Voyage</code> dengan kode voyage biasa untuk perjalanan normal, atau kode penyesuaian untuk deviasi (contoh <code>MMXV/23016/D1-D</code>) dan bunker (akhiran <code>-B</code>). Kode tanpa akhiran tidak memilih perjalanan deviasi/bunker. Jika kode cocok dengan beberapa master cable, data tersebut dilewati dan ditampilkan sebagai error.</li>
                 <li>Header lain mengikuti label FE seperti <code>Price (USD/Bbl)</code>, <code>Bill of Lading (Bbl 60F)</code>, <code>Diff R1 (Bbl 60F)</code>, <code>R1 (%)</code>, sampai <code>Start Time Discharge Time</code> dan <code>Stop Time Discharge Time</code>.</li>
                 <li>Jika satu kombinasi <code>No Voyage + Grade</code> muncul di banyak row, semua row itu digabung menjadi satu doc cargo dengan beberapa detail discharge time.</li>
                 <li><code>Actual Discharge Time (day)</code> akan dihitung dari total detail discharge time hasil import.</li>

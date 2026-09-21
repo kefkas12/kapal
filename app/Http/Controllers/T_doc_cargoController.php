@@ -6,11 +6,11 @@ use App\Models\File_upload;
 use App\Models\M_grade;
 use App\Models\Settings;
 use App\Models\T_doc_cargo;
-use App\Models\T_klaim;
 use App\Models\T_master_cable;
 use App\Support\FileUploadHelper;
 use App\Support\KlaimEstimateSyncService;
 use App\Support\SimpleSpreadsheetReader;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +30,7 @@ class T_doc_cargoController extends Controller
             ->where('id_cable', $idCable)
             ->where('id_grade', $idGrade);
 
-        if (!is_null($excludeDocCargoId)) {
+        if (! is_null($excludeDocCargoId)) {
             $query->where('id', '!=', $excludeDocCargoId);
         }
 
@@ -126,12 +126,14 @@ class T_doc_cargoController extends Controller
     private function normalizeLookup(?string $value): string
     {
         $upper = strtoupper(trim((string) $value));
+
         return preg_replace('/[^A-Z0-9]/', '', $upper) ?? '';
     }
 
     private function tokenizeAlias(?string $value): array
     {
         $tokens = preg_split('/[^A-Z0-9]+/', strtoupper(trim((string) $value))) ?: [];
+
         return array_values(array_filter($tokens, fn ($token) => $token !== ''));
     }
 
@@ -170,6 +172,7 @@ class T_doc_cargoController extends Controller
     private function cleanImportCell(array $row, int $index): ?string
     {
         $value = trim((string) ($row[$index] ?? ''));
+
         return $value === '' ? null : $value;
     }
 
@@ -183,6 +186,7 @@ class T_doc_cargoController extends Controller
             $serial = (float) $value;
             if ($serial > 0) {
                 $unix = (int) round(($serial - 25569) * 86400);
+
                 return gmdate('Y-m-d H:i:s', $unix);
             }
         }
@@ -192,8 +196,8 @@ class T_doc_cargoController extends Controller
             return null;
         }
 
-        if ($defaultYear && !preg_match('/\b\d{4}\b/', $text)) {
-            $text .= ' ' . $defaultYear;
+        if ($defaultYear && ! preg_match('/\b\d{4}\b/', $text)) {
+            $text .= ' '.$defaultYear;
         }
 
         $ts = strtotime($text);
@@ -229,7 +233,7 @@ class T_doc_cargoController extends Controller
         }
 
         if (strlen($digits) <= 3) {
-            return substr((string) $reportYear, -2) . str_pad($digits, 3, '0', STR_PAD_LEFT);
+            return substr((string) $reportYear, -2).str_pad($digits, 3, '0', STR_PAD_LEFT);
         }
 
         return str_pad($digits, 5, '0', STR_PAD_LEFT);
@@ -287,6 +291,7 @@ class T_doc_cargoController extends Controller
                 if ($value !== null) {
                     $carry[$col] = $value;
                     $cells[$col] = $value;
+
                     continue;
                 }
 
@@ -319,7 +324,7 @@ class T_doc_cargoController extends Controller
             $hasLoadingCargo = ($cells[5] ?? null) !== null;
             $hasDischargeCargo = ($cells[12] ?? null) !== null;
 
-            if (!$hasVoy || !$hasVessel || (!$hasLoadingCargo && !$hasDischargeCargo)) {
+            if (! $hasVoy || ! $hasVessel || (! $hasLoadingCargo && ! $hasDischargeCargo)) {
                 continue;
             }
 
@@ -371,10 +376,10 @@ class T_doc_cargoController extends Controller
             $vesselKey = $this->normalizeLookup($item['vessel_name'] ?? '');
             $voyageKey = $this->normalizeVoyageNumber($item['voy'] ?? null, $reportYear)
                 ?? (preg_replace('/\D/', '', (string) ($item['voy'] ?? '')) ?: '');
-            $bucketKey = $vesselKey . '|' . $kind;
-            $groupKey = $bucketKey . '|' . $voyageKey;
+            $bucketKey = $vesselKey.'|'.$kind;
+            $groupKey = $bucketKey.'|'.$voyageKey;
 
-            if (!isset($ordinalByGroup[$groupKey])) {
+            if (! isset($ordinalByGroup[$groupKey])) {
                 $sequenceByBucket[$bucketKey] = ($sequenceByBucket[$bucketKey] ?? 0) + 1;
                 $ordinalByGroup[$groupKey] = $sequenceByBucket[$bucketKey];
             }
@@ -409,6 +414,10 @@ class T_doc_cargoController extends Controller
             $str = str_replace(',', '.', $str);
         }
 
+        if (is_numeric($str)) {
+            return (float) $str;
+        }
+
         $cleaned = preg_replace('/[^0-9.\-]/', '', $str);
         if ($cleaned === null || $cleaned === '' || $cleaned === '-' || $cleaned === '.') {
             return 0.0;
@@ -426,6 +435,7 @@ class T_doc_cargoController extends Controller
         if ($ts === false) {
             return null;
         }
+
         return date('Y-m-d H:i:s', $ts);
     }
 
@@ -512,7 +522,7 @@ class T_doc_cargoController extends Controller
             ];
         }
 
-        $grade = new M_grade();
+        $grade = new M_grade;
         $grade->grade = strtoupper($rawGrade);
         $grade->price_bbl = $this->formatImportedNumber($priceBbl) ?? '1';
         $grade->user_id = $this->actingUserId();
@@ -553,10 +563,10 @@ class T_doc_cargoController extends Controller
         }
 
         foreach (['no_voyage_gab', 'grade'] as $requiredField) {
-            if (!array_key_exists($requiredField, $columnIndexes)) {
+            if (! array_key_exists($requiredField, $columnIndexes)) {
                 $requiredLabel = $this->docCargoImportFieldLabels()[$requiredField] ?? $requiredField;
                 throw ValidationException::withMessages([
-                    'file' => 'Header wajib tidak ditemukan: ' . $requiredLabel . '.',
+                    'file' => 'Header wajib tidak ditemukan: '.$requiredLabel.'.',
                 ]);
             }
         }
@@ -578,16 +588,16 @@ class T_doc_cargoController extends Controller
                 }
             }
 
-            if (!$hasValue) {
+            if (! $hasValue) {
                 continue;
             }
 
-            $groupKey = $this->normalizeLookup($item['no_voyage_gab'] ?? '') . '|' . $this->normalizeLookup($item['grade'] ?? '');
+            $groupKey = $this->normalizeLookup($item['no_voyage_gab'] ?? '').'|'.$this->normalizeLookup($item['grade'] ?? '');
             if ($groupKey === '|' || $groupKey === '') {
                 continue;
             }
 
-            if (!isset($groups[$groupKey])) {
+            if (! isset($groups[$groupKey])) {
                 $groups[$groupKey] = [
                     'group_key' => $groupKey,
                     'row_numbers' => [],
@@ -603,12 +613,12 @@ class T_doc_cargoController extends Controller
                     continue;
                 }
 
-                if (!$this->isImportValueBlank($item[$field] ?? null)) {
+                if (! $this->isImportValueBlank($item[$field] ?? null)) {
                     $groups[$groupKey]['fields'][$field] = $item[$field];
                 }
             }
 
-            if (!$this->isImportValueBlank($item['start_time'] ?? null) || !$this->isImportValueBlank($item['stop_time'] ?? null)) {
+            if (! $this->isImportValueBlank($item['start_time'] ?? null) || ! $this->isImportValueBlank($item['stop_time'] ?? null)) {
                 $groups[$groupKey]['detail_items'][] = [
                     'row_number' => $item['row_number'],
                     'start_time' => $item['start_time'] ?? null,
@@ -661,6 +671,44 @@ class T_doc_cargoController extends Controller
         ];
     }
 
+    private function docCargoImportVoyageCode(object $cable): string
+    {
+        $adjustedCode = trim((string) ($cable->no_voyage_gab_penyesuaian ?? ''));
+        if ($adjustedCode !== '') {
+            return $adjustedCode;
+        }
+
+        $suffix = match (strtolower(trim((string) ($cable->status_voyage ?? '')))) {
+            'deviasi' => '-D',
+            'bunker' => '-B',
+            default => '',
+        };
+
+        return trim((string) $cable->no_voyage_gab).$suffix;
+    }
+
+    private function resolveDocCargoImportCable(string $noVoyageGab): ?T_master_cable
+    {
+        $lookupCode = strtoupper(trim($noVoyageGab));
+        $baseCode = preg_replace('/-(D|B)$/', '', $lookupCode);
+        $candidates = T_master_cable::query()
+            ->where(function (Builder $query) use ($lookupCode, $baseCode): void {
+                $query->whereRaw('UPPER(TRIM(no_voyage_gab_penyesuaian)) = ?', [$lookupCode])
+                    ->orWhereRaw('UPPER(TRIM(no_voyage_gab)) = ?', [$lookupCode])
+                    ->orWhereRaw('UPPER(TRIM(no_voyage_gab)) = ?', [$baseCode]);
+            })
+            ->get()
+            ->filter(fn (T_master_cable $cable): bool => strtoupper($this->docCargoImportVoyageCode($cable)) === $lookupCode);
+
+        if ($candidates->count() > 1) {
+            throw ValidationException::withMessages([
+                'file' => 'No Voyage "'.$noVoyageGab.'" cocok dengan beberapa master cable (ID: '.$candidates->pluck('id')->implode(', ').'). Perbaiki duplikasi master cable sebelum import.',
+            ]);
+        }
+
+        return $candidates->first();
+    }
+
     private function buildDocCargoImportTemplateHtml(): string
     {
         $headers = array_values($this->docCargoImportFieldLabels());
@@ -681,14 +729,14 @@ class T_doc_cargoController extends Controller
 
         $html = '<table border="1"><tr>';
         foreach ($headers as $header) {
-            $html .= '<th>' . e($header) . '</th>';
+            $html .= '<th>'.e($header).'</th>';
         }
         $html .= '</tr>';
 
         foreach ($sampleRows as $sampleRow) {
             $html .= '<tr>';
             foreach ($sampleRow as $value) {
-                $html .= '<td>' . e((string) $value) . '</td>';
+                $html .= '<td>'.e((string) $value).'</td>';
             }
             $html .= '</tr>';
         }
@@ -704,10 +752,14 @@ class T_doc_cargoController extends Controller
         $headers = array_keys($labels);
 
         $docCargoRows = DB::table('t_doc_cargo')
+            ->leftJoin('t_master_cable', 't_master_cable.id', '=', 't_doc_cargo.id_cable')
             ->leftJoin('t_doc_cargo_detail', 't_doc_cargo_detail.id_doc_cargo', '=', 't_doc_cargo.id')
             ->select(
                 't_doc_cargo.id',
                 't_doc_cargo.no_voyage_gab',
+                't_master_cable.no_voyage_gab as cable_no_voyage_gab',
+                't_master_cable.no_voyage_gab_penyesuaian',
+                't_master_cable.status_voyage',
                 't_doc_cargo.grade',
                 't_doc_cargo.price_bbl',
                 't_doc_cargo.bill_of_lading',
@@ -739,14 +791,19 @@ class T_doc_cargoController extends Controller
 
         $html = '<table border="1"><tr>';
         foreach ($headers as $header) {
-            $html .= '<th>' . e($labels[$header]) . '</th>';
+            $html .= '<th>'.e($labels[$header]).'</th>';
         }
         $html .= '</tr>';
 
         foreach ($docCargoRows as $row) {
+            $row->no_voyage_gab = $this->docCargoImportVoyageCode((object) [
+                'no_voyage_gab' => $row->cable_no_voyage_gab ?? $row->no_voyage_gab,
+                'no_voyage_gab_penyesuaian' => $row->no_voyage_gab_penyesuaian,
+                'status_voyage' => $row->status_voyage,
+            ]);
             $html .= '<tr>';
             foreach ($headers as $header) {
-                $html .= '<td>' . e((string) ($row->{$header} ?? '')) . '</td>';
+                $html .= '<td>'.e((string) ($row->{$header} ?? '')).'</td>';
             }
             $html .= '</tr>';
         }
@@ -759,6 +816,7 @@ class T_doc_cargoController extends Controller
     private function resolveGradeId(array $row, array $grades): ?int
     {
         $normalized = $this->resolveGradeLookupKey($row['loading_cargo'] ?? $row['discharge_cargo'] ?? '');
+
         return $grades[$normalized]['id'] ?? null;
     }
 
@@ -782,10 +840,11 @@ class T_doc_cargoController extends Controller
                 'price_bbl' => $existing->price_bbl,
             ];
             $grades[$lookupKey !== '' ? $lookupKey : $this->normalizeLookup($existing->grade)] = $meta;
+
             return $meta;
         }
 
-        $grade = new M_grade();
+        $grade = new M_grade;
         $grade->grade = $gradeName;
         $grade->price_bbl = '1';
         $grade->user_id = $this->actingUserId();
@@ -820,6 +879,7 @@ class T_doc_cargoController extends Controller
     private function resolveCableRow(array $row, array $cables, array $vessels): ?array
     {
         $resolution = $this->resolveCableWithDebug($row, $cables, $vessels);
+
         return $resolution['cable'] ?? null;
     }
 
@@ -852,13 +912,13 @@ class T_doc_cargoController extends Controller
             if ($kind === 'L' && $jenisVoyage !== 'L') {
                 continue;
             }
-            if ($kind === 'D' && !str_starts_with($jenisVoyage, 'D')) {
+            if ($kind === 'D' && ! str_starts_with($jenisVoyage, 'D')) {
                 continue;
             }
 
             $cableVoyage = (string) ($cable['no_voyage'] ?? '');
             $cableVoyageDigits = preg_replace('/\D/', '', $cableVoyage) ?? '';
-            if ($cableVoyageDigits !== '' && !str_starts_with($cableVoyageDigits, $reportYearPrefix)) {
+            if ($cableVoyageDigits !== '' && ! str_starts_with($cableVoyageDigits, $reportYearPrefix)) {
                 continue;
             }
 
@@ -880,10 +940,10 @@ class T_doc_cargoController extends Controller
             if ($dischargePortAliases !== [] && array_intersect($dischargePortAliases, $cableAtaAliases) !== []) {
                 $score += 90;
             }
-            if ($loadingDate && !empty($cable['atd_time']) && date('m-d', strtotime($cable['atd_time'])) === $loadingDate) {
+            if ($loadingDate && ! empty($cable['atd_time']) && date('m-d', strtotime($cable['atd_time'])) === $loadingDate) {
                 $score += 20;
             }
-            if ($dischargeDate && !empty($cable['ata_time']) && date('m-d', strtotime($cable['ata_time'])) === $dischargeDate) {
+            if ($dischargeDate && ! empty($cable['ata_time']) && date('m-d', strtotime($cable['ata_time'])) === $dischargeDate) {
                 $score += 20;
             }
 
@@ -918,7 +978,7 @@ class T_doc_cargoController extends Controller
                     break;
                 }
             }
-            if (!$matchesVessel) {
+            if (! $matchesVessel) {
                 continue;
             }
 
@@ -926,12 +986,12 @@ class T_doc_cargoController extends Controller
             if ($kind === 'L' && $jenisVoyage !== 'L') {
                 continue;
             }
-            if ($kind === 'D' && !str_starts_with($jenisVoyage, 'D')) {
+            if ($kind === 'D' && ! str_starts_with($jenisVoyage, 'D')) {
                 continue;
             }
 
             $cableVoyageDigits = preg_replace('/\D/', '', (string) ($cable['no_voyage'] ?? '')) ?? '';
-            if ($cableVoyageDigits !== '' && !str_starts_with($cableVoyageDigits, $reportYearPrefix)) {
+            if ($cableVoyageDigits !== '' && ! str_starts_with($cableVoyageDigits, $reportYearPrefix)) {
                 continue;
             }
 
@@ -959,11 +1019,13 @@ class T_doc_cargoController extends Controller
                 $rightJenis = strtoupper((string) ($right['jenis_voyage'] ?? ''));
                 $leftOrder = $leftJenis === 'L' ? 0 : (int) preg_replace('/\D/', '', $leftJenis);
                 $rightOrder = $rightJenis === 'L' ? 0 : (int) preg_replace('/\D/', '', $rightJenis);
+
                 return $leftOrder <=> $rightOrder;
             });
 
             $ordinal = max(1, (int) ($row['fallback_group_ordinal'] ?? 1));
             $index = min(count($fallbackCandidates) - 1, $ordinal - 1);
+
             return [
                 'cable' => $fallbackCandidates[$index],
                 'reason' => 'fallback ordinal by vessel+kind digunakan',
@@ -1075,7 +1137,7 @@ class T_doc_cargoController extends Controller
             'Contoh import dari report harian.',
         ];
 
-        $headerRows = <<<HTML
+        $headerRows = <<<'HTML'
 <tr><th colspan="34" style="font-size:16px;text-align:left;background:#f3f3f3;">Herewith Update Daily Report Vessel Shipment</th></tr>
 <tr>
     <th rowspan="2">No</th>
@@ -1122,10 +1184,10 @@ HTML;
 
         $sampleCells = '';
         foreach ($sample as $value) {
-            $sampleCells .= '<td>' . htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8') . '</td>';
+            $sampleCells .= '<td>'.htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8').'</td>';
         }
 
-        return '<html><head><meta charset="utf-8"></head><body><table border="1">' . $headerRows . '<tr>' . $sampleCells . '</tr></table></body></html>';
+        return '<html><head><meta charset="utf-8"></head><body><table border="1">'.$headerRows.'<tr>'.$sampleCells.'</tr></table></body></html>';
     }
 
     private function sanitizeDocCargoPayload(Request $request): array
@@ -1199,6 +1261,7 @@ HTML;
         ];
 
         $allowedColumns = array_flip($this->docCargoColumns());
+
         return array_intersect_key($payload, $allowedColumns);
     }
 
@@ -1210,8 +1273,10 @@ HTML;
         }
         if (is_string($raw) && trim($raw) !== '') {
             $decoded = json_decode($raw, true);
+
             return is_array($decoded) ? $decoded : [];
         }
+
         return [];
     }
 
@@ -1241,7 +1306,7 @@ HTML;
             ];
 
             $filtered = array_intersect_key($row, $detailColumns);
-            if (!empty($filtered)) {
+            if (! empty($filtered)) {
                 DB::table('t_doc_cargo_detail')->insert($filtered);
             }
 
@@ -1277,11 +1342,11 @@ HTML;
 
     private function resolveKontrakForCable(?object $cable): ?object
     {
-        if (!$cable) {
+        if (! $cable) {
             return null;
         }
 
-        if (!empty($cable->id_kontrak)) {
+        if (! empty($cable->id_kontrak)) {
             $kontrak = DB::table('m_kontrak')->where('id', $cable->id_kontrak)->first();
             if ($kontrak) {
                 return $kontrak;
@@ -1363,7 +1428,7 @@ HTML;
 
         return response($this->buildDocCargoImportTemplateHtml(), 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -1373,7 +1438,7 @@ HTML;
 
         return response($this->buildDocCargoExportHtml(), 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -1429,7 +1494,8 @@ HTML;
         $datePart = now()->format('Ymd');
         $timePart = now()->format('His');
         $vesselPart = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string) $kodeVessel) ?: 'VESSEL');
-        return "AUTO/{$jenisKlaim}/{$vesselPart}/{$datePart}/{$timePart}/" . str_pad((string) $sequence, 2, '0', STR_PAD_LEFT);
+
+        return "AUTO/{$jenisKlaim}/{$vesselPart}/{$datePart}/{$timePart}/".str_pad((string) $sequence, 2, '0', STR_PAD_LEFT);
     }
 
     private function eligibleDocCargoQueryForJenis(string $jenisKlaim, int $sourceUserId)
@@ -1521,7 +1587,7 @@ HTML;
                         'no_urut' => str_pad((string) $detailNoUrut, 2, '0', STR_PAD_LEFT),
                         'no_voyage_gab' => $docCargo->no_voyage_gab ?: $docCargo->cable_no_voyage_gab,
                         'no_kontrak' => $docCargo->no_kontrak,
-                        'keterangan' => 'Auto generated from Doc Cargo ID ' . $docCargo->id,
+                        'keterangan' => 'Auto generated from Doc Cargo ID '.$docCargo->id,
                         'status' => 'OPEN',
                         'user_id' => $this->actingUserId(),
                         'created_at' => now(),
@@ -1606,7 +1672,8 @@ HTML;
         try {
             $rows = SimpleSpreadsheetReader::readRows(
                 $file->getRealPath(),
-                $file->getClientOriginalExtension()
+                $file->getClientOriginalExtension(),
+                percentagePoints: true
             );
         } catch (\RuntimeException $e) {
             throw ValidationException::withMessages([
@@ -1635,17 +1702,24 @@ HTML;
                 $gradeName = trim((string) ($fields['grade'] ?? ''));
 
                 if ($noVoyageGab === '' || $gradeName === '') {
-                    $result['errors'][] = 'Baris ' . $rowNumber . ': No Voyage dan Grade wajib diisi.';
+                    $result['errors'][] = 'Baris '.$rowNumber.': No Voyage dan Grade wajib diisi.';
                     $result['skipped']++;
+
                     continue;
                 }
 
-                $cable = T_master_cable::query()
-                    ->whereRaw('UPPER(TRIM(no_voyage_gab)) = ?', [strtoupper($noVoyageGab)])
-                    ->first();
-                if (!$cable) {
-                    $result['errors'][] = 'Baris ' . $rowNumber . ': No Voyage "' . $noVoyageGab . '" tidak ditemukan di master cable.';
+                try {
+                    $cable = $this->resolveDocCargoImportCable($noVoyageGab);
+                } catch (ValidationException $e) {
+                    $result['errors'][] = 'Baris '.$rowNumber.': '.$e->errors()['file'][0];
                     $result['skipped']++;
+
+                    continue;
+                }
+                if (! $cable) {
+                    $result['errors'][] = 'Baris '.$rowNumber.': No Voyage "'.$noVoyageGab.'" tidak ditemukan di master cable. Untuk deviasi/bunker, gunakan kode penyesuaian berakhiran -D/-B.';
+                    $result['skipped']++;
+
                     continue;
                 }
 
@@ -1690,7 +1764,7 @@ HTML;
                     $result['updated_rows'][] = [
                         'row_number' => implode(', ', $group['row_numbers'] ?? [$rowNumber]),
                         'doc_cargo_id' => (int) $existing->id,
-                        'no_voyage_gab' => $payload['no_voyage_gab'] ?? $existing->no_voyage_gab,
+                        'no_voyage_gab' => $this->docCargoImportVoyageCode($cable),
                         'grade_id' => (int) $gradeMeta['id'],
                         'grade_name' => $gradeMeta['grade'],
                         'bill_of_lading' => $payload['bill_of_lading'] ?? null,
@@ -1698,6 +1772,7 @@ HTML;
                         'detail_count' => count($detailItems),
                         'previous_status' => $existing->status,
                     ];
+
                     continue;
                 }
 
@@ -1716,7 +1791,7 @@ HTML;
                 $result['created_rows'][] = [
                     'row_number' => implode(', ', $group['row_numbers'] ?? [$rowNumber]),
                     'doc_cargo_id' => (int) $docCargoId,
-                    'no_voyage_gab' => $payload['no_voyage_gab'] ?? null,
+                    'no_voyage_gab' => $this->docCargoImportVoyageCode($cable),
                     'grade_id' => (int) $gradeMeta['id'],
                     'grade_name' => $gradeMeta['grade'],
                     'bill_of_lading' => $payload['bill_of_lading'] ?? null,
@@ -1824,6 +1899,10 @@ HTML;
             ->leftJoin('m_grade', 'm_grade.id', '=', 't_doc_cargo.id_grade')
             ->select(
                 't_doc_cargo.*',
+                't_master_cable.atd_port',
+                't_master_cable.ata_port',
+                't_master_cable.atd_time',
+                't_master_cable.ata_time',
                 DB::raw('COALESCE(t_doc_cargo.no_voyage_gab, t_master_cable.no_voyage_gab) as no_voyage_gab_display'),
                 DB::raw('COALESCE(t_doc_cargo.grade, m_grade.grade) as grade_display'),
                 DB::raw('COALESCE(t_doc_cargo.price_bbl, m_grade.price_bbl) as price_bbl_display')
@@ -1842,18 +1921,18 @@ HTML;
         }
 
         $idCable = $request->input('id_cable');
-        if (!is_null($idCable) && $idCable !== '') {
+        if (! is_null($idCable) && $idCable !== '') {
             $query->where('t_doc_cargo.id_cable', $idCable);
         }
 
         $idVessel = $request->input('id_vessel');
-        if (!is_null($idVessel) && $idVessel !== '') {
+        if (! is_null($idVessel) && $idVessel !== '') {
             // t_doc_cargo does not store vessel directly; filter through cable relation.
             $query->where('t_master_cable.id_vessel', $idVessel);
         }
 
         $status = $request->input('status');
-        if (!is_null($status) && $status !== '') {
+        if (! is_null($status) && $status !== '') {
             $query->where('t_doc_cargo.status', $status);
         }
 
@@ -1880,7 +1959,7 @@ HTML;
                         }
                     });
 
-                if (!is_null($excludeKlaimId) && $excludeKlaimId !== '') {
+                if (! is_null($excludeKlaimId) && $excludeKlaimId !== '') {
                     $sub->where('t_klaim_detail.id_klaim', '!=', $excludeKlaimId);
                 }
                 if ($jenisKlaim !== '') {
@@ -1898,13 +1977,13 @@ HTML;
             'created_at' => 't_doc_cargo.created_at',
         ];
         $sortBy = $request->input('sort_by', 'id');
-        if (!array_key_exists($sortBy, $allowedSort)) {
+        if (! array_key_exists($sortBy, $allowedSort)) {
             $sortBy = 'id';
         }
         $sortDir = strtolower((string) $request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
         if (in_array($sortBy, ['no_voyage_gab', 'no_voyage_gab_display'], true)) {
-            $voyageExpr = "COALESCE(t_doc_cargo.no_voyage_gab, t_master_cable.no_voyage_gab)";
+            $voyageExpr = 'COALESCE(t_doc_cargo.no_voyage_gab, t_master_cable.no_voyage_gab)';
             $gradeExpr = "UPPER(TRIM(COALESCE(t_doc_cargo.grade, m_grade.grade, '')))";
             $query
                 ->orderByRaw("SUBSTRING_INDEX({$voyageExpr}, '/', 1) asc")
@@ -2031,11 +2110,11 @@ HTML;
             $files = $request->file('files', []);
             if ($files) {
                 foreach ($files as $file) {
-                    if (!$file) {
+                    if (! $file) {
                         continue;
                     }
                     $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/doc_cargo');
-                    $upload = new File_upload();
+                    $upload = new File_upload;
                     $upload->id_doc_cargo = $docCargoId;
                     $upload->nama_file = $path;
                     $upload->save();
@@ -2065,7 +2144,7 @@ HTML;
             DB::beginTransaction();
             $incomingFiles = array_filter((array) $request->file('files', []));
             $hasExistingFiles = File_upload::where('id_doc_cargo', $id)->exists();
-            if (empty($incomingFiles) && !$hasExistingFiles) {
+            if (empty($incomingFiles) && ! $hasExistingFiles) {
                 throw ValidationException::withMessages([
                     'files' => 'File upload wajib diisi.',
                 ]);
@@ -2106,11 +2185,11 @@ HTML;
             $files = $request->file('files', []);
             if ($files) {
                 foreach ($files as $file) {
-                    if (!$file) {
+                    if (! $file) {
                         continue;
                     }
                     $path = FileUploadHelper::storeWithOriginalName($file, 'uploads/doc_cargo');
-                    $upload = new File_upload();
+                    $upload = new File_upload;
                     $upload->id_doc_cargo = $existing->id;
                     $upload->nama_file = $path;
                     $upload->save();
@@ -2136,11 +2215,12 @@ HTML;
         try {
             DB::beginTransaction();
             $user = Auth::user();
-            if (!$user || !($user->hasRole('approval') || $user->hasRole('superadmin'))) {
+            if (! $user || ! ($user->hasRole('approval') || $user->hasRole('superadmin'))) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.'
+                    'message' => 'Hanya role approval atau superadmin yang boleh melakukan approve.',
                 ], 403);
             }
 
@@ -2168,11 +2248,12 @@ HTML;
         try {
             DB::beginTransaction();
             $user = Auth::user();
-            if (!$user || !$user->hasRole('approval')) {
+            if (! $user || ! $user->hasRole('approval')) {
                 DB::rollBack();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hanya role approval yang boleh melakukan unapprove.'
+                    'message' => 'Hanya role approval yang boleh melakukan unapprove.',
                 ], 403);
             }
 
@@ -2209,7 +2290,7 @@ HTML;
             $files = File_upload::where('id_doc_cargo', $id)->get();
             foreach ($files as $file) {
                 if ($file->nama_file) {
-                    $path = public_path('storage/' . ltrim((string) $file->nama_file, '/'));
+                    $path = public_path('storage/'.ltrim((string) $file->nama_file, '/'));
                     if (file_exists($path)) {
                         @unlink($path);
                     }

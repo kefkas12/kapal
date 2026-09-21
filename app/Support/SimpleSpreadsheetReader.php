@@ -9,13 +9,13 @@ use ZipArchive;
 
 class SimpleSpreadsheetReader
 {
-    public static function readRows(string $path, ?string $extension = null): array
+    public static function readRows(string $path, ?string $extension = null, bool $percentagePoints = false): array
     {
         $ext = strtolower((string) ($extension ?: pathinfo($path, PATHINFO_EXTENSION)));
         $signature = self::detectSignature($path);
 
         if ($signature === 'xlsx') {
-            return self::readXlsx($path);
+            return self::readXlsx($path, $percentagePoints);
         }
 
         if ($signature === 'xls-binary') {
@@ -24,7 +24,7 @@ class SimpleSpreadsheetReader
 
         return match ($ext) {
             'csv' => self::readCsv($path),
-            'xlsx' => self::readXlsx($path),
+            'xlsx' => self::readXlsx($path, $percentagePoints),
             'xls', 'html', 'htm', 'xml' => self::readHtmlTable($path),
             default => throw new RuntimeException('Format file tidak didukung untuk import.'),
         };
@@ -101,7 +101,7 @@ class SimpleSpreadsheetReader
         return $rows;
     }
 
-    private static function readXlsx(string $path): array
+    private static function readXlsx(string $path, bool $percentagePoints): array
     {
         $zip = new ZipArchive;
         if ($zip->open($path) !== true) {
@@ -115,6 +115,7 @@ class SimpleSpreadsheetReader
             }
 
             $sharedStrings = self::readSharedStrings($zip);
+            $percentageStyles = $percentagePoints ? self::readPercentageStyles($zip) : [];
         } finally {
             $zip->close();
         }
@@ -154,6 +155,10 @@ class SimpleSpreadsheetReader
                     $value = (string) ($cell->v ?? '');
                 }
 
+                if (in_array($type, ['', 'n'], true) && isset($percentageStyles[(int) ($cell['s'] ?? 0)]) && is_numeric($value)) {
+                    $value = (string) ((float) $value * 100);
+                }
+
                 $row[$colIndex] = self::cleanCellValue($value);
             }
 
@@ -164,6 +169,42 @@ class SimpleSpreadsheetReader
         }
 
         return $rows;
+    }
+
+    /**
+     * @return array<int, true>
+     */
+    private static function readPercentageStyles(ZipArchive $zip): array
+    {
+        $stylesXml = $zip->getFromName('xl/styles.xml');
+        if ($stylesXml === false) {
+            return [];
+        }
+
+        $styles = simplexml_load_string($stylesXml);
+        if ($styles === false) {
+            throw new RuntimeException('Gagal membaca format angka XLSX.');
+        }
+
+        $percentageFormats = [9 => true, 10 => true];
+        foreach ($styles->numFmts->numFmt ?? [] as $format) {
+            $formatCode = (string) $format['formatCode'];
+            $formatCode = preg_replace('/"[^"]*"|\\\\.|\[[^\]]*\]|[\*_]./u', '', $formatCode) ?? '';
+            if (str_contains($formatCode, '%')) {
+                $percentageFormats[(int) $format['numFmtId']] = true;
+            }
+        }
+
+        $percentageStyles = [];
+        $index = 0;
+        foreach ($styles->cellXfs->xf ?? [] as $style) {
+            if (isset($percentageFormats[(int) $style['numFmtId']])) {
+                $percentageStyles[$index] = true;
+            }
+            $index++;
+        }
+
+        return $percentageStyles;
     }
 
     private static function firstVisibleWorksheetPath(ZipArchive $zip): string
