@@ -13,7 +13,7 @@ use Spatie\Permission\Models\Role;
 
 class UserRoleController extends Controller
 {
-    private const ALLOWED_ROLES = ['approval', 'admin', 'adminupload', 'superadmin'];
+    private const ALLOWED_ROLES = ['approval', 'admin', 'adminupload', 'superadmin', 'viewer'];
 
     private function ensureBaseRoles(): void
     {
@@ -37,7 +37,7 @@ class UserRoleController extends Controller
     private function canManageUsers(): bool
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user || $user->hasRole('viewer')) {
             return false;
         }
 
@@ -47,15 +47,16 @@ class UserRoleController extends Controller
 
         // Bootstrap mode: jika belum ada assignment role sama sekali, izinkan user login pertama mengelola user-role.
         $hasAnyAssignedRole = DB::table('model_has_roles')->exists();
-        return !$hasAnyAssignedRole;
+
+        return ! $hasAnyAssignedRole;
     }
 
     public function dashboardData()
     {
-        if (!$this->canManageUsers()) {
+        if (! $this->canManageUsers()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak punya akses untuk melihat dashboard role.'
+                'message' => 'Anda tidak punya akses untuk melihat dashboard role.',
             ], 403);
         }
 
@@ -63,7 +64,7 @@ class UserRoleController extends Controller
 
         $roles = Role::query()
             ->whereIn('name', self::ALLOWED_ROLES)
-            ->orderByRaw("FIELD(name, 'approval', 'admin', 'adminupload', 'superadmin')")
+            ->orderBy('id')
             ->get();
 
         $roleIds = $roles->pluck('id')->all();
@@ -100,10 +101,10 @@ class UserRoleController extends Controller
 
     public function users()
     {
-        if (!$this->canManageUsers()) {
+        if (! $this->canManageUsers()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak punya akses untuk melihat data user.'
+                'message' => 'Anda tidak punya akses untuk melihat data user.',
             ], 403);
         }
 
@@ -127,10 +128,10 @@ class UserRoleController extends Controller
     {
         $this->ensureBaseRoles();
 
-        if (!$this->canManageUsers()) {
+        if (! $this->canManageUsers()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak punya akses untuk menambah user.'
+                'message' => 'Anda tidak punya akses untuk menambah user.',
             ], 403);
         }
 
@@ -142,7 +143,7 @@ class UserRoleController extends Controller
         ]);
 
         $name = $validated['name'] ?? strtok($validated['email'], '@');
-        if (!$name) {
+        if (! $name) {
             $name = $validated['email'];
         }
 
@@ -170,10 +171,10 @@ class UserRoleController extends Controller
     {
         $this->ensureBaseRoles();
 
-        if (!$this->canManageUsers()) {
+        if (! $this->canManageUsers()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Anda tidak punya akses untuk assign role.'
+                'message' => 'Anda tidak punya akses untuk assign role.',
             ], 403);
         }
 
@@ -200,14 +201,14 @@ class UserRoleController extends Controller
 
         /** @var User|null $user */
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'User tidak ditemukan.'
+                'message' => 'User tidak ditemukan.',
             ], 401);
         }
 
-        if (!Hash::check($validated['current_password'], $user->password)) {
+        if (! Hash::check($validated['current_password'], $user->password)) {
             throw ValidationException::withMessages([
                 'current_password' => 'Password saat ini tidak cocok.',
             ]);

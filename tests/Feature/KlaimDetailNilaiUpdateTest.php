@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -53,6 +54,7 @@ class KlaimDetailNilaiUpdateTest extends TestCase
 
         $user = new User;
         $user->forceFill(['id' => 7, 'name' => 'Tester', 'email' => 'tester@example.com']);
+        $user->setRelation('roles', new Collection);
         Sanctum::actingAs($user);
 
         DB::table('t_klaim')->insert([

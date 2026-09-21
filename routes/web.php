@@ -16,10 +16,13 @@ Route::get('/doc-cargo/import-template', [T_doc_cargoController::class, 'importT
 Route::get('/doc-cargo/import-source', [T_doc_cargoController::class, 'exportImportSource'])
     ->name('doc-cargo.import.source');
 Route::post('/doc-cargo/import', [T_doc_cargoController::class, 'importExcelWeb'])
+    ->middleware(['auth:sanctum', 'viewer.read-only'])
     ->name('doc-cargo.import.submit');
 Route::post('/doc-cargo/refresh', [T_doc_cargoController::class, 'refreshWeb'])
+    ->middleware(['auth:sanctum', 'viewer.read-only'])
     ->name('doc-cargo.refresh.submit');
 Route::post('/doc-cargo/create-klaim-awal', [T_doc_cargoController::class, 'createKlaimAwalWeb'])
+    ->middleware(['auth:sanctum', 'viewer.read-only'])
     ->name('doc-cargo.klaim-awal.submit');
 
 Route::get('/cable/import', [T_master_cableController::class, 'importPage'])
@@ -29,6 +32,7 @@ Route::get('/cable/import-template', [T_master_cableController::class, 'importTe
 Route::get('/cable/import-source', [T_master_cableController::class, 'exportImportSource'])
     ->name('cable.import.source');
 Route::post('/cable/import', [T_master_cableController::class, 'importExcelWeb'])
+    ->middleware(['auth:sanctum', 'viewer.read-only'])
     ->name('cable.import.submit');
 
 Route::get('/klaim/import', [T_klaimController::class, 'importPage'])
@@ -38,4 +42,5 @@ Route::get('/klaim/import-template', [T_klaimController::class, 'importTemplate'
 Route::get('/klaim/import-source', [T_klaimController::class, 'exportImportSource'])
     ->name('klaim.import.source');
 Route::post('/klaim/import', [T_klaimController::class, 'importExcelWeb'])
+    ->middleware(['auth:sanctum', 'viewer.read-only'])
     ->name('klaim.import.submit');

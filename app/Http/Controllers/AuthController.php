@@ -11,7 +11,7 @@ use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
-    private const ALLOWED_ROLES = ['approval', 'admin', 'adminupload', 'superadmin'];
+    private const ALLOWED_ROLES = ['approval', 'admin', 'adminupload', 'superadmin', 'viewer'];
 
     private function ensureBaseRoles(): void
     {
@@ -28,7 +28,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'nullable|in:approval,admin,adminupload,superadmin',
+            'role' => 'nullable|in:viewer',
         ]);
 
         $user = DB::transaction(function () use ($validated) {
@@ -38,7 +38,7 @@ class AuthController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
-            $role = $validated['role'] ?? (User::count() === 1 ? 'superadmin' : 'approval');
+            $role = User::count() === 1 ? 'superadmin' : 'viewer';
             $user->syncRoles([$role]);
 
             return $user;
@@ -59,13 +59,13 @@ class AuthController extends Controller
         // Validasi input
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required'
+            'password' => 'required',
         ]);
 
         // Cek login
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        if (! Auth::attempt($request->only('email', 'password'))) {
             return response()->json([
-                'message' => 'Email atau password salah'
+                'message' => 'Email atau password salah',
             ], 401);
         }
 
@@ -84,7 +84,7 @@ class AuthController extends Controller
             'user' => array_merge($user->toArray(), [
                 'roles' => $user->getRoleNames()->values()->all(),
             ]),
-            'token' => $token
+            'token' => $token,
         ]);
     }
 

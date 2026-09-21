@@ -26,11 +26,11 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::controller(File_uploadController::class)->prefix('file_upload')->group(function () {
     Route::get('/view/{id}', 'view')->whereNumber('id');
     Route::get('/download/{id}', 'download')->whereNumber('id');
-    Route::delete('/{id}', 'delete')->whereNumber('id');
 });
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'viewer.read-only'])->group(function () {
     Route::controller(File_uploadController::class)->prefix('file_upload')->group(function () {
+        Route::delete('/{id}', 'delete')->whereNumber('id');
         Route::get('/pdf-by-section', 'pdfBySection');
         Route::get('/pdf-bulk-download', 'bulkDownload');
         Route::post('/cable/{id}', 'uploadCableFiles')->whereNumber('id');
@@ -52,7 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users', 'users');
         Route::post('/users', 'createUser');
         Route::put('/users/{id}/role', 'assignRole');
-        Route::post('/change-password', 'changeMyPassword');
+        Route::post('/change-password', 'changeMyPassword')->name('account.change-password');
     });
 
     Route::controller(M_kontrakController::class)->prefix('kontrak')->group(function () {
@@ -173,7 +173,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', 'delete');
     });
 
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout', [AuthController::class, 'logout'])->name('account.logout');
 
 });
 
