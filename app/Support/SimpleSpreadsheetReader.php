@@ -79,7 +79,7 @@ class SimpleSpreadsheetReader
             throw new RuntimeException('Gagal membaca file template/import.');
         }
 
-        $dom = new DOMDocument();
+        $dom = new DOMDocument;
         @$dom->loadHTML($html);
         $xpath = new DOMXPath($dom);
 
@@ -103,19 +103,21 @@ class SimpleSpreadsheetReader
 
     private static function readXlsx(string $path): array
     {
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         if ($zip->open($path) !== true) {
             throw new RuntimeException('Gagal membuka file XLSX.');
         }
 
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        if ($sheetXml === false) {
-            $zip->close();
-            throw new RuntimeException('Worksheet pertama pada XLSX tidak ditemukan.');
-        }
+        try {
+            $sheetXml = $zip->getFromName(self::firstVisibleWorksheetPath($zip));
+            if ($sheetXml === false) {
+                throw new RuntimeException('Worksheet pada XLSX tidak ditemukan.');
+            }
 
-        $sharedStrings = self::readSharedStrings($zip);
-        $zip->close();
+            $sharedStrings = self::readSharedStrings($zip);
+        } finally {
+            $zip->close();
+        }
 
         $xml = simplexml_load_string($sheetXml);
         if ($xml === false) {
@@ -164,6 +166,44 @@ class SimpleSpreadsheetReader
         return $rows;
     }
 
+    private static function firstVisibleWorksheetPath(ZipArchive $zip): string
+    {
+        $workbookXml = $zip->getFromName('xl/workbook.xml');
+        $relationshipsXml = $zip->getFromName('xl/_rels/workbook.xml.rels');
+        if ($workbookXml === false || $relationshipsXml === false) {
+            return 'xl/worksheets/sheet1.xml';
+        }
+
+        $workbook = simplexml_load_string($workbookXml);
+        $relationships = simplexml_load_string($relationshipsXml);
+        if ($workbook === false || $relationships === false) {
+            throw new RuntimeException('Gagal membaca daftar worksheet XLSX.');
+        }
+
+        $targets = [];
+        foreach ($relationships->children('http://schemas.openxmlformats.org/package/2006/relationships') as $relationship) {
+            $attributes = $relationship->attributes();
+            if (str_ends_with((string) $attributes['Type'], '/worksheet')) {
+                $targets[(string) $attributes['Id']] = (string) $attributes['Target'];
+            }
+        }
+
+        $sheets = $workbook->children('http://schemas.openxmlformats.org/spreadsheetml/2006/main')->sheets;
+        foreach ($sheets->sheet as $sheet) {
+            if (in_array((string) $sheet->attributes()['state'], ['hidden', 'veryHidden'], true)) {
+                continue;
+            }
+
+            $relationshipId = (string) $sheet->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'];
+            $target = $targets[$relationshipId] ?? null;
+            if ($target !== null) {
+                return str_starts_with($target, '/') ? ltrim($target, '/') : 'xl/'.$target;
+            }
+        }
+
+        throw new RuntimeException('Tidak ada worksheet terlihat yang dapat dibaca pada XLSX.');
+    }
+
     private static function readSharedStrings(ZipArchive $zip): array
     {
         $xmlString = $zip->getFromName('xl/sharedStrings.xml');
@@ -180,6 +220,7 @@ class SimpleSpreadsheetReader
         foreach ($xml->si as $item) {
             if (isset($item->t)) {
                 $strings[] = self::cleanCellValue((string) $item->t);
+
                 continue;
             }
 
@@ -195,7 +236,7 @@ class SimpleSpreadsheetReader
 
     private static function columnReferenceToIndex(string $reference): int
     {
-        if (!preg_match('/^([A-Z]+)/i', $reference, $matches)) {
+        if (! preg_match('/^([A-Z]+)/i', $reference, $matches)) {
             return 0;
         }
 
@@ -212,6 +253,7 @@ class SimpleSpreadsheetReader
     {
         $string = trim((string) $value);
         $string = str_replace("\xc2\xa0", ' ', $string);
+
         return preg_replace('/\s+/u', ' ', $string) ?? $string;
     }
 }

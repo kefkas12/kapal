@@ -240,7 +240,7 @@ class T_master_cableController extends Controller
     {
         return [
             'no_kontrak' => ['NOKONTRAK', 'CONTRACTNO', 'NOCONTRACT'],
-            'no_voyage_gab' => ['NOVOYAGEGAB', 'VOYAGEGAB', 'NOVOYAGE'],
+            'no_voyage_gab' => ['NOVOYAGEGAB', 'NOVOYAGEGABUNGAN', 'VOYAGEGAB', 'NOVOYAGE'],
             'status_voyage' => ['STATUSVOYAGE', 'VOYAGESTATUS'],
             'master' => ['MASTER'],
             'atd_port' => ['ATDPORT', 'LOADPORT'],
