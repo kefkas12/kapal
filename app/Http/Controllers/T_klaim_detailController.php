@@ -1274,6 +1274,37 @@ class T_klaim_detailController extends Controller
             ]);
         }
 
+        $incompleteInvoices = DB::table('t_klaim_detail as detail')
+            ->join('t_klaim as klaim', 'klaim.id', '=', 'detail.id_klaim')
+            ->join('t_klaim_detail_nilai as nilai', 'nilai.id_klaim_detail', '=', 'detail.id')
+            ->whereIn('detail.id', $ids->all())
+            ->whereRaw('UPPER(COALESCE(detail.status, "")) = ?', ['APPROVE'])
+            ->whereRaw('UPPER(COALESCE(nilai.status, "")) = ?', ['APPROVE'])
+            ->whereRaw('COALESCE(nilai.val_klaim_akhir, 0) <> 0')
+            ->where(function ($query) {
+                $query->whereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_klaim, ""))) IN ("", "-")')
+                    ->orWhereRaw('UPPER(TRIM(COALESCE(nilai.no_tagihan_dipotong, ""))) IN ("", "-")');
+            })
+            ->get(['klaim.no_klaim_akhir', 'nilai.sub_jenis', 'nilai.no_tagihan_klaim', 'nilai.no_tagihan_dipotong']);
+
+        if ($incompleteInvoices->isNotEmpty()) {
+            $messages = $incompleteInvoices->map(function ($invoice) {
+                $missingFields = [];
+
+                if (in_array(strtoupper(trim((string) $invoice->no_tagihan_klaim)), ['', '-'], true)) {
+                    $missingFields[] = 'No. Invoice Pertamina';
+                }
+
+                if (in_array(strtoupper(trim((string) $invoice->no_tagihan_dipotong)), ['', '-'], true)) {
+                    $missingFields[] = 'No. Invoice potongan';
+                }
+
+                return 'No Klaim Akhir '.$invoice->no_klaim_akhir.' ('.$invoice->sub_jenis.'): '.implode(' dan ', $missingFields).' belum diisi.';
+            })->all();
+
+            throw ValidationException::withMessages(['ids' => $messages]);
+        }
+
         DB::beginTransaction();
         try {
             $eligibleIds = T_klaim_detail::query()

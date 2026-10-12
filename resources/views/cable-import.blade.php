@@ -133,6 +133,11 @@
         @endif
 
         <div class="card">
+            <p>Masuk sebagai {{ auth()->user()->email }}</p>
+            <form method="POST" action="{{ route('web.logout') }}">
+                @csrf
+                <button type="submit">Keluar</button>
+            </form>
             <strong>Upload file import</strong>
             <form method="POST" action="{{ route('cable.import.submit') }}" enctype="multipart/form-data" style="margin-top: 16px;">
                 @csrf

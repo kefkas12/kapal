@@ -139,6 +139,7 @@
                 <li>Import akan create baru atau update data existing berdasarkan <code>No Voyage + Grade</code>, lalu status disimpan sebagai <strong>APPROVE</strong>.</li>
             </ul>
             <div class="actions">
+            <div class="actions">
                 <a class="button secondary" href="{{ route('doc-cargo.import.template') }}">Download Template</a>
                 <a class="button secondary" href="{{ route('doc-cargo.import.source') }}">Download Semua Doc Cargo</a>
             </div>

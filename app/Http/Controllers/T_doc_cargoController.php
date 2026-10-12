@@ -1908,7 +1908,41 @@ HTML;
                 DB::raw('COALESCE(t_doc_cargo.price_bbl, m_grade.price_bbl) as price_bbl_display')
             );
 
+        $idVessel = $request->input('id_vessel');
+        $availableForKlaim = $request->boolean('available_for_klaim', false);
+        $allForKlaim = $request->boolean('all_for_klaim', false)
+            && $availableForKlaim
+            && ! is_null($idVessel)
+            && $idVessel !== '';
+
         $search = trim((string) $request->input('search', ''));
+        if ($allForKlaim && $search !== '') {
+            $vesselCode = strtoupper(trim((string) DB::table('m_vessel')
+                ->where('id', $idVessel)
+                ->value('kode_vessel')));
+            $normalizedSearch = strtoupper($search);
+            $voyagePrefix = null;
+
+            if ($vesselCode !== '' && $normalizedSearch === $vesselCode) {
+                $search = '';
+            } elseif ($vesselCode !== '' && ctype_digit($normalizedSearch)) {
+                $voyagePrefix = $vesselCode.'/'.$normalizedSearch.'%';
+            } elseif ($vesselCode !== '' && str_starts_with($normalizedSearch, $vesselCode.'/')) {
+                $voyagePrefix = $normalizedSearch.'%';
+            }
+
+            if ($voyagePrefix !== null) {
+                $query->where(function ($voyageQuery) use ($voyagePrefix) {
+                    $voyageQuery->where('t_doc_cargo.no_voyage_gab', 'like', $voyagePrefix)
+                        ->orWhere(function ($legacyQuery) use ($voyagePrefix) {
+                            $legacyQuery->whereNull('t_doc_cargo.no_voyage_gab')
+                                ->where('t_master_cable.no_voyage_gab', 'like', $voyagePrefix);
+                        });
+                });
+                $search = '';
+            }
+        }
+
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('t_doc_cargo.no_voyage_gab', 'like', "%{$search}%")
@@ -1925,7 +1959,6 @@ HTML;
             $query->where('t_doc_cargo.id_cable', $idCable);
         }
 
-        $idVessel = $request->input('id_vessel');
         if (! is_null($idVessel) && $idVessel !== '') {
             // t_doc_cargo does not store vessel directly; filter through cable relation.
             $query->where('t_master_cable.id_vessel', $idVessel);
@@ -1936,7 +1969,6 @@ HTML;
             $query->where('t_doc_cargo.status', $status);
         }
 
-        $availableForKlaim = $request->boolean('available_for_klaim', false);
         if ($availableForKlaim) {
             $excludeKlaimId = $request->input('exclude_klaim_id');
             $jenisKlaim = trim((string) $request->input('jenis_klaim', ''));
@@ -2002,6 +2034,23 @@ HTML;
                 ->orderBy('t_doc_cargo.id', 'desc');
         } else {
             $query->orderBy($allowedSort[$sortBy], $sortDir);
+        }
+
+        if ($allForKlaim) {
+            $rows = $query->get();
+            $total = $rows->count();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data T_doc_cargo berhasil diambil',
+                'data' => $rows,
+                'meta' => [
+                    'current_page' => 1,
+                    'per_page' => $total,
+                    'total' => $total,
+                    'last_page' => 1,
+                ],
+            ]);
         }
 
         $paginator = $query->paginate($perPage);

@@ -3,11 +3,20 @@
 use App\Http\Controllers\T_doc_cargoController;
 use App\Http\Controllers\T_klaimController;
 use App\Http\Controllers\T_master_cableController;
+use App\Http\Controllers\WebSessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/login', [WebSessionController::class, 'create'])->name('login');
+Route::post('/login', [WebSessionController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('login.store');
+Route::post('/logout', [WebSessionController::class, 'destroy'])
+    ->middleware('auth:web')
+    ->name('web.logout');
 
 Route::get('/doc-cargo/import', [T_doc_cargoController::class, 'importPage'])
     ->name('doc-cargo.import.page');
@@ -26,6 +35,7 @@ Route::post('/doc-cargo/create-klaim-awal', [T_doc_cargoController::class, 'crea
     ->name('doc-cargo.klaim-awal.submit');
 
 Route::get('/cable/import', [T_master_cableController::class, 'importPage'])
+    ->middleware('auth:web')
     ->name('cable.import.page');
 Route::get('/cable/import-template', [T_master_cableController::class, 'importTemplate'])
     ->name('cable.import.template');
